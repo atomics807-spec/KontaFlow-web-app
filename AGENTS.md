@@ -7,7 +7,7 @@ npm ci
 npm run dev                 # Next.js dev server
 npm run typecheck           # tsc --noEmit (must be clean)
 npm test                    # vitest unit tests
-npm run test:db             # rebuilds kontaflow_test and runs 105 DB assertions
+npm run test:db             # rebuilds kontaflow_test and runs 149 DB assertions
 npm run lint
 npm run build
 npm run db:push             # applies pending supabase/migrations via SUPABASE_DB_URL
@@ -51,6 +51,12 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   reliable path locally.
 * Types for new RPCs/tables must be added to `src/types/database.ts`
   (`Functions` / `Tables`) or `supabase-js` rejects the call at compile time.
+* A `"use server"` file may only export async functions. Keep constants, Zod
+  schemas and types in a sibling module; exporting an object from the actions
+  file fails the build with "can only export async functions".
+* `generateMetadata` in `src/app/[locale]/layout.tsx` is the only global
+  metadata source. Page titles update correctly on client navigation; the
+  browser tool's cached tab title can lag, so verify with `document.title`.
 * `@supabase/ssr` clients cannot set cookies from Server Components; active
   workspace changes happen in Server Actions or Route Handlers.
 * Reports return `{ start, end }` from `monthBounds` but services expect
@@ -132,3 +138,31 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
 * Copy for the pages lives under `pages.*` in each locale dictionary. All three
   locales must keep identical keys (`satisfies Dictionary` enforces it at
   typecheck time).
+
+## Identity and onboarding (Phase 4)
+
+* Signup collects `first_name`, `last_name`, `phone`, `country_code`, locale and
+  an explicit privacy consent. `privacy_consents` stores policy version,
+  locale, IP and user agent. Add fields to the signup schema, action and all
+  three dictionaries together.
+* Phone OTPs live in `src/lib/otp.ts`: six digits from `crypto.randomInt`,
+  HMAC-SHA256 with `OTP_HMAC_SECRET` bound to user + purpose, 10-minute TTL,
+  60-second resend cooldown, five attempts. Only the hash reaches Postgres.
+  `SMS_PROVIDER=console` prints codes and is development-only.
+* `request_phone_verification` and `verify_phone_verification` are
+  `SECURITY DEFINER` RPCs; `otp_verifications` stays service-role only. The
+  verify RPC refuses a challenge whose destination no longer matches
+  `profiles.phone`.
+* Changing `profiles.phone` clears `phone_verified_at` and sets
+  `verification_required = true` via trigger. Never write verification
+  timestamps from the browser.
+* `authenticated` has column-level update grants only on safe profile fields
+  (`full_name`, `phone`, `locale`, `avatar_url`, `default_workspace_id`).
+  `verification_required`, `*_verified_at` and `onboarding_completed_at` are
+  not writable. Workspace grants exclude `owner_id`, `plan` and `slug`.
+* `complete_onboarding` requires both channels verified, then creates the
+  workspace, stores the business profile and marks onboarding complete in one
+  transaction. The raw `create_workspace` RPC also blocks unverified owners via
+  trigger.
+* `requireVerifiedUser(locale, nextPath)` in `src/lib/supabase/auth.ts` drives
+  the UI gate. Keep the default next path locale-prefixed.

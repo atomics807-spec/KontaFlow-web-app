@@ -8,7 +8,7 @@ verified. This page tracks what is real today and what comes next.
 | Area | Status |
 | --- | --- |
 | Next.js App Router + strict TypeScript + Tailwind v4 | done |
-| Supabase auth, email confirmation, password reset, onboarding | done |
+| Supabase auth, named registration, email + phone verification, consent, onboarding | done |
 | Multi-tenant schema, RLS, owner protection, invites/roles | done |
 | Money in bigint minor units, XAF default, per-workspace currency | done |
 | Transactions: record, list, void, receipts metadata, offline idempotency | done |
@@ -25,8 +25,9 @@ verified. This page tracks what is real today and what comes next.
 | i18n en/fr/wes with typed dictionaries and runtime parity tests | done |
 | PWA manifest + service worker + offline fallback | done |
 | Security headers incl. CSP, HSTS, frame denial | done |
+| Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
 | Unit tests (money, permissions, i18n, validation, rate limits) | done |
-| Database integration suite (56 assertions on a fresh DB) | done |
+| Database integration suite (149 assertions on a fresh DB) | done |
 
 ## Next
 

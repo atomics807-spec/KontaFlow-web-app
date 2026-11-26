@@ -31,7 +31,7 @@ export function MarketingFooter() {
       title: dict.marketing.footerLegal,
       links: [
         { label: dict.marketing.navSecurity, href: `/${locale}/security` },
-        { label: dict.marketing.privacy, href: `/${locale}/security` },
+        { label: dict.marketing.privacy, href: `/${locale}/security#privacy` },
         { label: dict.marketing.terms, href: `/${locale}/security` },
       ],
     },

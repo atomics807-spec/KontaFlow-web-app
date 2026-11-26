@@ -17,11 +17,13 @@ const ALICE = "11111111-1111-4111-8111-111111111111";
 const BOB = "22222222-2222-4222-8222-222222222222";
 const CHARLIE = "33333333-3333-4333-8333-333333333333";
 const DORA = "44444444-4444-4444-8444-444444444444";
+const EVE = "55555555-5555-4555-8555-555555555555";
 
 const alice = { sub: ALICE, email: "alice@example.com", role: "authenticated" };
 const bob = { sub: BOB, email: "bob@example.com", role: "authenticated" };
 const charlie = { sub: CHARLIE, email: "charlie@example.com", role: "authenticated" };
 const dora = { sub: DORA, email: "dora@example.com", role: "authenticated" };
+const eve = { sub: EVE, email: "eve@example.com", role: "authenticated" };
 
 async function commitAs<T>(
   client: Client,
@@ -71,6 +73,16 @@ async function main(): Promise<void> {
          ($3, 'charlie@example.com', '{"full_name":"Charlie Fotso"}'::jsonb),
          ($4, 'dora@example.com', '{"full_name":"Dora Etaba"}'::jsonb)`,
       [ALICE, BOB, CHARLIE, DORA],
+    );
+
+    // These accounts stand in for customers who existed before Phase 4.
+    await client.query(
+      `update profiles
+       set email_verified_at = now(),
+           phone_verified_at = now(),
+           verification_required = false
+       where id = any($1::uuid[])`,
+      [[ALICE, BOB, CHARLIE, DORA]],
     );
 
     console.log("\nProvisioning");
@@ -1011,6 +1023,279 @@ async function main(): Promise<void> {
     ok(
       "owner sees their accounts through the view",
       Number(await asAlice(`select count(*) from financial_accounts where workspace_id = $1`, [idA])) > 0,
+    );
+
+    console.log("\nPhase 4 · identity and onboarding");
+    await client.query(
+      `insert into auth.users (id, email, phone, raw_user_meta_data)
+       values ($1, 'eve@example.com', $2, $3::jsonb)`,
+      [
+        EVE,
+        "+237699000111",
+        JSON.stringify({
+          first_name: "Eve",
+          last_name: "Manga",
+          phone: "+237699000111",
+          country: "CM",
+          locale: "fr",
+          privacy_accepted: true,
+          privacy_policy_version: "2026-01-01",
+          marketing_opt_in: false,
+        }),
+      ],
+    );
+
+    eq("new profile keeps the person's name", await scalar(client, `select full_name from profiles where id = $1`, [EVE]), "Eve Manga");
+    eq("new profile stores the phone", await scalar(client, `select phone from profiles where id = $1`, [EVE]), "+237699000111");
+    eq("new profile is not email verified", await scalar(client, `select email_verified_at from profiles where id = $1`, [EVE]), "");
+    eq("new profile is not phone verified", await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE]), "");
+    eq(
+      "new profile requires verification",
+      await scalar(client, `select verification_required from profiles where id = $1`, [EVE]),
+      "true",
+    );
+    eq(
+      "privacy consent is recorded",
+      await scalar(
+        client,
+        `select count(*) from privacy_consents where user_id = $1 and consent_type = 'privacy' and granted`,
+        [EVE],
+      ),
+      "1",
+    );
+
+    const selfVerification = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `update profiles set phone_verified_at = now() where id = $1`,
+      [EVE],
+    );
+    ok(
+      "users cannot mark their own phone verified",
+      Boolean(selfVerification?.message.includes("permission denied")),
+      selfVerification,
+    );
+    const selfOnboarding = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `update profiles set onboarding_completed_at = now(), verification_required = false where id = $1`,
+      [EVE],
+    );
+    ok(
+      "users cannot clear the verification requirement",
+      Boolean(selfOnboarding?.message.includes("permission denied")),
+      selfOnboarding,
+    );
+    ok(
+      "users can still edit their own display name",
+      Boolean(
+        await commitAs(client, eve, async (c) => {
+          const result = await c.query(`update profiles set full_name = 'Eve Manga' where id = $1`, [EVE]);
+          return result.rowCount === 1;
+        }),
+      ),
+    );
+
+    const unverifiedWorkspace = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `select public.create_workspace('Bypass Boutique', 'XAF', 'CM', 'Africa/Douala', null, 'fr')`,
+    );
+    ok(
+      "unverified user cannot create a workspace directly",
+      Boolean(unverifiedWorkspace?.message.includes("Verify your email and phone")),
+      unverifiedWorkspace,
+    );
+
+    const onboardingBeforeVerification = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `select public.complete_onboarding('Bypass Boutique', 'sole_proprietorship', 'Yaoundé', 'retail', 'micro', 'XAF', 1, 'CM', '+237699000111', 'Africa/Douala', 'fr', null)`,
+    );
+    ok(
+      "unverified user cannot finish onboarding",
+      Boolean(onboardingBeforeVerification?.message.match(/verification/i)),
+      onboardingBeforeVerification,
+    );
+
+    const codeHash = "a".repeat(64);
+    const requested = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string }>(
+        `select (public.request_phone_verification($1) ->> 'status') as status`,
+        [codeHash],
+      );
+      return result.rows[0]!.status;
+    });
+    eq("phone code is stored", requested, "sent");
+
+    const cooldown = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string }>(
+        `select (public.request_phone_verification($1) ->> 'status') as status`,
+        ["b".repeat(64)],
+      );
+      return result.rows[0]!.status;
+    });
+    eq("immediate resend is cooled down", cooldown, "cooldown");
+
+    const wrongCode = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string; attempts_remaining: number }>(
+        `select result ->> 'status' as status,
+                (result ->> 'attempts_remaining')::integer as attempts_remaining
+         from (select public.verify_phone_verification($1) as result) verification`,
+        ["b".repeat(64)],
+      );
+      return result.rows[0]!;
+    });
+    eq("a wrong code is rejected", wrongCode.status, "invalid");
+    eq("a wrong code consumes one attempt", wrongCode.attempts_remaining, 4);
+    eq(
+      "a wrong code does not verify the phone",
+      await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE]),
+      "",
+    );
+
+    const verified = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string }>(
+        `select (public.verify_phone_verification($1) ->> 'status') as status`,
+        [codeHash],
+      );
+      return result.rows[0]!.status;
+    });
+    eq("the matching code verifies the phone", verified, "verified");
+    ok(
+      "phone verification timestamp is set",
+      Boolean(await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE])),
+    );
+
+    const stillUnverified = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `select public.create_workspace('Bypass Boutique', 'XAF', 'CM', 'Africa/Douala', null, 'fr')`,
+    );
+    ok(
+      "phone-only verification is not enough",
+      Boolean(stillUnverified?.message.includes("Verify your email and phone")),
+      stillUnverified,
+    );
+
+    await client.query(`update auth.users set email_confirmed_at = now() where id = $1`, [EVE]);
+    ok(
+      "email confirmation mirrors into the profile",
+      Boolean(await scalar(client, `select email_verified_at from profiles where id = $1`, [EVE])),
+    );
+
+    const onboarded = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ data: { id: string } }>(
+        `select public.complete_onboarding(
+           'Manga Boutique', 'sole_proprietorship', 'Yaoundé', 'retail', 'micro',
+           'XAF', 1, 'CM', '+237699000111', 'Africa/Douala', 'fr', 'Ets Manga'
+         ) as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    const eveWorkspace = onboarded.id;
+    ok("verified user finishes onboarding", Boolean(eveWorkspace));
+    eq("onboarding stores the business name", await scalar(client, `select name from workspaces where id = $1`, [eveWorkspace]), "Manga Boutique");
+    eq("onboarding stores the legal name", await scalar(client, `select legal_name from workspaces where id = $1`, [eveWorkspace]), "Ets Manga");
+    eq("onboarding stores the business type", await scalar(client, `select business_type from workspaces where id = $1`, [eveWorkspace]), "sole_proprietorship");
+    eq("onboarding stores the industry", await scalar(client, `select industry from workspaces where id = $1`, [eveWorkspace]), "retail");
+    eq("onboarding stores the business size", await scalar(client, `select business_size from workspaces where id = $1`, [eveWorkspace]), "micro");
+    eq("onboarding stores the city", await scalar(client, `select city from workspaces where id = $1`, [eveWorkspace]), "Yaoundé");
+    eq("onboarding stores the business phone", await scalar(client, `select phone from workspaces where id = $1`, [eveWorkspace]), "+237699000111");
+    eq("onboarding stores the locale", await scalar(client, `select locale from profiles where id = $1`, [EVE]), "fr");
+    ok(
+      "onboarding records the completion time",
+      Boolean(await scalar(client, `select onboarding_completed_at from profiles where id = $1`, [EVE])),
+    );
+    eq(
+      "onboarding makes the user the workspace owner",
+      await scalar(client, `select role from workspace_members where workspace_id = $1 and user_id = $2`, [eveWorkspace, EVE]),
+      "owner",
+    );
+    eq(
+      "onboarding seeds the ledger",
+      await scalar(client, `select count(*) from accounts where workspace_id = $1`, [eveWorkspace]),
+      "8",
+    );
+
+    const planEscalation = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `update workspaces set plan = 'scale' where id = $1`,
+      [eveWorkspace],
+    );
+    ok(
+      "workspace users cannot upgrade their own plan",
+      Boolean(planEscalation?.message.includes("permission denied")),
+      planEscalation,
+    );
+    const ownerHijack = await expectError(
+      client,
+      "authenticated",
+      eve,
+      `update workspaces set owner_id = $1 where id = $2`,
+      [DORA, eveWorkspace],
+    );
+    ok(
+      "workspace users cannot transfer ownership directly",
+      Boolean(ownerHijack?.message.includes("permission denied")),
+      ownerHijack,
+    );
+
+    ok(
+      "a user can change their phone number",
+      Boolean(
+        await commitAs(client, eve, async (c) => {
+          const result = await c.query(`update profiles set phone = '+237699000222' where id = $1`, [EVE]);
+          return result.rowCount === 1;
+        }),
+      ),
+    );
+    eq("a new phone number is stored", await scalar(client, `select phone from profiles where id = $1`, [EVE]), "+237699000222");
+    eq(
+      "a new phone number loses its verification",
+      await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE]),
+      "",
+    );
+    eq(
+      "a new phone number re-arms the verification gate",
+      await scalar(client, `select verification_required from profiles where id = $1`, [EVE]),
+      "true",
+    );
+
+    await client.query(
+      `update otp_verifications set created_at = now() - interval '2 hours' where user_id = $1`,
+      [EVE],
+    );
+    const destinationChallenge = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string }>(
+        `select (public.request_phone_verification($1) ->> 'status') as status`,
+        ["c".repeat(64)],
+      );
+      return result.rows[0]!.status;
+    });
+    eq("a fresh challenge is issued for the new number", destinationChallenge, "sent");
+    await commitAs(client, eve, async (c) => {
+      await c.query(`update profiles set phone = '+237699000333' where id = $1`, [EVE]);
+    });
+    const staleDestination = await commitAs(client, eve, async (c) => {
+      const result = await c.query<{ status: string }>(
+        `select (public.verify_phone_verification($1) ->> 'status') as status`,
+        ["c".repeat(64)],
+      );
+      return result.rows[0]!.status;
+    });
+    eq("a code for the previous number is refused", staleDestination, "phone_changed");
+    eq(
+      "a stale code does not verify the replacement number",
+      await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE]),
+      "",
     );
 
     console.log("\nPhase 3 · tenant lifecycle");

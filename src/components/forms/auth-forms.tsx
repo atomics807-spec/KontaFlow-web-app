@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
-import { Field, Input } from "@/components/ui/input";
+import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { fill, useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
+import { PRIVACY_POLICY_PATH } from "@/lib/legal";
+import { COUNTRIES, countryName } from "@/lib/countries";
+import { LOCALES, LOCALE_META } from "@/lib/i18n/config";
 import {
   requestPasswordResetAction,
   signInAction,
@@ -100,16 +103,30 @@ export function SignupForm({ next }: { next: string }) {
         <input type="hidden" name="next" value={next} />
         <FormAlert state={state} />
 
-        <Field label={dict.auth.fullName} htmlFor="fullName" error={state.fieldErrors?.fullName?.[0]}>
-          <Input
-            id="fullName"
-            name="fullName"
-            autoComplete="name"
-            required
-            placeholder={dict.auth.fullNamePlaceholder}
-            aria-invalid={Boolean(state.fieldErrors?.fullName)}
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={dict.auth.firstName} htmlFor="firstName" error={state.fieldErrors?.firstName?.[0]}>
+            <Input
+              id="firstName"
+              name="firstName"
+              autoComplete="given-name"
+              required
+              maxLength={80}
+              placeholder="Awa"
+              aria-invalid={Boolean(state.fieldErrors?.firstName)}
+            />
+          </Field>
+          <Field label={dict.auth.lastName} htmlFor="lastName" error={state.fieldErrors?.lastName?.[0]}>
+            <Input
+              id="lastName"
+              name="lastName"
+              autoComplete="family-name"
+              required
+              maxLength={80}
+              placeholder="Nkeng"
+              aria-invalid={Boolean(state.fieldErrors?.lastName)}
+            />
+          </Field>
+        </div>
 
         <Field label={dict.auth.email} htmlFor="email" error={state.fieldErrors?.email?.[0]}>
           <Input
@@ -124,23 +141,111 @@ export function SignupForm({ next }: { next: string }) {
           />
         </Field>
 
-        <Field
-          label={dict.auth.password}
-          htmlFor="password"
-          hint={dict.auth.passwordHint}
-          error={state.fieldErrors?.password?.[0]}
-        >
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            placeholder="••••••••"
-            aria-invalid={Boolean(state.fieldErrors?.password)}
-          />
+        <div className="grid gap-4 sm:grid-cols-[1fr_9.5rem]">
+          <Field label={dict.auth.phone} htmlFor="phone" error={state.fieldErrors?.phone?.[0]}>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              inputMode="tel"
+              required
+              placeholder={dict.auth.phonePlaceholder}
+              aria-invalid={Boolean(state.fieldErrors?.phone)}
+            />
+          </Field>
+          <Field label={dict.auth.country} htmlFor="country">
+            <Select id="country" name="country" defaultValue="CM" autoComplete="country">
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {countryName(country.code, locale)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label={dict.auth.password}
+            htmlFor="password"
+            hint={dict.auth.passwordHint}
+            error={state.fieldErrors?.password?.[0]}
+          >
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              placeholder="••••••••••"
+              aria-invalid={Boolean(state.fieldErrors?.password)}
+            />
+          </Field>
+          <Field
+            label={dict.auth.confirmPassword}
+            htmlFor="confirm"
+            error={state.fieldErrors?.confirm?.[0]}
+          >
+            <Input
+              id="confirm"
+              name="confirm"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={10}
+              placeholder="••••••••••"
+              aria-invalid={Boolean(state.fieldErrors?.confirm)}
+            />
+          </Field>
+        </div>
+
+        <Field label={dict.auth.preferredLanguage} htmlFor="preferredLocale">
+          <Select id="preferredLocale" name="preferredLocale" defaultValue={locale}>
+            {LOCALES.map((code) => (
+              <option key={code} value={code}>
+                {LOCALE_META[code].label}
+              </option>
+            ))}
+          </Select>
         </Field>
+
+        <div className="space-y-3 rounded-xl border border-line bg-panel p-4">
+          <label className="flex items-start gap-3 text-sm text-ink">
+            <input
+              type="checkbox"
+              name="privacy"
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent-strong focus:ring-accent-strong/30"
+            />
+            <span>
+              {dict.auth.privacyAccept}{" "}
+              <a
+                href={`/${locale}${PRIVACY_POLICY_PATH}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-semibold text-accent underline-offset-2 hover:underline"
+              >
+                {dict.auth.privacyPolicy}
+              </a>
+            </span>
+          </label>
+          {state.fieldErrors?.privacyAccepted?.[0] ? (
+            <p className="text-xs font-medium text-danger" role="alert">
+              {state.fieldErrors.privacyAccepted[0]}
+            </p>
+          ) : null}
+          <label className="flex items-start gap-3 text-sm text-muted">
+            <input
+              type="checkbox"
+              name="marketing"
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-line text-accent-strong focus:ring-accent-strong/30"
+            />
+            <span>{dict.auth.marketingConsent}</span>
+          </label>
+          <p className="text-xs leading-relaxed text-muted">{dict.auth.privacyNote}</p>
+        </div>
 
         <SubmitButton className="w-full" size="lg" pendingLabel={dict.common.loading}>
           {dict.auth.signUp}

@@ -22,6 +22,25 @@
 * Email confirmation, password reset and invitations use the
   `/auth/callback?next=...` route with `safeNextPath()` to prevent open
   redirects (only same-origin relative paths are accepted).
+* Registration collects a real person (first name, last name, email, phone,
+  country) and explicit privacy consent with policy version, locale, IP and
+  user agent. `verification_required` forces both email and phone proof before
+  onboarding.
+* Phone OTPs are six digits from `crypto.randomInt`, HMAC-hashed with a
+  server-only secret before storage, bound to user + purpose, delivered over
+  the server-side SMS adapter and never returned to the browser. Verification
+  allows five attempts, a 60-second resend cooldown and five codes per hour.
+* Changing the phone number clears `phone_verified_at` and re-arms
+  verification by trigger.
+* `authenticated` has no column privilege on verification timestamps,
+  `verification_required`, `onboarding_completed_at`, `workspaces.owner_id` or
+  `workspaces.plan`, so a crafted PostgREST `update` cannot self-verify,
+  clear onboarding, change ownership or upgrade billing.
+* A database trigger refuses workspace creation for a self-authenticated,
+  unverified owner even if the client calls `create_workspace` directly.
+* The privacy notice is published at `/{locale}/security#privacy` and covers
+  data collected, use, retention, processor categories and user rights. Signup
+  links to it and stores the accepted policy version with every consent.
 
 ## Authorisation layers
 

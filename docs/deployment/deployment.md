@@ -28,6 +28,8 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Assistant; omit to disable cleanly |
 | `WHATSAPP_*` | Phone number id, access token, verify token, app secret |
 | `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN` | Africa's Talking callback |
+| `SMS_PROVIDER=africastalking` + `AFRICASTALKING_*` | Phone OTP delivery; `none` blocks onboarding, `console` is local-only |
+| `OTP_HMAC_SECRET` | Dedicated 32-byte secret for OTP hashing; do not reuse the service-role key |
 | `CRON_SECRET` | Bearer token for `/api/cron/daily-digest` |
 
 Never commit `.env.local`. Vercel stores encrypted env vars per environment;
@@ -93,7 +95,9 @@ npm run deploy:cloudflare
 
 ## Post-deploy smoke test
 
-1. Sign up, confirm email, complete onboarding → dashboard loads.
+1. Sign up, confirm email, receive the SMS code, verify the phone, complete
+   onboarding → dashboard loads. Without a working SMS provider the phone gate
+   blocks workspace creation by design.
 2. Record income and expense; dashboard and reports reflect them.
 3. Invite a teammate, accept the link in a private window, verify isolation in
    the new session (no access to your business unless invited).

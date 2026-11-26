@@ -41,20 +41,7 @@ export const getProfile = cache(async (): Promise<ProfileRow | null> => {
 
   const supabase = await createClient();
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  if (data) return data;
-
-  // Fallback for accounts created before the trigger was installed.
-  const { data: created } = await supabase
-    .from("profiles")
-    .insert({
-      id: user.id,
-      full_name: (user.user_metadata?.full_name as string | undefined) ?? "",
-      locale: "en",
-    })
-    .select("*")
-    .maybeSingle();
-
-  return created ?? null;
+  return data ?? null;
 });
 
 export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | null> => {
@@ -108,11 +95,18 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
     user,
     profile: profile ?? {
       id: user.id,
+      first_name: "",
+      last_name: "",
       full_name: "",
       phone: null,
       locale: "en",
+      country_code: "CM",
       avatar_url: null,
       default_workspace_id: null,
+      email_verified_at: user.email_confirmed_at ?? null,
+      phone_verified_at: null,
+      onboarding_completed_at: null,
+      verification_required: true,
       last_seen_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -133,8 +127,40 @@ export async function requireUser(locale: string, nextPath = "/dashboard"): Prom
   return user;
 }
 
+export type VerifiedIdentity = {
+  user: User;
+  profile: ProfileRow | null;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+};
+
+/**
+ * Blocks unverified accounts from onboarding and the dashboard. Accounts that
+ * predate Phase 4 have `verification_required = false` and pass through.
+ */
+export async function requireVerifiedUser(
+  locale: string,
+  nextPath = `/${locale}/dashboard`,
+): Promise<VerifiedIdentity> {
+  const user = await requireUser(locale, nextPath);
+  const profile = await getProfile();
+  const emailVerified = Boolean(user.email_confirmed_at || profile?.email_verified_at);
+  const phoneVerified = Boolean(profile?.phone_verified_at);
+
+  if (profile?.verification_required) {
+    if (!emailVerified) {
+      redirect(`/${locale}/verify-email?next=${encodeURIComponent(nextPath)}`);
+    }
+    if (!phoneVerified) {
+      redirect(`/${locale}/verify-phone?next=${encodeURIComponent(nextPath)}`);
+    }
+  }
+
+  return { user, profile, emailVerified, phoneVerified };
+}
+
 export async function requireWorkspaceContext(locale: string): Promise<WorkspaceContext> {
-  await requireUser(locale);
+  await requireVerifiedUser(locale);
   const context = await getWorkspaceContext();
   if (!context) redirect(`/${locale}/onboarding`);
   return context;

@@ -26,6 +26,11 @@ its tests cannot drift apart.
 | `0015_phase3_storage` | five workspace buckets + profile images, tenant-scoped policies |
 | `0016_phase3_cascade_deletion` | cascade-safe tenant deletion: deferred tenant FKs, workspace-delete marker, guards that yield only during a cascade |
 | `0017_contact_messages` | inbound public contact form: `contact_messages` (service-role only, no tenant, RLS enabled, topic/status/locale checks) |
+| `0018_phase4_identity_verification` | named profiles, verification timestamps, onboarding fields, consent metadata, hashed phone-OTP RPCs, `complete_onboarding` |
+| `0019_phase4_workspace_verification_gate` | trigger that blocks workspace creation by an unverified owner, even through the lower-level RPC |
+| `0020_phase4_column_privileges` | column grants so browser clients cannot write verification flags, onboarding state, ownership or plan |
+| `0021_phase4_phone_change_reverification` | changing a phone number clears its verification and re-arms the onboarding gate |
+| `0022_phase4_bind_otp_to_destination` | a code is refused if the profile phone changed after it was sent |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 
@@ -60,6 +65,29 @@ domain names without duplicating data.
 
 The compatibility views are read-only and use `security_invoker = true`, so the
 caller's RLS applies. Writes always go to the canonical table.
+
+## Identity and verification
+
+A person registers with a first name, last name, email, phone and country.
+`public.profiles` stores those identity fields plus `email_verified_at`,
+`phone_verified_at`, `verification_required` and `onboarding_completed_at`.
+`privacy_consents` records the exact policy version, locale, IP, user agent and
+marketing choice at signup.
+
+Phone codes are six digits generated with `crypto.randomInt`. Only an HMAC
+(`OTP_HMAC_SECRET`, bound to user + purpose) reaches `otp_verifications`; the
+plaintext never touches the database. `request_phone_verification` enforces a
+60-second resend cooldown, five codes per rolling hour and one active challenge;
+`verify_phone_verification` allows at most five attempts, expires codes after
+ten minutes, refuses a code whose destination no longer matches the profile
+phone and marks the profile verified in the same transaction.
+
+`complete_onboarding` refuses to run while either contact channel is
+unverified, then calls `create_workspace`, stores the business profile and marks
+the profile complete atomically. `app.enforce_verified_workspace_creation` is a
+second line of defence at the `workspaces` table. Verification timestamps are
+not writable by `authenticated`; the same grants protect `workspaces.owner_id`
+and `workspaces.plan`.
 
 ## Transactions and corrections
 

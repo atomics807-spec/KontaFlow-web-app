@@ -66,6 +66,46 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
         </div>
       </section>
 
+      <section id="privacy" className="scroll-mt-24 border-t border-line py-16 sm:py-20">
+        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Reveal>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-strong">{p.privacyEyebrow}</p>
+            <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-heading sm:text-3xl">{p.privacyTitle}</h2>
+            <p className="mt-2 text-sm text-muted">{p.privacyUpdated}</p>
+          </Reveal>
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <Reveal>
+              <div className="space-y-5 text-sm leading-relaxed text-muted">
+                <p>{p.privacyIntro}</p>
+                <div>
+                  <h3 className="font-bold text-heading">{p.privacyDataTitle}.</h3>
+                  <p className="mt-1">{p.privacyData}</p>
+                </div>
+                <div>
+                  <h3 className="font-bold text-heading">{p.privacyUseTitle}.</h3>
+                  <p className="mt-1">{p.privacyUse}</p>
+                </div>
+              </div>
+            </Reveal>
+            <Reveal delay={0.05}>
+              <div className="space-y-5 text-sm leading-relaxed text-muted">
+                <div>
+                  <h3 className="font-bold text-heading">{p.privacyRetentionTitle}.</h3>
+                  <p className="mt-1">{p.privacyRetention}</p>
+                </div>
+                <div>
+                  <h3 className="font-bold text-heading">{p.privacyRightsTitle}.</h3>
+                  <p className="mt-1">{p.privacyRights}</p>
+                </div>
+                <p className="rounded-xl border border-line bg-panel p-4 font-medium text-ink">
+                  {p.privacyContact}
+                </p>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       <CtaSection />
     </>
   );

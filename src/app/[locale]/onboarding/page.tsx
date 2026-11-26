@@ -4,7 +4,7 @@ import { Logo } from "@/components/layout/logo";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { OnboardingForm } from "@/components/forms/onboarding-form";
 import { SignOutButton } from "@/components/forms/sign-out-button";
-import { getSessionUser, getWorkspaceContext } from "@/lib/supabase/auth";
+import { getWorkspaceContext, requireVerifiedUser } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -16,8 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 export default async function OnboardingPage({ params }: { params: Promise<{ locale: string }> }) {
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
-  const user = await getSessionUser();
-  if (!user) redirect(`/${locale}/login?next=${encodeURIComponent("/onboarding")}`);
+  const { user, profile } = await requireVerifiedUser(locale, `/${locale}/onboarding`);
 
   const context = await getWorkspaceContext();
   if (context) redirect(`/${locale}/dashboard`);
@@ -37,8 +36,13 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
       </header>
 
       <main id="main" className="relative mx-auto flex w-full max-w-5xl justify-center px-5 pb-16 pt-6 sm:px-8 sm:pt-10">
-        <div className="surface w-full max-w-xl p-6 sm:p-9">
-          <OnboardingForm email={user.email ?? ""} />
+        <div className="surface w-full max-w-3xl p-6 sm:p-9">
+          <OnboardingForm
+            email={user.email ?? ""}
+            defaultCountry={profile?.country_code ?? "CM"}
+            defaultLocale={profile?.locale ?? locale}
+            defaultPhone={profile?.phone ?? ""}
+          />
         </div>
       </main>
     </div>

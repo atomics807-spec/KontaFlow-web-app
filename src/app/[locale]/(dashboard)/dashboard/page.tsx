@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Banknote, Sparkles, Trendin
 import { CashflowChart } from "@/components/charts/cashflow-chart";
 import { KpiCard, deltaTenths } from "@/components/dashboard/kpi-card";
 import { TransactionListCard } from "@/components/dashboard/transaction-list";
+import { GettingStarted } from "@/components/dashboard/getting-started";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +23,15 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: dict.nav.overview, robots: { index: false, follow: false } };
 }
 
-export default async function DashboardPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function DashboardPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ welcome?: string }>;
+}) {
   const locale = resolveLocale((await params).locale);
+  const { welcome } = await searchParams;
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const { workspace, profile } = context;
@@ -117,6 +125,8 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   return (
     <div className="space-y-6">
       {header}
+
+      {welcome === "1" ? <GettingStarted locale={locale} dict={dict} /> : null}
 
       <section aria-label={dict.dashboard.quickActions} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard

@@ -43,8 +43,12 @@ export async function bootstrapLocalAuth(client: Client): Promise<void> {
       phone text,
       raw_user_meta_data jsonb not null default '{}'::jsonb,
       role text default 'authenticated',
-      created_at timestamptz not null default now()
+      created_at timestamptz not null default now(),
+      email_confirmed_at timestamptz
     );
+
+    alter table auth.users
+      add column if not exists email_confirmed_at timestamptz;
 
     create or replace function auth.jwt()
     returns jsonb

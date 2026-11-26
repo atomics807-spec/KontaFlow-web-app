@@ -19,6 +19,7 @@ const PROTECTED_PAGES = [
   "/team",
   "/billing",
   "/onboarding",
+  "/verify-phone",
 ];
 
 const STATIC_FILE = /\.(?:png|jpe?g|svg|ico|webp|avif|txt|xml|webmanifest|js|css|woff2?|map)$/i;
@@ -58,7 +59,7 @@ export async function proxy(request: NextRequest) {
   if (!userId && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
-    url.search = `?next=${encodeURIComponent(rest)}`;
+    url.search = `?next=${encodeURIComponent(`/${locale}${rest}`)}`;
     return carryCookies(response, NextResponse.redirect(url));
   }
 

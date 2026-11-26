@@ -32,11 +32,18 @@ export type UsageKind = "ai_message" | "ussd_session" | "whatsapp_message" | "sy
 
 export type ProfileRow = {
   id: string;
+  first_name: string;
+  last_name: string;
   full_name: string;
   phone: string | null;
   locale: string;
+  country_code: string;
   avatar_url: string | null;
   default_workspace_id: string | null;
+  email_verified_at: string | null;
+  phone_verified_at: string | null;
+  onboarding_completed_at: string | null;
+  verification_required: boolean;
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;
@@ -52,8 +59,14 @@ export type WorkspaceRow = {
   timezone: string;
   locale: string;
   country_code: string;
+  city: string | null;
+  phone: string | null;
+  business_type: string | null;
+  industry: string | null;
+  business_size: string | null;
   fiscal_year_start_month: number;
   logo_url: string | null;
+  logo_path: string | null;
   plan: WorkspacePlan;
   settings: Json;
   created_at: string;
@@ -469,6 +482,36 @@ export type Database = {
           p_locale?: string;
         };
         Returns: { id: string; name: string; slug: string; currency: string; timezone: string; locale: string };
+      };
+      complete_onboarding: {
+        Args: {
+          p_name: string;
+          p_business_type: string | null;
+          p_city: string | null;
+          p_industry: string | null;
+          p_business_size: string | null;
+          p_currency?: string;
+          p_fiscal_year_start_month?: number;
+          p_country?: string;
+          p_phone?: string | null;
+          p_timezone?: string;
+          p_locale?: string;
+          p_legal_name?: string | null;
+        };
+        Returns: { id: string; name: string; slug: string; currency: string; timezone: string; locale: string; onboarding_completed: boolean };
+      };
+      request_phone_verification: {
+        Args: { p_code_hash: string; p_expires_at?: string; p_ip?: string | null };
+        Returns: {
+          status: string;
+          destination?: string;
+          expires_at?: string;
+          retry_after_seconds?: number;
+        };
+      };
+      verify_phone_verification: {
+        Args: { p_code_hash: string };
+        Returns: { status: string; attempts_remaining?: number };
       };
       record_transaction: {
         Args: { p_payload: Json };

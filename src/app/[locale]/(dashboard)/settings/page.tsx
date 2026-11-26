@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { History, MessageCircle, Smartphone } from "lucide-react";
+import { ChevronRight, History, MessageCircle, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,20 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
         </div>
         <Badge tone="outline">{dict.plans[workspace.plan]}</Badge>
       </header>
+
+      <Link
+        href={`/${locale}/settings/security`}
+        className="surface flex items-center gap-3 p-4 transition hover:border-accent-strong/40 sm:p-5"
+      >
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-strong">
+          <ShieldCheck className="h-5 w-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-heading">{dict.identity.securityTitle}</span>
+          <span className="mt-0.5 block text-xs text-muted">{dict.identity.securitySubtitle}</span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted" aria-hidden />
+      </Link>
 
       <Card className="p-5 sm:p-6">
         <h2 className="text-base font-bold text-heading">{dict.settings.businessProfile}</h2>

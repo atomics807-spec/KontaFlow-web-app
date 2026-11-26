@@ -7,6 +7,11 @@ import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getPublicEnv } from "@/lib/env";
 import { emailSchema, passwordSchema } from "@/lib/validation/schemas";
+import { signupSchema } from "@/lib/validation/auth";
+import { normalizePhone } from "@/lib/validation/phone";
+import { PRIVACY_POLICY_VERSION } from "@/lib/legal";
+import { getRequestMeta } from "@/lib/security/request-meta";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   fieldErrorsFrom,
   formError,
@@ -21,9 +26,14 @@ function localeFrom(formData: FormData) {
   return resolveLocale(String(formData.get("locale") ?? "en"));
 }
 
+function unconfirmedEmail(message: string): boolean {
+  return /confirm|confirmed|verification/i.test(message);
+}
+
 export async function signInAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = localeFrom(formData);
   const dict = await getDictionary(locale);
+  const meta = await getRequestMeta();
 
   const parsed = z
     .object({ email: emailSchema, password: z.string().min(1, dict.auth.password) })
@@ -36,18 +46,52 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
   }
 
+  const limitKey = `signin:${meta.ip ?? "unknown"}:${parsed.data.email}`;
+  if (!rateLimit(limitKey, 5, 15 * 60_000)) {
+    logger.warn("auth.sign_in_rate_limited", { ip: meta.ip, email: parsed.data.email });
+    return formError(dict.identity.tooManyAttempts);
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email: parsed.data.email,
     password: parsed.data.password,
   });
 
   if (error) {
     logger.warn("auth.sign_in_failed", { message: error.message });
+    if (unconfirmedEmail(error.message)) {
+      redirect(
+        `/${locale}/verify-email?email=${encodeURIComponent(parsed.data.email)}&next=${encodeURIComponent(
+          `/${locale}/onboarding`,
+        )}`,
+      );
+    }
     return formError(dict.auth.invalidCredentials);
   }
 
   const next = safeNextPath(formData.get("next"), `/${locale}/dashboard`);
+  const user = data.user;
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("verification_required, phone_verified_at, email_verified_at")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.verification_required) {
+      if (!user.email_confirmed_at && !profile.email_verified_at) {
+        redirect(
+          `/${locale}/verify-email?email=${encodeURIComponent(user.email ?? "")}&next=${encodeURIComponent(next)}`,
+        );
+      }
+      if (!profile.phone_verified_at) {
+        redirect(`/${locale}/verify-phone?next=${encodeURIComponent(next)}`);
+      }
+    }
+  }
+
   revalidatePath("/", "layout");
   redirect(next);
 }
@@ -55,49 +99,130 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 export async function signUpAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = localeFrom(formData);
   const dict = await getDictionary(locale);
+  const meta = await getRequestMeta();
 
-  const parsed = z
-    .object({
-      fullName: z.string().trim().min(2, dict.auth.nameRequired).max(120),
-      email: emailSchema,
-      password: passwordSchema,
-    })
-    .safeParse({
-      fullName: formData.get("fullName"),
-      email: formData.get("email"),
-      password: formData.get("password"),
-    });
+  const parsed = signupSchema({
+    firstNameRequired: dict.auth.firstNameRequired,
+    lastNameRequired: dict.auth.lastNameRequired,
+    phoneInvalid: dict.auth.phoneInvalid,
+    privacyRequired: dict.auth.privacyRequired,
+    passwordMismatch: dict.auth.passwordMismatch,
+  }).safeParse({
+    firstName: formData.get("firstName"),
+    lastName: formData.get("lastName"),
+    email: formData.get("email"),
+    country: formData.get("country"),
+    phone: formData.get("phone"),
+    password: formData.get("password"),
+    confirm: formData.get("confirm"),
+    preferredLocale: formData.get("preferredLocale"),
+    privacyAccepted: formData.get("privacy") === "on",
+    marketingOptIn: formData.get("marketing") === "on",
+  });
 
   if (!parsed.success) {
     return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
   }
 
+  if (!rateLimit(`signup:${meta.ip ?? "unknown"}`, 5, 60 * 60_000)) {
+    logger.warn("auth.sign_up_rate_limited", { ip: meta.ip });
+    return formError(dict.identity.tooManyAttempts);
+  }
+
+  const phone = normalizePhone(parsed.data.phone, parsed.data.country);
+  if (!phone) {
+    return formError(dict.auth.phoneInvalid, { phone: [dict.auth.phoneInvalid] });
+  }
+
+  const fullName = `${parsed.data.firstName} ${parsed.data.lastName}`.trim();
+  const acceptedAt = new Date().toISOString();
   const target = safeNextPath(formData.get("next") as string | null, `/${locale}/onboarding`);
   const { NEXT_PUBLIC_APP_URL } = getPublicEnv();
   const supabase = await createClient();
+
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName, locale },
-      emailRedirectTo: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(target)}`,
+      data: {
+        first_name: parsed.data.firstName,
+        last_name: parsed.data.lastName,
+        full_name: fullName,
+        phone,
+        country: parsed.data.country,
+        locale: parsed.data.preferredLocale,
+        privacy_accepted: true,
+        privacy_policy_version: PRIVACY_POLICY_VERSION,
+        privacy_accepted_at: acceptedAt,
+        marketing_opt_in: parsed.data.marketingOptIn,
+        consent_ip: meta.ip,
+        consent_user_agent: meta.userAgent,
+      },
+      emailRedirectTo: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(
+        `/${locale}/verify-phone?next=${encodeURIComponent(target)}`,
+      )}`,
     },
   });
 
   if (error) {
-    logger.warn("auth.sign_up_failed", { message: error.message });
+    logger.warn("auth.sign_up_failed", {
+      message: error.message,
+      code: error.code,
+      phone,
+    });
+    if (/phone|profiles_phone_key|database error/i.test(error.message) && /duplicate|database/i.test(error.message)) {
+      return formError(dict.auth.phoneTaken, { phone: [dict.auth.phoneTaken] });
+    }
     const message = /already|registered|exists/i.test(error.message)
       ? dict.auth.haveAccount
       : dict.errors.generic;
     return formError(message);
   }
 
-  if (data.session) {
+  if (data.session && data.user) {
+    // With email confirmations disabled the account is already confirmed and
+    // the trigger has set email_verified_at. Phone proof is still required.
     revalidatePath("/", "layout");
-    redirect(target);
+    redirect(`/${locale}/verify-phone?next=${encodeURIComponent(target)}`);
   }
 
-  return formSuccess(dict.auth.checkEmail);
+  redirect(
+    `/${locale}/verify-email?email=${encodeURIComponent(parsed.data.email)}&sent=1&next=${encodeURIComponent(
+      target,
+    )}`,
+  );
+}
+
+export async function resendEmailVerificationAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const locale = localeFrom(formData);
+  const dict = await getDictionary(locale);
+  const meta = await getRequestMeta();
+  const parsed = emailSchema.safeParse(formData.get("email"));
+
+  if (!parsed.success) {
+    return formError(dict.auth.emailInvalid, { email: [dict.auth.emailInvalid] });
+  }
+  if (!rateLimit(`verify-email:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 10 * 60_000)) {
+    return formError(dict.identity.tooManyAttempts);
+  }
+
+  const { NEXT_PUBLIC_APP_URL } = getPublicEnv();
+  const supabase = await createClient();
+  await supabase.auth.resend({
+    type: "signup",
+    email: parsed.data,
+    options: {
+      emailRedirectTo: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=${encodeURIComponent(
+        `/${locale}/verify-phone`,
+      )}`,
+    },
+  });
+
+  // Never reveal whether an address exists or is already confirmed.
+  return formSuccess(dict.identity.verifyEmailResent);
 }
 
 export async function requestPasswordResetAction(
@@ -106,10 +231,14 @@ export async function requestPasswordResetAction(
 ): Promise<FormState> {
   const locale = localeFrom(formData);
   const dict = await getDictionary(locale);
+  const meta = await getRequestMeta();
 
   const parsed = emailSchema.safeParse(formData.get("email"));
   if (!parsed.success) {
     return formError(dict.auth.emailInvalid, { email: [dict.auth.emailInvalid] });
+  }
+  if (!rateLimit(`reset:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 15 * 60_000)) {
+    return formError(dict.identity.tooManyAttempts);
   }
 
   const { NEXT_PUBLIC_APP_URL } = getPublicEnv();
@@ -147,7 +276,10 @@ export async function updatePasswordAction(_prev: FormState, formData: FormData)
   if (!user) return formError(dict.errors.sessionExpired);
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
-  if (error) return formError(dict.errors.generic);
+  if (error) {
+    logger.warn("auth.password_update_failed", { message: error.message });
+    return formError(dict.errors.generic);
+  }
 
   return formSuccess(dict.auth.passwordUpdated);
 }
