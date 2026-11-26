@@ -221,6 +221,8 @@ export type BlogCopy = {
   subtitle: string;
   imageAlt: string;
   imageCaption: string;
+  featuredImage: string;
+  featuredImageAlt: string;
   featuredLabel: string;
   readArticle: string;
   allArticles: string;

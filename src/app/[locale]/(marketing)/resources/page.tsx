@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/resources",
     title: content.blog.metaTitle,
     description: content.blog.metaDescription,
-    image: "/images/marketing/market-vendor-phone.webp",
+    image: "/images/marketing/business-analysis.webp",
   });
 }
 
@@ -40,7 +40,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
           eyebrow: blog.eyebrow,
           title: blog.title,
           subtitle: blog.subtitle,
-          image: "/images/marketing/market-vendor-phone.webp",
+          image: "/images/marketing/business-analysis.webp",
           imageAlt: blog.imageAlt,
           imageCaption: blog.imageCaption,
         }}
@@ -58,8 +58,8 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
               <article className="grid overflow-hidden rounded-[1.8rem] border border-line bg-panel lg:grid-cols-[1.05fr_0.95fr]">
                 <div className="relative min-h-[18rem] lg:min-h-[26rem]">
                   <Image
-                    src={featured.image}
-                    alt={featured.imageAlt}
+                    src={blog.featuredImage}
+                    alt={blog.featuredImageAlt}
                     fill
                     priority
                     sizes="(max-width: 1024px) 100vw, 52vw"

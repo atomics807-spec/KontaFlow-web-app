@@ -201,7 +201,7 @@ export function AiSection({ copy }: { copy: HomeCopy }) {
         <Reveal delay={0.08}>
           <div className="relative overflow-hidden rounded-[1.8rem] border border-white/15 bg-white/[0.06] p-2">
             <Image
-              src="/images/marketing/market-vendor-phone.webp"
+              src="/images/marketing/ai-bookkeeping-phone.webp"
               alt={copy.ai.imageAlt}
               width={900}
               height={600}

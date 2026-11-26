@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { LogoMark } from "@/components/layout/logo";
@@ -17,9 +18,23 @@ export default async function AuthLayout({
   return (
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <aside className="relative hidden overflow-hidden bg-forest p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        <Image
+          src="/images/marketing/partnership-growth.webp"
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="(max-width: 1024px) 100vw, 52vw"
+          className="object-cover object-[58%_center]"
+        />
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-forest/70" />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(22,169,126,0.35),transparent_55%),radial-gradient(circle_at_85%_90%,rgba(242,182,75,0.16),transparent_50%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(100deg,rgba(8,45,35,0.98)_0%,rgba(8,45,35,0.88)_42%,rgba(8,45,35,0.55)_100%)]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_10%,rgba(22,169,126,0.30),transparent_55%),radial-gradient(circle_at_85%_90%,rgba(242,182,75,0.14),transparent_50%)]"
         />
         <div className="relative">
           <Link href={`/${locale}`} className="inline-flex items-center gap-2.5">

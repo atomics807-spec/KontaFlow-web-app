@@ -136,7 +136,7 @@ export const fr: SiteContent = {
         "Demande avant de valider un montant, une catégorie ou une date flous.",
         "Répond à partir de votre espace autorisé, jamais de celui d'un autre client.",
       ],
-      imageAlt: "Vendeur de marché consultant son téléphone dans un étal coloré",
+      imageAlt: "Mains utilisant un téléphone et un ordinateur portable pour la comptabilité en ligne",
       note: "Illustration produit. L'IA peut se tromper ; vérifiez les écritures avant validation.",
       confirm: "Confirmer",
       edit: "Modifier",
@@ -608,8 +608,8 @@ export const fr: SiteContent = {
     accent: "Sans facture de conseil.",
     subtitle:
       "KontaFlow est d'abord un produit. Autour, nous aidons concrètement avec la configuration, les canaux, les rôles et les rapports dont votre comptable a besoin.",
-    image: "/images/marketing/small-business-owner.webp",
-    imageAlt: "Commerçante devant son étal au marché",
+    image: "/images/marketing/bookkeeping-services.webp",
+    imageAlt: "Bureau de comptabilité avec ordinateur portable, calculatrice et graphiques financiers",
     imageCaption: "Photographie d'illustration, pas un client.",
     introTitle: "Choisissez l'aide dont vous avez besoin",
     introBody:
@@ -894,8 +894,10 @@ export const fr: SiteContent = {
     title: "Des notes pratiques pour de meilleurs comptes.",
     subtitle:
       "Pas de jargon, pas de slides recyclées. Des guides courts pour propriétaires et comptables confrontés à de vraies contraintes.",
-    imageAlt: "Vendeurs de marché arrangeant plantain et légumes",
-    imageCaption: "Photographie d'illustration, pas un client.",
+    imageAlt: "Tableau d'analyse d'entreprise avec graphiques sur une silhouette de ville",
+    imageCaption: "Visuel d'illustration, pas un client.",
+    featuredImage: "/images/marketing/analytics-dashboard.webp",
+    featuredImageAlt: "Tableau de bord analytique avec graphiques et un graphique à barres physique sur un bureau",
     featuredLabel: "À la une",
     readArticle: "Lire l'article",
     allArticles: "Tous les articles",
@@ -909,8 +911,8 @@ export const fr: SiteContent = {
         category: "Bases de la comptabilité",
         publishedAt: "2026-11-12",
         readingMinutes: 5,
-        image: "/images/marketing/mobile-money.webp",
-        imageAlt: "Agent de mobile money dans une petite boutique",
+        image: "/images/marketing/growth-analytics.webp",
+        imageAlt: "Personne examinant des analyses de croissance avec une courbe ascendante en surimpression dans un bureau",
         intro:
           "Quand l'argent de l'entreprise et l'argent personnel partagent le même portefeuille, chaque rapport devient une supposition. Pas besoin d'un service financier pour corriger cela. Il faut une règle, un peu de séparation et une habitude qui survit à une semaine chargée.",
         sections: [

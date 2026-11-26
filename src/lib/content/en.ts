@@ -136,7 +136,7 @@ export const en: SiteContent = {
         "Asks before posting an unclear amount, category or date.",
         "Answers from your permitted workspace records, never another tenant's.",
       ],
-      imageAlt: "Market vendor checking his phone in a colourful stall",
+      imageAlt: "Hands using a phone and laptop for online bookkeeping",
       note: "Product illustration. AI output can be wrong; review entries before posting.",
       confirm: "Confirm",
       edit: "Edit",
@@ -615,8 +615,8 @@ export const en: SiteContent = {
     accent: "Without the consultancy invoice.",
     subtitle:
       "KontaFlow is a product first. Around it, we offer practical help with setup, channels, team roles and the reports your accountant needs.",
-    image: "/images/marketing/small-business-owner.webp",
-    imageAlt: "Small business owner standing in her market stall",
+    image: "/images/marketing/bookkeeping-services.webp",
+    imageAlt: "Bookkeeping desk with laptop, calculator and financial charts",
     imageCaption: "Illustrative photography, not a customer.",
     introTitle: "Choose the help you need",
     introBody:
@@ -904,8 +904,10 @@ export const en: SiteContent = {
     title: "Practical notes for better books.",
     subtitle:
       "No jargon, no recycled corporate slides. Short guides for owners and accountants working with real constraints.",
-    imageAlt: "Market vendors arranging plantain and produce",
-    imageCaption: "Illustrative photography, not a customer.",
+    imageAlt: "Business analysis dashboard with charts over a city skyline",
+    imageCaption: "Illustrative graphic, not a customer.",
+    featuredImage: "/images/marketing/analytics-dashboard.webp",
+    featuredImageAlt: "Analytics dashboard with charts and a physical bar graph on a desk",
     featuredLabel: "Featured",
     readArticle: "Read article",
     allArticles: "All articles",
@@ -919,8 +921,8 @@ export const en: SiteContent = {
         category: "Bookkeeping basics",
         publishedAt: "2026-11-12",
         readingMinutes: 5,
-        image: "/images/marketing/mobile-money.webp",
-        imageAlt: "Mobile money agent inside a small shop",
+        image: "/images/marketing/growth-analytics.webp",
+        imageAlt: "Person reviewing growth analytics with a rising chart overlay in an office",
         intro:
           "When business and personal money share one wallet, every report becomes a guess. You do not need a finance department to fix that. You need a rule, a small amount of separation and a habit that survives a busy week.",
         sections: [

@@ -136,7 +136,7 @@ export const pcm: SiteContent = {
         "E dey ask before e post amount, category or date wey no clear.",
         "E dey answer from your workspace record, no be another tenant own.",
       ],
-      imageAlt: "Market vendor dey check him phone for colourful stall",
+      imageAlt: "Hands dey use phone and laptop for online bookkeeping",
       note: "Product picture. AI fit make mistake; check entry before posting.",
       confirm: "Confirm",
       edit: "Change",
@@ -599,8 +599,8 @@ export const pcm: SiteContent = {
     accent: "Without big consultancy bill.",
     subtitle:
       "KontaFlow na product first. Around am, we dey help with setup, channel, team role and di report wey your accountant need.",
-    image: "/images/marketing/small-business-owner.webp",
-    imageAlt: "Small business owner dey stand for her market stall",
+    image: "/images/marketing/bookkeeping-services.webp",
+    imageAlt: "Bookkeeping desk with laptop, calculator and financial chart",
     imageCaption: "Photo for illustration, no be customer.",
     introTitle: "Choose di help wey yu need",
     introBody:
@@ -879,8 +879,10 @@ export const pcm: SiteContent = {
     title: "Practical note for better book.",
     subtitle:
       "No jargon, no corporate slide. Short guide for owner and accountant wey dey work with real constraint.",
-    imageAlt: "Market traders dey arrange plantain and produce",
-    imageCaption: "Photo for illustration, no be customer.",
+    imageAlt: "Business analysis dashboard with chart over city skyline",
+    imageCaption: "Illustration picture, no be customer.",
+    featuredImage: "/images/marketing/analytics-dashboard.webp",
+    featuredImageAlt: "Analytics dashboard with chart and physical bar graph on desk",
     featuredLabel: "Featured",
     readArticle: "Read article",
     allArticles: "All article",
@@ -894,8 +896,8 @@ export const pcm: SiteContent = {
         category: "Bookkeeping basics",
         publishedAt: "2026-11-12",
         readingMinutes: 5,
-        image: "/images/marketing/mobile-money.webp",
-        imageAlt: "Mobile money agent inside small shop",
+        image: "/images/marketing/growth-analytics.webp",
+        imageAlt: "Person dey check growth analytics with rising chart overlay for office",
         intro:
           "If business and personal money share one wallet, every report become guess. Yu no need finance department to fix am. Yu need one rule, small separation and habit wey go survive busy week.",
         sections: [
