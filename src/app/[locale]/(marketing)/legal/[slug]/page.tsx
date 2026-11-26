@@ -27,7 +27,7 @@ export async function generateMetadata({
     path: `/legal/${doc.slug}`,
     title: `${doc.title} — KontaFlow`,
     description: doc.description,
-    image: "/images/marketing/produce.webp",
+    image: "/images/marketing/business-notes.webp",
   });
 }
 
@@ -58,7 +58,7 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
           </div>
           <div className="relative hidden min-h-[15rem] lg:block">
             <Image
-              src="/images/marketing/produce.webp"
+              src="/images/marketing/business-notes.webp"
               alt={content.common.illustrativePhotoAlt}
               fill
               sizes="36vw"

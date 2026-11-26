@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/pricing",
     title: `${content.home.subscription.title} — KontaFlow`,
     description: content.home.subscription.subtitle,
-    image: "/images/marketing/cafe-owner.webp",
+    image: "/images/marketing/office-gadgets.webp",
   });
 }
 
@@ -34,7 +34,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
           eyebrow: pricing.eyebrow,
           title: pricing.title,
           subtitle: pricing.subtitle,
-          image: "/images/marketing/cafe-owner.webp",
+          image: "/images/marketing/office-gadgets.webp",
           imageAlt: content.common.illustrativePhotoAlt,
           imageCaption: content.common.illustrativePhoto,
         }}

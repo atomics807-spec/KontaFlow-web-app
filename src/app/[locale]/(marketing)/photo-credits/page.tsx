@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/photo-credits",
     title: `${content.photoCredits.title} — KontaFlow`,
     description: content.photoCredits.intro,
-    image: "/images/marketing/market-vendors.webp",
+    image: "/images/marketing/team-meeting.webp",
   });
 }
 
@@ -30,7 +30,7 @@ export default async function PhotoCreditsPage({ params }: { params: Promise<{ l
           eyebrow: content.common.legalNav,
           title: credits.title,
           subtitle: credits.intro,
-          image: "/images/marketing/market-vendors.webp",
+          image: "/images/marketing/team-meeting.webp",
           imageAlt: content.common.illustrativePhotoAlt,
           imageCaption: content.common.illustrativePhoto,
         }}

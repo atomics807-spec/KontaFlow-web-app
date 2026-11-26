@@ -16,7 +16,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/security",
     title: dict.pages.security.title,
     description: dict.pages.security.subtitle,
-    image: "/images/marketing/office-work.webp",
+    image: "/images/marketing/security-home-office.webp",
   });
 }
 
@@ -41,7 +41,7 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
           eyebrow: p.eyebrow,
           title: p.title,
           subtitle: p.subtitle,
-          image: "/images/marketing/office-work.webp",
+          image: "/images/marketing/security-home-office.webp",
           imageAlt: content.common.illustrativePhotoAlt,
           imageCaption: content.common.illustrativePhoto,
         }}

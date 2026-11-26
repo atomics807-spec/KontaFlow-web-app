@@ -193,7 +193,7 @@ export function HomeHero({
         <div className="relative mx-auto w-full max-w-[34rem] pb-10 lg:max-w-none lg:pb-16">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/15 sm:aspect-[5/5] lg:aspect-[4/4.5] lg:rounded-b-none lg:border-b-0">
             <Image
-              src="/images/marketing/professional-team.webp"
+              src="/images/marketing/home-hero.webp"
               alt={copy.hero.imageAlt}
               fill
               priority

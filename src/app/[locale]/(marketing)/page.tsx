@@ -35,7 +35,7 @@ export async function generateMetadata({
     path: "",
     title: content.home.metaTitle,
     description: content.home.metaDescription,
-    image: "/images/marketing/professional-team.webp",
+    image: "/images/marketing/home-hero.webp",
   });
 }
 

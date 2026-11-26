@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/resources",
     title: content.blog.metaTitle,
     description: content.blog.metaDescription,
-    image: "/images/marketing/market-vendors.webp",
+    image: "/images/marketing/market-vendor-phone.webp",
   });
 }
 
@@ -40,7 +40,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
           eyebrow: blog.eyebrow,
           title: blog.title,
           subtitle: blog.subtitle,
-          image: "/images/marketing/market-vendors.webp",
+          image: "/images/marketing/market-vendor-phone.webp",
           imageAlt: blog.imageAlt,
           imageCaption: blog.imageCaption,
         }}
