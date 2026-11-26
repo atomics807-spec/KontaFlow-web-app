@@ -68,7 +68,7 @@ export const legalFr: LegalDoc[] = [
       {
         heading: "9. Contact",
         paragraphs: [
-          "Questions sur ces conditions : hello@kontaflow.com. Confidentialité : privacy@kontaflow.com. Sécurité : security@kontaflow.com.",
+          "Questions sur ces conditions : info@kontaflow.com. Confidentialité : privacy@kontaflow.com. Sécurité : security@kontaflow.com.",
         ],
       },
     ],
@@ -264,7 +264,7 @@ export const legalFr: LegalDoc[] = [
       {
         heading: "3. Résiliation",
         paragraphs: [
-          "Vous pouvez demander la résiliation d'une offre payante à tout moment en écrivant à hello@kontaflow.com. Sauf accord contraire, la résiliation arrête la prochaine période et vous gardez l'accès jusqu'à la fin de la période déjà payée.",
+          "Vous pouvez demander la résiliation d'une offre payante à tout moment en écrivant à info@kontaflow.com. Sauf accord contraire, la résiliation arrête la prochaine période et vous gardez l'accès jusqu'à la fin de la période déjà payée.",
           "La résiliation ne supprime pas automatiquement l'espace. Vous pouvez exporter vos dossiers et demander la suppression selon la Politique de confidentialité.",
         ],
       },
@@ -278,7 +278,7 @@ export const legalFr: LegalDoc[] = [
       {
         heading: "5. Demander de l'aide",
         paragraphs: [
-          "Écrivez à hello@kontaflow.com avec le nom de l'espace, la date du débit, le montant et le motif. N'envoyez pas de numéro de carte complet ni de mot de passe. Nous confirmerons la prochaine étape et le délai après examen.",
+          "Écrivez à info@kontaflow.com avec le nom de l'espace, la date du débit, le montant et le motif. N'envoyez pas de numéro de carte complet ni de mot de passe. Nous confirmerons la prochaine étape et le délai après examen.",
         ],
       },
     ],

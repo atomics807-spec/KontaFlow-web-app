@@ -91,8 +91,8 @@ export const en: SiteContent = {
             "Waiting for a month-end summary means you learn about a bad month when it is already over.",
         },
       ],
-      imageAlt: "Market street in Douala with traders and traffic",
-      imageCaption: "Mboppi market, Douala. Illustrative photography, not a customer.",
+      imageAlt: "Market street in Cameroon with traders and traffic",
+      imageCaption: "Market street in Cameroon. Illustrative photography, not a customer.",
     },
     solution: {
       eyebrow: "The KontaFlow way",
@@ -395,7 +395,7 @@ export const en: SiteContent = {
         {
           question: "Which currencies and timezones are supported?",
           answer:
-            "XAF is the default, with support for other currencies and per-workspace timezone settings. Africa/Douala is the default timezone.",
+            "XAF is the default, with support for other currencies and per-workspace timezone settings. West Africa Time (WAT) is the default timezone.",
         },
         {
           question: "Can I run more than one business?",
@@ -472,7 +472,7 @@ export const en: SiteContent = {
       {
         title: "Where we work",
         body:
-          "The product is designed in Douala, Cameroon, for businesses across the region. The interface is available in English, French and Cameroon Pidgin, with XAF as the default currency and Africa/Douala as the default timezone.",
+          "The product is designed in Limbe, Cameroon, for businesses across the region. The interface is available in English, French and Cameroon Pidgin, with XAF as the default currency and West Africa Time (WAT) as the default timezone.",
       },
     ],
     cta: {
@@ -1080,9 +1080,9 @@ export const en: SiteContent = {
       "If needed, we ask one or two clarifying questions.",
       "You get a reply within one business day, Monday to Friday.",
     ],
-    email: "hello@kontaflow.com",
+    email: "info@kontaflow.com",
     privacyEmail: "privacy@kontaflow.com",
-    location: "Douala, Cameroon",
+    location: "Limbe, Cameroon",
     hours: "Monday–Friday · 8:00–18:00 WAT",
   },
   legal: legalEn,
@@ -1201,7 +1201,7 @@ export const en: SiteContent = {
       },
       {
         file: "market-douala.webp",
-        title: "Rue du marché Mboppi à Douala",
+        title: "Market street in Cameroon",
         creator: "Johnkekam",
         license: "CC BY-SA 4.0",
         licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",

@@ -133,6 +133,13 @@ async function main(): Promise<void> {
       await scalar(client, `select full_name from profiles where id = $1`, [ALICE]),
       "Alice Nkeng",
     );
+    eq(
+      "member directory returns email text",
+      await commitAs(client, alice, (c) =>
+        scalar(c, `select email from public.get_workspace_members($1) where user_id = $2`, [idA, ALICE]),
+      ),
+      "alice@example.com",
+    );
 
     console.log("\nRecording transactions");
     const txIncome = await commitAs(client, alice, async (c) => {
@@ -1309,6 +1316,177 @@ async function main(): Promise<void> {
       "a stale code does not verify the replacement number",
       await scalar(client, `select phone_verified_at from profiles where id = $1`, [EVE]),
       "",
+    );
+
+    console.log("\nPhase 7 · finance operations");
+    const starterInvoicePayload = `select public.create_invoice(jsonb_build_object(
+      'workspace_id', $1::uuid, 'customer_id', $2::uuid, 'issue_on', current_date, 'due_on', current_date + 7,
+      'issue', true, 'items', jsonb_build_array(jsonb_build_object(
+        'description', 'Starter invoice', 'quantity', '1', 'unit_price_minor', '5000', 'tax_rate_bp', 0))))`;
+    eq(
+      "starter workspaces cannot issue invoices",
+      (await expectError(client, "authenticated", alice, starterInvoicePayload, [idA, customerA]))?.code,
+      "42501",
+    );
+
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `update subscriptions set plan = 'scale', plan_id = (select id from subscription_plans where code = 'scale') where workspace_id = $1`,
+          [idA],
+        );
+      },
+      true,
+    );
+    eq(
+      "a scale subscription enables invoicing",
+      await commitAs(client, alice, async (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'invoicing')::text`, [idA]),
+      ),
+      "true",
+    );
+    const createdInvoice = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string; number: string; total_minor: string; status: string } }>(
+        `select public.create_invoice(jsonb_build_object(
+           'workspace_id', $1::uuid, 'customer_id', $2::uuid, 'issue_on', current_date, 'due_on', current_date + 7,
+           'issue', true, 'items', jsonb_build_array(
+             jsonb_build_object('description', 'Fish crates', 'quantity', '2', 'unit_price_minor', '5000', 'tax_rate_bp', 1925),
+             jsonb_build_object('description', 'Delivery', 'quantity', '1.5', 'unit_price_minor', '2000', 'tax_rate_bp', 500)
+           ))) as data`,
+        [idA, customerA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("the invoice RPC returns the derived total", createdInvoice.total_minor, "15075");
+    eq("the invoice RPC issues immediately", createdInvoice.status, "sent");
+    eq(
+      "issuing an invoice opens one receivable",
+      await scalar(client, `select count(*) from debts where invoice_id = $1 and direction = 'receivable'`, [createdInvoice.id]),
+      "1",
+    );
+    eq(
+      "the invoice view exposes the remaining balance",
+      await scalar(client, `select status || ':' || remaining_minor from v_invoices where id = $1`, [createdInvoice.id]),
+      "sent:15075",
+    );
+    const linkedDebt = await scalar(client, `select id from debts where invoice_id = $1`, [createdInvoice.id]);
+    const cashAccount = await scalar(
+      client,
+      `select id from accounts where workspace_id = $1 and subtype = 'cash' and not is_archived order by name limit 1`,
+      [idA],
+    );
+    const cashBefore = await scalar(client, `select balance_minor from v_account_balances where account_id = $1`, [cashAccount]);
+    const paymentResult = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string; transaction_id: string | null; status: string } }>(
+        `select public.record_debt_payment(jsonb_build_object(
+           'debt_id', $1::uuid, 'amount_minor', '1925', 'paid_on', current_date,
+           'account_id', $2::uuid, 'payment_method', 'cash', 'reference', 'INV test payment')) as data`,
+        [linkedDebt, cashAccount],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("the repayment RPC updates the debt", paymentResult.status, "partially_paid");
+    ok("the repayment RPC posts a ledger transaction", Boolean(paymentResult.transaction_id));
+    eq(
+      "the repayment also updates the linked invoice",
+      await scalar(client, `select status || ':' || amount_paid_minor || ':' || remaining_minor from v_invoices where id = $1`, [createdInvoice.id]),
+      "partially_paid:1925:13150",
+    );
+    eq(
+      "the repayment posts cash into the selected account",
+      await scalar(client, `select (select balance_minor from v_account_balances where account_id = $1) - $2::bigint`, [cashAccount, cashBefore]),
+      "1925",
+    );
+    eq(
+      "repayments record their ledger transaction",
+      await scalar(client, `select kind || ':' || amount_minor from transactions where id = $1`, [paymentResult.transaction_id]),
+      "income:1925",
+    );
+    eq(
+      "overpaying a debt is rejected by the RPC",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `select public.record_debt_payment(jsonb_build_object('debt_id', $1::uuid, 'amount_minor', '999999'))`,
+        [linkedDebt],
+      ))?.code,
+      "23514",
+    );
+    eq(
+      "a paid invoice cannot be voided",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `select public.void_invoice($1, 'test')`,
+        [createdInvoice.id],
+      ))?.code,
+      "23514",
+    );
+
+    const draftInvoice = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string; status: string } }>(
+        `select public.create_invoice(jsonb_build_object(
+           'workspace_id', $1::uuid, 'customer_id', $2::uuid, 'issue_on', current_date, 'due_on', current_date + 3,
+           'issue', false, 'items', jsonb_build_array(
+             jsonb_build_object('description', 'Draft job', 'quantity', '1', 'unit_price_minor', '2500', 'tax_rate_bp', 0)
+           ))) as data`,
+        [idA, customerA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("draft invoices start as drafts", draftInvoice.status, "draft");
+    await commitAs(client, alice, async (c) => {
+      await c.query(`select public.issue_invoice($1::uuid)`, [draftInvoice.id]);
+    });
+    await commitAs(client, alice, async (c) => {
+      await c.query(`select public.void_invoice($1::uuid, 'Cancelled by customer')`, [draftInvoice.id]);
+    });
+    eq(
+      "voiding an unpaid invoice closes its receivable",
+      await scalar(
+        client,
+        `select i.status || ':' || d.status from invoices i join debts d on d.invoice_id = i.id where i.id = $1`,
+        [draftInvoice.id],
+      ),
+      "void:written_off",
+    );
+
+    await commitAs(client, alice, async (c) => {
+      await c.query(
+        `insert into budgets (workspace_id, name, period_start, period_end, amount_minor, currency)
+         values ($1, 'Phase 7 budget', date_trunc('month', current_date)::date,
+                 (date_trunc('month', current_date) + interval '1 month - 1 day')::date, 5000, 'XAF')`,
+        [idA],
+      );
+    });
+    ok(
+      "budget progress is exposed as a view",
+      Boolean(
+        await scalar(
+          client,
+          `select amount_minor || ':' || (spent_minor >= 0) from v_budget_progress where workspace_id = $1 and name = 'Phase 7 budget'`,
+          [idA],
+        ),
+      ),
+    );
+    const phase7Dashboard = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.get_dashboard_summary($1, current_date - 30, current_date) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    ok("the dashboard reports receivables", BigInt(String(phase7Dashboard.outstandingReceivablesMinor)) >= 13_150n);
+    eq("the dashboard reports budget progress", Array.isArray(phase7Dashboard.budgetProgress), true);
+    eq(
+      "other tenants cannot read the invoice view",
+      await asDora(`select count(*) from v_invoices where workspace_id = $1`, [idA]),
+      "0",
     );
 
     console.log("\nPhase 3 · tenant lifecycle");

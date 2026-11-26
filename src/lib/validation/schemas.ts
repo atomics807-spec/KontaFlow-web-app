@@ -141,3 +141,96 @@ export const memberRoleSchema = z.object({
   memberId: uuid,
   role: z.enum(["owner", "admin", "accountant", "manager", "staff"]),
 });
+
+// ---------------------------------------------------------------------------
+// Phase 7 · finance operations
+// ---------------------------------------------------------------------------
+
+const optionalUuid = z.preprocess((value) => (value === "" || value === null ? undefined : value), uuid.optional());
+const optionalDate = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  dateString.optional(),
+);
+
+export const accountSchema = z.object({
+  name: z.string().trim().min(1, "Enter an account name.").max(120),
+  subtype: z.enum(["cash", "bank", "mobile_money"]),
+  institution: z.string().trim().max(120).optional().or(z.literal("")),
+  openingBalance: z.string().trim().max(20).optional().or(z.literal("")),
+});
+
+export const debtSchema = z
+  .object({
+    direction: z.enum(["receivable", "payable"]),
+    contactId: uuid,
+    description: z.string().trim().min(2).max(300),
+    principal: amountInputSchema,
+    openedOn: dateString,
+    dueOn: optionalDate,
+    notes: z.string().trim().max(1000).optional().or(z.literal("")),
+  })
+  .superRefine((value, ctx) => {
+    if (value.dueOn && value.dueOn < value.openedOn) {
+      ctx.addIssue({ code: "custom", path: ["dueOn"], message: "The due date must be on or after the opening date." });
+    }
+  });
+
+export const debtPaymentSchema = z.object({
+  debtId: uuid,
+  amount: amountInputSchema,
+  paidOn: dateString,
+  accountId: optionalUuid,
+  paymentMethod: z.enum(["cash", "mobile_money", "bank_transfer", "card", "cheque", "other"]).default("cash"),
+  reference: z.string().trim().max(120).optional().or(z.literal("")),
+  notes: z.string().trim().max(1000).optional().or(z.literal("")),
+});
+
+export const budgetSchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    categoryId: optionalUuid,
+    periodStart: dateString,
+    periodEnd: dateString,
+    amount: amountInputSchema,
+    alertThresholdBp: z.coerce.number().int().min(0).max(10000).default(8000),
+  })
+  .superRefine((value, ctx) => {
+    if (value.periodEnd < value.periodStart) {
+      ctx.addIssue({ code: "custom", path: ["periodEnd"], message: "The end date must be on or after the start date." });
+    }
+  });
+
+export const goalSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  target: amountInputSchema,
+  targetDate: optionalDate,
+  notes: z.string().trim().max(1000).optional().or(z.literal("")),
+});
+
+export const goalProgressSchema = z.object({
+  goalId: uuid,
+  saved: amountInputSchema,
+});
+
+export const invoiceItemSchema = z.object({
+  description: z.string().trim().min(1).max(300),
+  quantity: z.string().trim().regex(/^\d+(\.\d{1,3})?$/, "Use a positive quantity."),
+  unitPrice: amountInputSchema,
+  taxRateBp: z.coerce.number().int().min(0).max(10000).default(0),
+});
+
+export const invoiceSchema = z
+  .object({
+    customerId: uuid,
+    issueOn: dateString,
+    dueOn: dateString,
+    notes: z.string().trim().max(2000).optional().or(z.literal("")),
+    terms: z.string().trim().max(2000).optional().or(z.literal("")),
+    issue: z.boolean().default(false),
+    items: z.array(invoiceItemSchema).min(1).max(100),
+  })
+  .superRefine((value, ctx) => {
+    if (value.dueOn < value.issueOn) {
+      ctx.addIssue({ code: "custom", path: ["dueOn"], message: "The due date must be on or after the issue date." });
+    }
+  });

@@ -89,18 +89,52 @@ export type RecordTransactionResult = {
   amountMinor: bigint;
 };
 
+export type ReceiptAttachment = {
+  path: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
 export async function recordTransaction(
   workspaceId: string,
   currency: string,
   input: TransactionInput,
-  options?: { channel?: string; attachmentPath?: string | null },
+  options?: { channel?: string; attachment?: ReceiptAttachment | null },
 ): Promise<RecordTransactionResult> {
   const supabase = await createClient();
-  const payload = toTransactionPayload(input, workspaceId, currency, options);
+  if (options?.attachment && !options.attachment.path.startsWith(`${workspaceId}/`)) {
+    throw new AppError("forbidden", "That receipt does not belong to this workspace.");
+  }
+  const payload = toTransactionPayload(input, workspaceId, currency, {
+    channel: options?.channel,
+    attachmentPath: options?.attachment?.path ?? null,
+  });
 
   const { data, error } = await supabase.rpc("record_transaction", { p_payload: payload });
   if (error) throw assertNoError(error, "Could not record the transaction.");
   if (!data) throw new AppError("internal_error", "Could not record the transaction.");
+
+  if (options?.attachment) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new AppError("unauthenticated", "Sign in again to attach the receipt.");
+
+    const { error: attachmentError } = await supabase.from("attachments").upsert(
+      {
+        workspace_id: workspaceId,
+        transaction_id: data.id,
+        storage_path: options.attachment.path,
+        file_name: options.attachment.fileName,
+        mime_type: options.attachment.mimeType,
+        size_bytes: options.attachment.sizeBytes,
+        uploaded_by: user.id,
+      },
+      { onConflict: "workspace_id,storage_path", ignoreDuplicates: true },
+    );
+    if (attachmentError) throw assertNoError(attachmentError, "Could not save the receipt.");
+  }
 
   return {
     id: data.id,

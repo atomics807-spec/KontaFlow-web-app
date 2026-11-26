@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Clock, Mail, MapPin, ShieldCheck, Timer } from "lucide-react";
+import { Clock, Mail, MapPin, MessageCircle, Phone, ShieldCheck, Timer } from "lucide-react";
+import { CONTACT_DETAILS } from "@/lib/contact-details";
 import { ContactForm } from "@/components/marketing/contact-form";
 import { PageHero } from "@/components/marketing/site";
 import { Reveal } from "@/components/motion/reveal";
@@ -28,6 +29,14 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
 
   const details = [
     { icon: Mail, label: labels.infoEmailLabel, value: copy.email, href: `mailto:${copy.email}` },
+    { icon: Phone, label: labels.infoPhoneLabel, value: CONTACT_DETAILS.phoneCalls, href: CONTACT_DETAILS.telCalls },
+    {
+      icon: MessageCircle,
+      label: labels.infoWhatsappLabel,
+      value: CONTACT_DETAILS.phoneWhatsApp,
+      href: CONTACT_DETAILS.whatsappUrl,
+      external: true,
+    },
     { icon: MapPin, label: labels.infoOfficeLabel, value: copy.location },
     { icon: Clock, label: labels.infoHoursLabel, value: copy.hours },
     { icon: Timer, label: labels.infoResponseLabel, value: labels.infoResponseValue },
@@ -43,6 +52,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
       "@type": "Organization",
       name: "KontaFlow",
       email: copy.email,
+      telephone: CONTACT_DETAILS.phoneCalls,
       areaServed: "CM",
     },
   };
@@ -109,7 +119,11 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
                     <div>
                       <p className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-muted">{item.label}</p>
                       {item.href ? (
-                        <a href={item.href} className="mt-1 block text-sm font-semibold text-heading hover:underline">
+                        <a
+                          href={item.href}
+                          className="mt-1 block text-sm font-semibold text-heading hover:underline"
+                          {...("external" in item && item.external ? { target: "_blank", rel: "noreferrer" } : {})}
+                        >
                           {item.value}
                         </a>
                       ) : (

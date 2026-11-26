@@ -168,7 +168,7 @@ export function SecuritySection() {
             {dict.marketing.feature6Desc}
           </p>
           <p className="mt-8 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-jade-300/80">
-            RLS · RBAC · Audit trail · Africa/Douala
+            RLS · RBAC · Audit trail · Limbe, Cameroon
           </p>
         </div>
 

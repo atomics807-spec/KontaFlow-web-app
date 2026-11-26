@@ -55,7 +55,7 @@ export const legalPcm: LegalDoc[] = [
         heading: "7. Stop access and contact",
         paragraphs: [
           "We fit suspend or stop access if yu break di rules, use di service for illegal thing, no pay or cause security risk. If e make sense, we go give notice and chance to export data.",
-          "Yu fit stop using di service anytime. Contact hello@kontaflow.com for general questions, privacy@kontaflow.com for privacy and security@kontaflow.com for security.",
+          "Yu fit stop using di service anytime. Contact info@kontaflow.com for general questions, privacy@kontaflow.com for privacy and security@kontaflow.com for security.",
         ],
       },
     ],
@@ -234,7 +234,7 @@ export const legalPcm: LegalDoc[] = [
       {
         heading: "3. Cancellation",
         paragraphs: [
-          "Yu fit ask to cancel paid plan anytime by email to hello@kontaflow.com. Unless we agree otherwise, cancellation stop di next billing period and yu keep access until di period wey yu don pay finish.",
+          "Yu fit ask to cancel paid plan anytime by email to info@kontaflow.com. Unless we agree otherwise, cancellation stop di next billing period and yu keep access until di period wey yu don pay finish.",
           "Cancellation no delete workspace automatic. Yu fit export records and ask for deletion under di Privacy Policy.",
         ],
       },
@@ -248,7 +248,7 @@ export const legalPcm: LegalDoc[] = [
       {
         heading: "5. How to ask for help",
         paragraphs: [
-          "Email hello@kontaflow.com with workspace name, charge date, amount and reason. No send full card number or password. We go confirm next step and timeline after we check.",
+          "Email info@kontaflow.com with workspace name, charge date, amount and reason. No send full card number or password. We go confirm next step and timeline after we check.",
         ],
       },
     ],

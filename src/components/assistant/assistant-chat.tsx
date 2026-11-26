@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, TriangleAlert } from "lucide-react";
+import { Send, Sparkles } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,12 +93,7 @@ export function AssistantChat({
 
   if (!configured) {
     return (
-      <Alert tone="warning">
-        <span className="flex items-start gap-2">
-          <TriangleAlert className="mt-0.5 h-4 w-4" aria-hidden />
-          {dict.assistant.notConfigured}
-        </span>
-      </Alert>
+      <Alert tone="warning">{dict.assistant.notConfigured}</Alert>
     );
   }
 

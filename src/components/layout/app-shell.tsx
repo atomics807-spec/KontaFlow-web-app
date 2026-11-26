@@ -6,13 +6,17 @@ import { useState, useTransition } from "react";
 import {
   ArrowLeftRight,
   ChevronDown,
+  Coins,
   CreditCard,
   FileBarChart2,
+  FileText,
+  Handshake,
   LayoutDashboard,
   Menu,
   Plus,
   Settings,
   Sparkles,
+  Target,
   UserCog,
   Users,
 } from "lucide-react";
@@ -53,12 +57,16 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
   const primary = [
     { href: `/${locale}/dashboard`, label: dict.nav.overview, icon: LayoutDashboard },
     { href: `/${locale}/transactions`, label: dict.nav.transactions, icon: ArrowLeftRight },
+    { href: `/${locale}/accounts`, label: dict.nav.accounts, icon: Coins },
     { href: `/${locale}/contacts`, label: dict.nav.contacts, icon: Users },
     { href: `/${locale}/assistant`, label: dict.nav.assistant, icon: Sparkles },
     { href: `/${locale}/reports`, label: dict.nav.reports, icon: FileBarChart2 },
   ];
 
   const secondary = [
+    { href: `/${locale}/debts`, label: dict.nav.debts, icon: Handshake },
+    { href: `/${locale}/budgets`, label: dict.nav.budgets, icon: Target },
+    { href: `/${locale}/invoices`, label: dict.nav.invoices, icon: FileText },
     { href: `/${locale}/team`, label: dict.nav.team, icon: UserCog },
     { href: `/${locale}/settings`, label: dict.nav.settings, icon: Settings },
     { href: `/${locale}/billing`, label: dict.nav.billing, icon: CreditCard },
@@ -175,7 +183,7 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
           <LocaleSwitcher compact />
           <ThemeToggle tone="dark" />
         </div>
-        <p className="mt-2 px-1 text-[0.65rem] text-jade-200/50">Africa/Douala</p>
+        <p className="mt-2 px-1 text-[0.65rem] text-jade-200/50">{dict.marketing.footerLocation}</p>
       </div>
     </>
   );

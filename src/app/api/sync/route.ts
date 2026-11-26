@@ -22,6 +22,15 @@ const itemSchema = z.object({
   contactId: z.uuid().nullable().optional(),
   paymentMethod: z.enum(["cash", "mobile_money", "bank_transfer", "card", "cheque", "other"]),
   reference: z.string().max(120).nullable().optional(),
+  attachment: z
+    .object({
+      path: z.string().min(1).max(500),
+      fileName: z.string().min(1).max(200),
+      mimeType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp"]),
+      sizeBytes: z.number().int().positive().max(10 * 1024 * 1024),
+    })
+    .nullable()
+    .optional(),
 });
 
 const bodySchema = z.object({ items: z.array(itemSchema).min(1).max(100) });
@@ -93,6 +102,7 @@ export async function POST(request: Request) {
     try {
       const created = await recordTransaction(item.workspaceId, item.currency, validated.data, {
         channel: "sync",
+        attachment: item.attachment ?? null,
       });
       results.push({
         clientGeneratedId: item.clientGeneratedId,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CONTACT_TOPICS, createContactSchema } from "@/lib/validation/contact";
+import { CONTACT_DETAILS } from "@/lib/contact-details";
 
 const messages = {
   name: "Enter your name.",
@@ -53,5 +54,15 @@ describe("contact form validation", () => {
 
   it("keeps the topic list stable", () => {
     expect(CONTACT_TOPICS).toEqual(["sales", "support", "partnership", "press", "other"]);
+  });
+});
+
+describe("public contact details", () => {
+  it("routes WhatsApp and calls to the correct numbers", () => {
+    expect(CONTACT_DETAILS.email).toBe("info@kontaflow.com");
+    expect(CONTACT_DETAILS.phoneWhatsApp).toBe("+237 673 610 903");
+    expect(CONTACT_DETAILS.phoneCalls).toBe("+237 672 555 075");
+    expect(CONTACT_DETAILS.whatsappUrl).toBe("https://wa.me/237673610903");
+    expect(CONTACT_DETAILS.telCalls).toBe("tel:+237672555075");
   });
 });

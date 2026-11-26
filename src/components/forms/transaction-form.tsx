@@ -3,17 +3,16 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { AlertTriangle, Loader2, Save, WifiOff } from "lucide-react";
+import { Loader2, Paperclip, Save, X } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { SuccessCheck } from "@/components/motion/success-check";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { moneyLocale, parseMoneyToMinor } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
 import { pickTranslation } from "@/lib/i18n/config";
-import { newClientId, queueItem, flushOutbox } from "@/lib/offline/outbox";
+import { newClientId, queueItem, flushOutbox, type OutboxAttachment } from "@/lib/offline/outbox";
 import { cn } from "@/lib/utils";
 import type { AccountSubtype, CategoryKind, TransactionKind } from "@/types/database";
 
@@ -47,6 +46,7 @@ export function TransactionForm({
   const [kind, setKind] = useState<TransactionKind>(defaultKind);
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [receipt, setReceipt] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "warning" | "error"; text: string } | null>(null);
 
@@ -96,6 +96,26 @@ export function TransactionForm({
       return;
     }
 
+    let attachment: OutboxAttachment | null = null;
+    if (receipt) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        setMessage({ tone: "warning", text: dict.transactions.receiptOnline });
+        return;
+      }
+      setPending(true);
+      try {
+        const upload = new FormData();
+        upload.append("file", receipt);
+        const response = await fetch("/api/receipts/upload", { method: "POST", body: upload });
+        if (!response.ok) throw new Error("upload");
+        attachment = (await response.json()) as OutboxAttachment;
+      } catch {
+        setPending(false);
+        setMessage({ tone: "error", text: dict.transactions.receiptFailed });
+        return;
+      }
+    }
+
     const item = {
       clientGeneratedId: newClientId(),
       workspaceId,
@@ -116,6 +136,7 @@ export function TransactionForm({
         | "cheque"
         | "other",
       reference: String(data.get("reference") ?? "").trim() || null,
+      attachment,
       createdAt: Date.now(),
       attempts: 0,
     };
@@ -128,6 +149,7 @@ export function TransactionForm({
     try {
       await queueItem(item);
     } catch {
+      setPending(false);
       setMessage({ tone: "error", text: dict.errors.generic });
       return;
     }
@@ -142,6 +164,7 @@ export function TransactionForm({
       form.reset();
       setAmount("");
       setCategoryId("");
+      setReceipt(null);
       router.refresh();
       return;
     }
@@ -161,22 +184,13 @@ export function TransactionForm({
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-5" noValidate>
       {message ? (
         <Alert tone={message.tone === "success" ? "success" : message.tone === "warning" ? "warning" : "error"}>
-          <span className="flex items-start gap-2">
+          <span>
+            {message.text}
             {message.tone === "success" ? (
-              <SuccessCheck className="mt-0.5 h-4 w-4 text-accent-strong" />
-            ) : message.tone === "warning" ? (
-              <WifiOff className="mt-0.5 h-4 w-4" aria-hidden />
-            ) : (
-              <AlertTriangle className="mt-0.5 h-4 w-4" aria-hidden />
-            )}
-            <span>
-              {message.text}
-              {message.tone === "success" ? (
-                <Link href={`/${locale}/transactions`} className="ml-2 font-semibold underline">
-                  {dict.common.viewAll}
-                </Link>
-              ) : null}
-            </span>
+              <Link href={`/${locale}/transactions`} className="ml-2 font-semibold underline">
+                {dict.common.viewAll}
+              </Link>
+            ) : null}
           </span>
         </Alert>
       ) : null}
@@ -290,7 +304,10 @@ export function TransactionForm({
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={kind === "income" ? dict.transactions.accountLabel : dict.transactions.accountLabel} htmlFor="accountId">
+        <Field
+          label={kind === "transfer" ? dict.transactions.transferFrom : dict.transactions.accountLabel}
+          htmlFor="accountId"
+        >
           <Select id="accountId" name="accountId" required defaultValue={accounts[0]?.id ?? ""}>
             {accounts.map((account) => (
               <option key={account.id} value={account.id}>
@@ -302,7 +319,7 @@ export function TransactionForm({
         </Field>
 
         {kind === "transfer" ? (
-          <Field label={dict.transactions.accountLabel} htmlFor="counterAccountId">
+          <Field label={dict.transactions.transferTo} htmlFor="counterAccountId">
             <Select id="counterAccountId" name="counterAccountId" required defaultValue={accounts[1]?.id ?? accounts[0]?.id ?? ""}>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
@@ -347,6 +364,43 @@ export function TransactionForm({
       >
         <Input id="reference" name="reference" maxLength={120} autoComplete="off" />
       </Field>
+
+      <div>
+        <label htmlFor="receipt" className="mb-1.5 block text-[0.8rem] font-semibold uppercase tracking-[0.08em] text-muted">
+          {dict.transactions.receipt}
+        </label>
+        {receipt ? (
+          <div className="flex items-center gap-2 rounded-xl border border-accent-line bg-accent-soft px-3 py-2.5 text-sm text-accent">
+            <Paperclip className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 truncate">{receipt.name}</span>
+            <span className="shrink-0 text-xs text-accent/70">{Math.ceil(receipt.size / 1024)} KB</span>
+            <button
+              type="button"
+              onClick={() => {
+                setReceipt(null);
+                if (formRef.current) {
+                  const input = formRef.current.elements.namedItem("receipt");
+                  if (input instanceof HTMLInputElement) input.value = "";
+                }
+              }}
+              className="grid h-7 w-7 place-items-center rounded-full hover:bg-panel"
+              aria-label={dict.transactions.receiptRemove}
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
+        ) : (
+          <Input
+            id="receipt"
+            name="receipt"
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp"
+            onChange={(event) => setReceipt(event.currentTarget.files?.[0] ?? null)}
+            className="h-auto py-2 file:mr-3 file:rounded-full file:border-0 file:bg-page-soft file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-heading"
+          />
+        )}
+        <p className="mt-1.5 text-xs text-muted">{dict.transactions.receiptHint}</p>
+      </div>
 
       <div className="flex flex-col gap-2 pt-1 sm:flex-row">
         <Button type="submit" size="lg" disabled={pending} className="w-full sm:w-auto">

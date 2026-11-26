@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, History, MessageCircle, ShieldCheck, Smartphone } from "lucide-react";
+import { ChevronRight, Download, FileText, History, MessageCircle, ShieldCheck, Smartphone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkChannelForm, WorkspaceSettingsForm } from "@/components/forms/workspace-settings-form";
 import { listAuditLogs, listChannelIdentities } from "@/services/workspaces";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
@@ -26,6 +26,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const canEdit = context.can("workspace:update");
   const canIntegrate = context.can("integrations:manage");
   const canAudit = context.can("audit:read");
+  const canExport = context.can("reports:export");
 
   const [identities, audit] = await Promise.all([
     canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
@@ -69,6 +70,29 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
           />
         </div>
       </Card>
+
+      {canExport ? (
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-start gap-2">
+            <Download className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
+            <div>
+              <h2 className="text-sm font-bold text-heading">{dict.settings.dataTitle}</h2>
+              <p className="mt-0.5 text-xs text-muted">{dict.settings.dataSubtitle}</p>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href={`/api/transactions/export?locale=${locale}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              <Download className="h-4 w-4" aria-hidden />
+              {dict.settings.downloadCsv}
+            </a>
+            <a href={`/api/transactions/export/pdf?locale=${locale}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              <FileText className="h-4 w-4" aria-hidden />
+              {dict.settings.downloadPdf}
+            </a>
+          </div>
+          <p className="mt-3 text-[0.7rem] text-muted">{dict.settings.dataNote}</p>
+        </Card>
+      ) : null}
 
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">

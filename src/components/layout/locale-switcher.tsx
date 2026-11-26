@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Globe } from "lucide-react";
 import { LOCALE_COOKIE, LOCALES, LOCALE_META, localizePath, resolveLocale } from "@/lib/i18n/config";
 import { persistLocalePreference } from "@/app/[locale]/locale-actions";
@@ -8,17 +9,17 @@ import { useI18n } from "./i18n-provider";
 
 export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, t } = useI18n();
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   const change = (next: string) => {
     if (next === locale) return;
-    // Set the cookie immediately so the proxy sees the choice, then persist
-    // the profile preference for other devices. A hard navigation avoids
-    // locale prefix bugs in the client router after a server action.
-    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     const target = localizePath(window.location.pathname, resolveLocale(next));
+    const suffix = `${window.location.search}${window.location.hash}`;
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     startTransition(() => {
-      void persistLocalePreference(next).finally(() => window.location.assign(target));
+      router.replace(`${target}${suffix}`);
+      void persistLocalePreference(next).catch(() => {});
     });
   };
 

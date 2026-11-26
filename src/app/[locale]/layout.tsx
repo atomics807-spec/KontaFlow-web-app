@@ -132,7 +132,7 @@ export default async function LocaleLayout({
           {dict.common.continue}
         </a>
         <ThemeProvider>
-          <I18nProvider locale={locale} dict={dict}>
+          <I18nProvider key={locale} locale={locale} dict={dict}>
             <MotionProvider>
               <ToastProvider>
                 {children}

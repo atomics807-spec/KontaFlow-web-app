@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { isAiConfigured } from "@/lib/ai/client";
+import { monthBounds } from "@/lib/dates";
 import { planFor } from "@/lib/plans";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -29,6 +30,14 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const { start: monthStart } = monthBounds(new Date(), context.workspace.timezone);
+  const { count: aiUsed } = await supabase
+    .from("usage_events")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", context.workspace.id)
+    .eq("kind", "ai_message")
+    .gte("created_at", `${monthStart}T00:00:00Z`);
 
   let messages: ChatMessage[] = [];
   if (conversation?.id) {
@@ -58,7 +67,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
           <p className="mt-1 text-sm text-muted">{dict.assistant.subtitle}</p>
         </div>
         <Badge tone="jade">
-          {dict.settings.usage}: {planFor(context.workspace.plan).aiMessagesPerMonth}
+          {dict.settings.usage}: {aiUsed ?? 0} / {planFor(context.workspace.plan).aiMessagesPerMonth}
         </Badge>
       </header>
 

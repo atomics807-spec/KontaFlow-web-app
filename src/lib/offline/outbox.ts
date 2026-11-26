@@ -6,6 +6,13 @@
  * Each entry carries a client_generated_id, which the database uses to make
  * retries idempotent.
  */
+export type OutboxAttachment = {
+  path: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
 export type OutboxItem = {
   clientGeneratedId: string;
   workspaceId: string;
@@ -20,6 +27,7 @@ export type OutboxItem = {
   contactId?: string | null;
   paymentMethod: "cash" | "mobile_money" | "bank_transfer" | "card" | "cheque" | "other";
   reference?: string | null;
+  attachment?: OutboxAttachment | null;
   createdAt: number;
   attempts: number;
   lastError?: string;

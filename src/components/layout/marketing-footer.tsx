@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Mail } from "lucide-react";
+import { ArrowUpRight, Mail, MessageCircle, Phone } from "lucide-react";
+import { CONTACT_DETAILS } from "@/lib/contact-details";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
 import { useI18n } from "./i18n-provider";
@@ -51,13 +52,31 @@ export function MarketingFooter() {
           <Logo />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted">{dict.marketing.footerTagline}</p>
           <p className="mt-5 text-xs text-muted/80">{dict.marketing.footerLocation}</p>
-          <a
-            href="mailto:hello@kontaflow.com"
-            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent-strong hover:underline"
-          >
-            <Mail className="h-4 w-4" aria-hidden />
-            hello@kontaflow.com
-          </a>
+          <div className="mt-4 space-y-2">
+            <a
+              href={`mailto:${CONTACT_DETAILS.email}`}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-accent-strong hover:underline"
+            >
+              <Mail className="h-4 w-4" aria-hidden />
+              {CONTACT_DETAILS.email}
+            </a>
+            <a
+              href={CONTACT_DETAILS.telCalls}
+              className="flex items-center gap-2 text-sm text-muted hover:text-heading"
+            >
+              <Phone className="h-4 w-4" aria-hidden />
+              {dict.pages.contact.infoPhoneLabel}: {CONTACT_DETAILS.phoneCalls}
+            </a>
+            <a
+              href={CONTACT_DETAILS.whatsappUrl}
+              className="flex items-center gap-2 text-sm text-muted hover:text-heading"
+              rel="noreferrer"
+              target="_blank"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              {dict.pages.contact.infoWhatsappLabel}: {CONTACT_DETAILS.phoneWhatsApp}
+            </a>
+          </div>
         </div>
         {columns.map((column) => (
           <div key={column.title}>

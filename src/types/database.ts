@@ -29,6 +29,10 @@ export type MemberStatus = "invited" | "active" | "suspended";
 export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
 export type AiMessageRole = "user" | "assistant" | "tool";
 export type UsageKind = "ai_message" | "ussd_session" | "whatsapp_message" | "sync_push";
+export type InvoiceStatus = "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "void";
+export type DebtDirection = "receivable" | "payable";
+export type DebtStatus = "open" | "partially_paid" | "settled" | "written_off";
+export type GoalStatus = "active" | "achieved" | "paused" | "cancelled";
 
 export type ProfileRow = {
   id: string;
@@ -177,6 +181,18 @@ export type TransactionRow = {
   updated_at: string;
 };
 
+export type AttachmentRow = {
+  id: string;
+  workspace_id: string;
+  transaction_id: string | null;
+  storage_path: string;
+  file_name: string;
+  mime_type: string;
+  size_bytes: number;
+  uploaded_by: string | null;
+  created_at: string;
+};
+
 export type LedgerLineRow = {
   id: string;
   workspace_id: string;
@@ -212,6 +228,7 @@ export type TransactionViewRow = {
   account_name: string;
   created_by: string | null;
   created_at: string;
+  attachment_path: string | null;
 };
 
 export type AiConversationRow = {
@@ -361,6 +378,204 @@ export type ContactMessageRow = {
   created_at: string;
 };
 
+export type AccountBalanceRow = {
+  account_id: string;
+  workspace_id: string;
+  name: string;
+  type: AccountType;
+  subtype: AccountSubtype;
+  institution: string | null;
+  masked_number: string | null;
+  currency: string;
+  opening_balance_minor: number;
+  is_system: boolean;
+  is_archived: boolean;
+  created_at: string;
+  updated_at: string;
+  movement_minor: number;
+  balance_minor: number;
+};
+
+export type DebtViewRow = {
+  id: string;
+  workspace_id: string;
+  direction: DebtDirection;
+  contact_id: string;
+  contact_name: string;
+  contact_kind: ContactKind;
+  description: string;
+  principal_minor: number;
+  paid_minor: number;
+  remaining_minor: number;
+  currency: string;
+  opened_on: string;
+  due_on: string | null;
+  status: DebtStatus;
+  invoice_id: string | null;
+  invoice_number: string | null;
+  transaction_id: string | null;
+  notes: string | null;
+  closed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_overdue: boolean;
+};
+
+export type InvoiceViewRow = {
+  id: string;
+  workspace_id: string;
+  customer_id: string;
+  customer_name: string;
+  number: string;
+  status: InvoiceStatus;
+  issue_on: string;
+  due_on: string;
+  currency: string;
+  subtotal_minor: number;
+  tax_minor: number;
+  total_minor: number;
+  amount_paid_minor: number;
+  remaining_minor: number;
+  notes: string | null;
+  terms: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  voided_at: string | null;
+  created_at: string;
+  updated_at: string;
+  is_overdue: boolean;
+  linked_debt_id: string | null;
+};
+
+export type BudgetProgressRow = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  category_id: string | null;
+  category_name: string | null;
+  category_translations: Record<string, string> | null;
+  category_color: string | null;
+  period_start: string;
+  period_end: string;
+  amount_minor: number;
+  currency: string;
+  alert_threshold_bp: number;
+  spent_minor: number;
+};
+
+export type DebtPaymentRow = {
+  id: string;
+  workspace_id: string;
+  debt_id: string;
+  amount_minor: number;
+  paid_on: string;
+  account_id: string | null;
+  payment_method: PaymentMethod;
+  transaction_id: string | null;
+  reference: string | null;
+  notes: string | null;
+  created_by: string | null;
+  voided_at: string | null;
+  voided_by: string | null;
+  void_reason: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type FinancialGoalRow = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  target_minor: number;
+  saved_minor: number;
+  currency: string;
+  target_date: string | null;
+  account_id: string | null;
+  status: GoalStatus;
+  notes: string | null;
+  achieved_at: string | null;
+  archived_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceRow = {
+  id: string;
+  workspace_id: string;
+  customer_id: string;
+  number: string;
+  status: InvoiceStatus;
+  issue_on: string;
+  due_on: string;
+  currency: string;
+  subtotal_minor: number;
+  tax_minor: number;
+  total_minor: number;
+  amount_paid_minor: number;
+  notes: string | null;
+  terms: string | null;
+  storage_path: string | null;
+  sent_at: string | null;
+  paid_at: string | null;
+  voided_at: string | null;
+  void_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceItemRow = {
+  id: string;
+  workspace_id: string;
+  invoice_id: string;
+  position: number;
+  description: string;
+  quantity: number;
+  unit_price_minor: number;
+  tax_rate_bp: number;
+  line_total_minor: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BudgetRow = {
+  id: string;
+  workspace_id: string;
+  name: string;
+  category_id: string | null;
+  period_start: string;
+  period_end: string;
+  amount_minor: number;
+  currency: string;
+  alert_threshold_bp: number;
+  archived_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DebtRow = {
+  id: string;
+  workspace_id: string;
+  direction: DebtDirection;
+  contact_id: string;
+  description: string;
+  principal_minor: number;
+  paid_minor: number;
+  currency: string;
+  opened_on: string;
+  due_on: string | null;
+  status: DebtStatus;
+  invoice_id: string | null;
+  transaction_id: string | null;
+  notes: string | null;
+  closed_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DashboardSummary = {
   workspace: { id: string; name: string; currency: string; timezone: string; plan: WorkspacePlan };
   period: { from: string; to: string };
@@ -370,9 +585,27 @@ export type DashboardSummary = {
   previousIncomeMinor: string;
   previousExpenseMinor: string;
   cashBalanceMinor: string;
+  outstandingReceivablesMinor: string;
+  outstandingPayablesMinor: string;
+  overdueReceivablesMinor: string;
+  overduePayablesMinor: string;
+  openDebtCount: number;
   aiMessagesUsed: number;
   monthlySeries: { month: string; income: string; expense: string }[];
   topExpenseCategories: { name: string; translations: Record<string, string>; color: string; total: string }[];
+  budgetProgress: {
+    id: string;
+    name: string;
+    category_id: string | null;
+    category_name: string | null;
+    category_translations: Record<string, string> | null;
+    category_color: string | null;
+    period_start: string;
+    period_end: string;
+    amount_minor: string;
+    spent_minor: string;
+    currency: string;
+  }[];
   recentTransactions: {
     id: string;
     kind: TransactionKind;
@@ -420,6 +653,7 @@ export type Database = {
       contacts: TableDefinition<ContactRow>;
       transactions: TableDefinition<TransactionRow>;
       ledger_lines: TableDefinition<LedgerLineRow>;
+      attachments: TableDefinition<AttachmentRow>;
       ai_conversations: TableDefinition<AiConversationRow>;
       ai_messages: TableDefinition<AiMessageRow>;
       audit_logs: TableDefinition<AuditLogRow>;
@@ -428,26 +662,22 @@ export type Database = {
       usage_events: TableDefinition<UsageEventRow>;
       channel_identities: TableDefinition<ChannelIdentityRow>;
       notifications: TableDefinition<NotificationRow>;
+      invoices: TableDefinition<InvoiceRow>;
+      invoice_items: TableDefinition<InvoiceItemRow>;
+      debts: TableDefinition<DebtRow>;
+      debt_payments: TableDefinition<DebtPaymentRow>;
+      budgets: TableDefinition<BudgetRow>;
+      financial_goals: TableDefinition<FinancialGoalRow>;
       contact_messages: TableDefinition<ContactMessageRow>;
       ussd_sessions: TableDefinition<UssdSessionRow>;
       whatsapp_messages: TableDefinition<WhatsappMessageRow>;
     };
     Views: {
       v_transactions: { Row: TransactionViewRow; Relationships: [] };
-      v_account_balances: {
-        Row: {
-          account_id: string;
-          workspace_id: string;
-          name: string;
-          type: AccountType;
-          subtype: AccountSubtype;
-          currency: string;
-          opening_balance_minor: number;
-          movement_minor: number;
-          balance_minor: number;
-        };
-        Relationships: [];
-      };
+      v_account_balances: { Row: AccountBalanceRow; Relationships: [] };
+      v_debts: { Row: DebtViewRow; Relationships: [] };
+      v_invoices: { Row: InvoiceViewRow; Relationships: [] };
+      v_budget_progress: { Row: BudgetProgressRow; Relationships: [] };
     };
     Functions: {
       record_channel_transaction: {
@@ -529,6 +759,30 @@ export type Database = {
         Args: { p_workspace_id: string; p_from: string; p_to: string };
         Returns: DashboardSummary;
       };
+      has_workspace_feature: {
+        Args: { p_workspace_id: string; p_feature_code: string };
+        Returns: boolean;
+      };
+      next_invoice_number: {
+        Args: { p_workspace_id: string };
+        Returns: string;
+      };
+      create_invoice: {
+        Args: { p_payload: Json };
+        Returns: { id: string; number: string; total_minor: string; status: InvoiceStatus };
+      };
+      issue_invoice: {
+        Args: { p_invoice_id: string };
+        Returns: { id: string; status: InvoiceStatus; debt_id: string };
+      };
+      record_debt_payment: {
+        Args: { p_payload: Json };
+        Returns: { id: string; transaction_id: string | null; status: DebtStatus };
+      };
+      void_invoice: {
+        Args: { p_invoice_id: string; p_reason: string | null };
+        Returns: { id: string; status: InvoiceStatus };
+      };
       get_report: {
         Args: { p_workspace_id: string; p_from: string; p_to: string };
         Returns: ReportResult;
@@ -566,6 +820,10 @@ export type Database = {
       invitation_status: InvitationStatus;
       ai_message_role: AiMessageRole;
       usage_kind: UsageKind;
+      invoice_status: InvoiceStatus;
+      debt_direction: DebtDirection;
+      debt_status: DebtStatus;
+      goal_status: GoalStatus;
     };
     CompositeTypes: Record<string, never>;
   };

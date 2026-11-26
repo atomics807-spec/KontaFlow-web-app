@@ -27,7 +27,7 @@ const serverSchema = z.object({
   RESEND_API_KEY: optionalSecret,
   EMAIL_FROM: z.string().default("KontaFlow <notifications@kontaflow.com>"),
   EMAIL_REPLY_TO: optionalSecret,
-  CONTACT_INBOX_EMAIL: z.string().default("hello@kontaflow.com"),
+  CONTACT_INBOX_EMAIL: z.string().default("info@kontaflow.com"),
   AFRICASTALKING_USERNAME: z.string().default("sandbox"),
   AFRICASTALKING_API_KEY: optionalSecret,
   AFRICASTALKING_SENDER_ID: optionalSecret,

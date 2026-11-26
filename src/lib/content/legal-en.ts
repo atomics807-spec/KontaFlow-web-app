@@ -67,7 +67,7 @@ export const legalEn: LegalDoc[] = [
       {
         heading: "9. Contact",
         paragraphs: [
-          "Questions about these terms: hello@kontaflow.com. Privacy questions: privacy@kontaflow.com. Security reports: security@kontaflow.com.",
+          "Questions about these terms: info@kontaflow.com. Privacy questions: privacy@kontaflow.com. Security reports: security@kontaflow.com.",
         ],
       },
     ],
@@ -260,7 +260,7 @@ export const legalEn: LegalDoc[] = [
       {
         heading: "3. Cancellation",
         paragraphs: [
-          "You can ask to cancel a paid plan at any time by contacting hello@kontaflow.com. Unless agreed otherwise, cancellation stops the next billing period and you keep access until the end of the period you have already paid for.",
+          "You can ask to cancel a paid plan at any time by contacting info@kontaflow.com. Unless agreed otherwise, cancellation stops the next billing period and you keep access until the end of the period you have already paid for.",
           "Cancelling a paid plan does not delete your workspace automatically. You can export your records and ask for account deletion under the Privacy Policy.",
         ],
       },
@@ -274,7 +274,7 @@ export const legalEn: LegalDoc[] = [
       {
         heading: "5. How to request help",
         paragraphs: [
-          "Email hello@kontaflow.com with the workspace name, the date of the charge, the amount and the reason for the request. Do not send full card numbers or passwords. We will confirm the next step and the expected timeline after reviewing the request.",
+          "Email info@kontaflow.com with the workspace name, the date of the charge, the amount and the reason for the request. Do not send full card numbers or passwords. We will confirm the next step and the expected timeline after reviewing the request.",
         ],
       },
     ],

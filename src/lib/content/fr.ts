@@ -91,8 +91,8 @@ export const fr: SiteContent = {
             "Attendre le résumé de fin de mois signifie découvrir un mauvais mois quand il est déjà terminé.",
         },
       ],
-      imageAlt: "Rue de marché à Douala avec commerçants et circulation",
-      imageCaption: "Marché Mboppi, Douala. Photographie d'illustration, pas un client.",
+      imageAlt: "Rue de marché au Cameroun avec commerçants et circulation",
+      imageCaption: "Marché au Cameroun. Photographie d'illustration, pas un client.",
     },
     solution: {
       eyebrow: "La méthode KontaFlow",
@@ -394,7 +394,7 @@ export const fr: SiteContent = {
         {
           question: "Quelles devises et quels fuseaux sont pris en charge ?",
           answer:
-            "Le XAF par défaut, avec d'autres devises et un fuseau horaire par espace. Africa/Douala est le fuseau par défaut.",
+            "Le XAF par défaut, avec d'autres devises et un fuseau horaire par espace. L’heure d’Afrique de l’Ouest (WAT) est le fuseau par défaut.",
         },
         {
           question: "Puis-je gérer plusieurs entreprises ?",
@@ -471,7 +471,7 @@ export const fr: SiteContent = {
       {
         title: "Où nous travaillons",
         body:
-          "Le produit est conçu à Douala, au Cameroun, pour les entreprises de la région. L'interface est disponible en anglais, français et pidgin camerounais, avec le XAF par défaut et Africa/Douala comme fuseau horaire.",
+          "Le produit est conçu à Limbe, au Cameroun, pour les entreprises de la région. L'interface est disponible en anglais, français et pidgin camerounais, avec le XAF par défaut et l’heure d’Afrique de l’Ouest (WAT) comme fuseau horaire.",
       },
     ],
     cta: {
@@ -1070,9 +1070,9 @@ export const fr: SiteContent = {
       "Si nécessaire, nous posons une ou deux questions de clarification.",
       "Vous recevez une réponse sous un jour ouvré, du lundi au vendredi.",
     ],
-    email: "hello@kontaflow.com",
+    email: "info@kontaflow.com",
     privacyEmail: "privacy@kontaflow.com",
-    location: "Douala, Cameroun",
+    location: "Limbe, Cameroun",
     hours: "Lundi–vendredi · 8h00–18h00 WAT",
   },
   legal: legalFr,
@@ -1191,7 +1191,7 @@ export const fr: SiteContent = {
       },
       {
         file: "market-douala.webp",
-        title: "Rue du marché Mboppi à Douala",
+        title: "Rue du marché au Cameroun",
         creator: "Johnkekam",
         license: "CC BY-SA 4.0",
         licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",

@@ -91,8 +91,8 @@ export const pcm: SiteContent = {
             "If yu wait for month-end summary, yu go learn about bad month when e don finish.",
         },
       ],
-      imageAlt: "Market street for Douala with trader and traffic",
-      imageCaption: "Mboppi market, Douala. Photo for illustration, no be customer.",
+      imageAlt: "Market street for Cameroon with trader and traffic",
+      imageCaption: "Market street in Cameroon. Photo for illustration, no be customer.",
     },
     solution: {
       eyebrow: "KontaFlow way",
@@ -392,7 +392,7 @@ export const pcm: SiteContent = {
         {
           question: "Which currency and timezone dey supported?",
           answer:
-            "XAF na default, with other currency and workspace timezone setting. Africa/Douala na default timezone.",
+            "XAF na default, with other currency and workspace timezone setting. West Africa Time (WAT) na default timezone.",
         },
         {
           question: "I fit run more than one business?",
@@ -468,7 +468,7 @@ export const pcm: SiteContent = {
       {
         title: "Where we work",
         body:
-          "We design di product for Douala, Cameroon, for business across di region. Interface dey for English, French and Cameroon Pidgin, with XAF as default and Africa/Douala as default timezone.",
+          "We design di product for Limbe, Cameroon, for business across di region. Interface dey for English, French and Cameroon Pidgin, with XAF as default and West Africa Time (WAT) as default timezone.",
       },
     ],
     cta: {
@@ -1055,9 +1055,9 @@ export const pcm: SiteContent = {
       "If e need, we ask one or two clarifying question.",
       "Yu get reply within one business day, Monday to Friday.",
     ],
-    email: "hello@kontaflow.com",
+    email: "info@kontaflow.com",
     privacyEmail: "privacy@kontaflow.com",
-    location: "Douala, Cameroon",
+    location: "Limbe, Cameroon",
     hours: "Monday–Friday · 8:00–18:00 WAT",
   },
   legal: legalPcm,
@@ -1176,7 +1176,7 @@ export const pcm: SiteContent = {
       },
       {
         file: "market-douala.webp",
-        title: "Rue du marché Mboppi à Douala",
+        title: "Market street for Cameroon",
         creator: "Johnkekam",
         license: "CC BY-SA 4.0",
         licenseUrl: "https://creativecommons.org/licenses/by-sa/4.0/",

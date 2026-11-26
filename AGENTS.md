@@ -7,7 +7,7 @@ npm ci
 npm run dev                 # Next.js dev server
 npm run typecheck           # tsc --noEmit (must be clean)
 npm test                    # vitest unit tests
-npm run test:db             # rebuilds kontaflow_test and runs 151 DB assertions
+npm run test:db             # rebuilds kontaflow_test and runs DB integrity assertions
 npm run lint
 npm run build
 npm run db:push             # applies pending supabase/migrations via SUPABASE_DB_URL
@@ -169,3 +169,66 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   trigger.
 * `requireVerifiedUser(locale, nextPath)` in `src/lib/supabase/auth.ts` drives
   the UI gate. Keep the default next path locale-prefixed.
+
+## Finance operations (Phase 7)
+
+* Routes: `/{locale}/accounts`, `/debts`, `/budgets`, `/invoices`,
+  `/invoices/new`, `/invoices/[id]`. Server actions live in
+  `src/app/[locale]/(dashboard)/finance/actions.ts`; reads and writes go
+  through `src/services/finance.ts`.
+* Invoice writes use the `create_invoice(jsonb)` / `issue_invoice(uuid)` /
+  `void_invoice(uuid, text)` RPCs. Invoice totals are derived by triggers from
+  integer quantities; never send totals from the client. Issued invoices are
+  immutable and an invoice with payments cannot be voided.
+* Repayments use `record_debt_payment(jsonb)`. When an account is selected the
+  RPC also calls `record_transaction` so cash moves through the ledger; the
+  existing triggers update `debts.paid_minor` and the linked invoice status.
+  Overpayment is rejected in both the RPC and a constraint.
+* Plan entitlement is checked with `has_workspace_feature(workspace_id, code)`.
+  Invoicing is a `scale` feature. The catalogue is global; changing a tenant's
+  plan means updating both `subscriptions.plan` and `plan_id`.
+* Finance views (`v_account_balances`, `v_budget_progress`, `v_debts`,
+  `v_invoices`) are `security_invoker`, so RLS applies to callers. Dashboard
+  aggregates come from `get_dashboard_summary` and include receivables,
+  payables, overdue balances and budget progress.
+* Receipt files are private Storage objects addressed by
+  `transactions.attachment_path`; upload/retrieve through
+  `/api/receipts/upload` and `/api/receipts/[id]`. CSV export is
+  `/api/transactions/export`.
+* Shared invoice arithmetic lives in `src/lib/finance/calculations.ts` and
+  mirrors the SQL triggers. Keep both sides in step; `tests/finance.test.ts`
+  covers rounding.
+* `get_workspace_members` must cast `auth.users.email` to `text`; the column is
+  `varchar`, and a `RETURNS TABLE (... email text)` signature fails at runtime
+  without the cast. Migration `20260101000029` fixes this.
+* The invoices list `PAID` KPI sums `amount_paid_minor` across every non-void
+  invoice, so partial payments appear immediately rather than only after an
+  invoice reaches `paid`.
+
+## Public contact, locale switching and exports
+
+* Public contact details live in `src/lib/contact-details.ts`. Email is
+  `info@kontaflow.com`; `673610903` is WhatsApp and calls, `672555075` is calls
+  only. Office copy is Limbe, Cameroon. Change the module, not individual pages.
+* `LocaleSwitcher` sets the locale cookie, persists the profile preference, then
+  uses `router.replace` on the localized path while preserving query/hash. The
+  locale layout keys `I18nProvider` by locale so client translations remount.
+  Do not reintroduce `window.location.assign`; it caused a full reload and
+  dropped page state.
+* Users with `reports:export` can download CSV from
+  `/api/transactions/export` and an itemized PDF from
+  `/api/transactions/export/pdf`. Both honour workspace RLS, date/type/search
+  filters, locale and the current currency/timezone. Settings and the
+  transactions page both expose the links.
+* Transaction PDF rendering lives in `src/services/transactions-pdf.ts`; keep
+  Helvetica-safe text sanitization because pdf-lib standard fonts are WinAnsi.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

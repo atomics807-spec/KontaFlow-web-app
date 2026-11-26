@@ -133,7 +133,7 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
           <div className="mt-10 rounded-2xl border border-line bg-panel p-5">
             <p className="flex items-center gap-2 text-sm font-bold text-heading">
               <Mail className="h-4 w-4 text-accent-strong" aria-hidden />
-              hello@kontaflow.com
+              info@kontaflow.com
             </p>
             <p className="mt-2 text-xs leading-relaxed text-muted">privacy@kontaflow.com · security@kontaflow.com</p>
           </div>

@@ -37,7 +37,7 @@ export function VoidButton({ transactionId }: { transactionId: string }) {
         className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-muted transition hover:bg-danger-soft hover:text-danger"
       >
         <Ban className="h-3.5 w-3.5" aria-hidden />
-        {dict.transactions.voided}
+        {dict.transactions.void}
       </button>
 
       <ConfirmDialog
@@ -45,7 +45,7 @@ export function VoidButton({ transactionId }: { transactionId: string }) {
         onClose={() => setOpen(false)}
         title={dict.transactions.voidConfirm}
         description={dict.transactions.voidNote}
-        confirmLabel={dict.transactions.voided}
+        confirmLabel={dict.transactions.void}
         cancelLabel={dict.common.cancel}
         closeLabel={dict.common.close}
         formAction={action}

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableWrap, Td, Th } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -70,9 +70,23 @@ export function TransactionsTable({
                       <p className={item.status === "voided" ? "truncate text-sm text-muted line-through" : "truncate text-sm font-semibold text-heading"}>
                         {item.description}
                       </p>
-                      <p className="truncate text-xs text-muted">
-                        {item.contactName ? `${item.contactName} · ` : ""}
-                        {item.accountName}
+                      <p className="flex items-center gap-1.5 truncate text-xs text-muted">
+                        <span className="truncate">
+                          {item.contactName ? `${item.contactName} · ` : ""}
+                          {item.accountName}
+                        </span>
+                        {item.attachmentPath ? (
+                          <a
+                            href={`/api/receipts/${item.id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex shrink-0 items-center gap-0.5 text-accent hover:underline"
+                            title={dict.transactions.receipt}
+                          >
+                            <Paperclip className="h-3 w-3" aria-hidden />
+                            <span className="sr-only">{dict.transactions.receipt}</span>
+                          </a>
+                        ) : null}
                       </p>
                     </div>
                   </div>

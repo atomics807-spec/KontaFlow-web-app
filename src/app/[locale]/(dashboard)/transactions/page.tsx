@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Download, FileText, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,16 @@ export default async function TransactionsPage({
           ? dict.transactions.expense
           : dict.transactions.transfer;
 
+  const exportHref = (format: "csv" | "pdf" = "csv") => {
+    const params = new URLSearchParams();
+    if (kind !== "all") params.set("kind", kind);
+    if (search) params.set("q", search);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    params.set("locale", locale);
+    return `/api/transactions/export${format === "pdf" ? "/pdf" : ""}?${params.toString()}`;
+  };
+
   const kindHref = (value: TransactionKind | "all") => {
     const params = new URLSearchParams();
     if (value !== "all") params.set("kind", value);
@@ -67,12 +77,26 @@ export default async function TransactionsPage({
           <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.transactions.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.transactions.subtitle}</p>
         </div>
-        {context.can("transactions:create") ? (
-          <Link href={`/${locale}/transactions/new`} className={buttonVariants({ size: "md" })}>
-            <Plus className="h-4 w-4" aria-hidden />
-            {dict.transactions.new}
-          </Link>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {context.can("reports:export") ? (
+            <>
+              <a href={exportHref("csv")} className={buttonVariants({ variant: "secondary", size: "md" })}>
+                <Download className="h-4 w-4" aria-hidden />
+                {dict.settings.downloadCsv}
+              </a>
+              <a href={exportHref("pdf")} className={buttonVariants({ variant: "secondary", size: "md" })}>
+                <FileText className="h-4 w-4" aria-hidden />
+                {dict.settings.downloadPdf}
+              </a>
+            </>
+          ) : null}
+          {context.can("transactions:create") ? (
+            <Link href={`/${locale}/transactions/new`} className={buttonVariants({ size: "md" })}>
+              <Plus className="h-4 w-4" aria-hidden />
+              {dict.transactions.new}
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <nav aria-label={dict.common.filter} className="flex flex-wrap gap-2">
@@ -149,6 +173,7 @@ export default async function TransactionsPage({
             contactName: row.contact_name,
             channel: row.channel,
             accountName: row.account_name,
+            attachmentPath: row.attachment_path,
           }))}
         />
       </Card>

@@ -23,6 +23,7 @@ export type TransactionListItem = {
   contactName?: string | null;
   channel: EntryChannel;
   accountName?: string | null;
+  attachmentPath?: string | null;
 };
 
 const CHANNEL_ICONS = {
