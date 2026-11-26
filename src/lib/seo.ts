@@ -8,33 +8,43 @@ export function marketingMetadata({
   path,
   title,
   description,
+  image = "/images/marketing/og-default.webp",
+  type = "website",
 }: {
   locale: Locale;
   path: string;
   title: string;
   description: string;
+  image?: string;
+  type?: "website" | "article";
 }): Metadata {
   const canonical = `${BASE_URL}/${locale}${path}`;
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: {
       canonical,
-      languages: Object.fromEntries(
-        LOCALES.map((code) => [LOCALE_META[code as Locale].htmlLang, `${BASE_URL}/${code}${path}`]),
-      ),
+      languages: {
+        ...Object.fromEntries(
+          LOCALES.map((code) => [LOCALE_META[code as Locale].htmlLang, `${BASE_URL}/${code}${path}`]),
+        ),
+        "x-default": `${BASE_URL}/en${path}`,
+      },
     },
     openGraph: {
-      type: "website",
+      type,
       title,
       description,
       url: canonical,
+      siteName: "KontaFlow",
       locale: LOCALE_META[locale].ogLocale,
+      images: [{ url: `${BASE_URL}${image}`, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [`${BASE_URL}${image}`],
     },
   };
 }

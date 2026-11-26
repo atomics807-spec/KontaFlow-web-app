@@ -10,9 +10,9 @@
 insert into public.subscription_plans
   (code, name, description, price_minor, currency, billing_interval, seats_included, workspace_limit, ai_message_limit, sort_order)
 values
-  ('starter', 'Starter', 'For solo traders getting organised.', 0, 'XAF', 'month', 1, 1, 100, 1),
-  ('growth', 'Growth', 'For shops and small teams with daily volume.', 9900, 'XAF', 'month', 5, 2, 100, 2),
-  ('scale', 'Scale', 'For multi-branch businesses and accountants.', 29900, 'XAF', 'month', 50, null, null, 3)
+  ('starter', 'Starter', 'For solo traders getting organised.', 0, 'XAF', 'month', 2, 1, 50, 1),
+  ('growth', 'Growth', 'For shops and small teams with daily volume.', 9900, 'XAF', 'month', 8, 2, 500, 2),
+  ('scale', 'Scale', 'For multi-branch businesses and accountants.', 29900, 'XAF', 'month', 25, null, 5000, 3)
 on conflict (code) do update
   set name = excluded.name,
       description = excluded.description,

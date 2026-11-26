@@ -7,7 +7,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { fill, useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
-import { PRIVACY_POLICY_PATH } from "@/lib/legal";
+import { PRIVACY_POLICY_PATH, TERMS_PATH } from "@/lib/legal";
 import { COUNTRIES, countryName } from "@/lib/countries";
 import { LOCALES, LOCALE_META } from "@/lib/i18n/config";
 import {
@@ -229,6 +229,7 @@ export function SignupForm({ next }: { next: string }) {
               >
                 {dict.auth.privacyPolicy}
               </a>
+              .
             </span>
           </label>
           {state.fieldErrors?.privacyAccepted?.[0] ? (
@@ -252,7 +253,17 @@ export function SignupForm({ next }: { next: string }) {
         </SubmitButton>
       </form>
 
-      <p className="mt-4 text-xs leading-relaxed text-muted">{dict.auth.termsNote}</p>
+      <p className="mt-4 text-xs leading-relaxed text-muted">
+        {dict.auth.termsNote}{" "}
+        <Link href={`/${locale}${TERMS_PATH}`} className="font-semibold text-accent hover:underline">
+          {dict.marketing.terms}
+        </Link>{" "}
+        {dict.auth.termsConjunction}{" "}
+        <Link href={`/${locale}${PRIVACY_POLICY_PATH}`} className="font-semibold text-accent hover:underline">
+          {dict.auth.privacyPolicy}
+        </Link>
+        .
+      </p>
 
       <p className="mt-6 text-center text-sm text-muted">
         {dict.auth.haveAccount}{" "}

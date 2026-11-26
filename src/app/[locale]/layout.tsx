@@ -64,11 +64,13 @@ export async function generateMetadata({
       description: dict.marketing.heroSubtitle,
       locale: meta.ogLocale,
       url: `${appUrl}/${locale}`,
+      images: [{ url: `${appUrl}/images/marketing/og-default.webp`, alt: dict.common.tagline }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${dict.common.appName} — ${dict.common.tagline}`,
       description: dict.marketing.heroSubtitle,
+      images: [`${appUrl}/images/marketing/og-default.webp`],
     },
     alternates: {
       canonical: `${appUrl}/${locale}`,

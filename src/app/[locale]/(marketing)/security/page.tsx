@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { BookOpenCheck, HardDrive, KeyRound, Lock, ScrollText, Webhook } from "lucide-react";
-import { PageHero } from "@/components/marketing/page-hero";
-import { CtaSection, SecuritySection } from "@/components/marketing/sections";
+import Link from "next/link";
+import { ArrowRight, BookOpenCheck, HardDrive, KeyRound, Lock, Mail, ScrollText, Webhook } from "lucide-react";
+import { PageHero, SectionHeading } from "@/components/marketing/site";
 import { Reveal } from "@/components/motion/reveal";
+import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
 import { marketingMetadata } from "@/lib/seo";
@@ -15,12 +16,13 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     path: "/security",
     title: dict.pages.security.title,
     description: dict.pages.security.subtitle,
+    image: "/images/marketing/office-work.webp",
   });
 }
 
 export default async function SecurityPage({ params }: { params: Promise<{ locale: string }> }) {
   const locale = resolveLocale((await params).locale);
-  const dict = await getDictionary(locale);
+  const [dict, content] = await Promise.all([getDictionary(locale), getSiteContent(locale)]);
   const p = dict.pages.security;
 
   const controls = [
@@ -35,22 +37,25 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
   return (
     <>
       <PageHero
-        eyebrow={p.eyebrow}
-        title={p.title}
-        subtitle={p.subtitle}
-        primaryHref={`/${locale}/signup`}
-        primaryLabel={dict.marketing.getStarted}
-        secondaryHref={`/${locale}/contact`}
-        secondaryLabel={dict.marketing.contact}
+        page={{
+          eyebrow: p.eyebrow,
+          title: p.title,
+          subtitle: p.subtitle,
+          image: "/images/marketing/office-work.webp",
+          imageAlt: content.common.illustrativePhotoAlt,
+          imageCaption: content.common.illustrativePhoto,
+        }}
+        locale={locale}
+        primaryHref={`/${locale}/contact`}
+        primaryLabel={dict.marketing.contact}
+        secondaryHref={`/${locale}/legal/privacy`}
+        secondaryLabel={dict.marketing.privacy}
       />
-      <SecuritySection />
 
       <section className="py-16 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <h2 className="text-2xl font-extrabold tracking-tight text-heading sm:text-3xl">{p.controlsTitle}</h2>
-          </Reveal>
-          <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <SectionHeading eyebrow={dict.marketing.navSecurity} title={p.controlsTitle} />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {controls.map((control, index) => (
               <Reveal key={control.title} delay={index * 0.04}>
                 <div className="h-full rounded-2xl border border-line bg-panel p-5">
@@ -63,50 +68,41 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
               </Reveal>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section id="privacy" className="scroll-mt-24 border-t border-line py-16 sm:py-20">
-        <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-          <Reveal>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-strong">{p.privacyEyebrow}</p>
-            <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-heading sm:text-3xl">{p.privacyTitle}</h2>
-            <p className="mt-2 text-sm text-muted">{p.privacyUpdated}</p>
-          </Reveal>
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <Reveal>
-              <div className="space-y-5 text-sm leading-relaxed text-muted">
-                <p>{p.privacyIntro}</p>
-                <div>
-                  <h3 className="font-bold text-heading">{p.privacyDataTitle}.</h3>
-                  <p className="mt-1">{p.privacyData}</p>
-                </div>
-                <div>
-                  <h3 className="font-bold text-heading">{p.privacyUseTitle}.</h3>
-                  <p className="mt-1">{p.privacyUse}</p>
-                </div>
-              </div>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <div className="space-y-5 text-sm leading-relaxed text-muted">
-                <div>
-                  <h3 className="font-bold text-heading">{p.privacyRetentionTitle}.</h3>
-                  <p className="mt-1">{p.privacyRetention}</p>
-                </div>
-                <div>
-                  <h3 className="font-bold text-heading">{p.privacyRightsTitle}.</h3>
-                  <p className="mt-1">{p.privacyRights}</p>
-                </div>
-                <p className="rounded-xl border border-line bg-panel p-4 font-medium text-ink">
-                  {p.privacyContact}
-                </p>
-              </div>
-            </Reveal>
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-line bg-panel p-6">
+              <h2 className="text-lg font-extrabold text-heading">{p.reportTitle}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{p.reportBody}</p>
+              <a
+                href="mailto:security@kontaflow.com"
+                className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-accent-strong hover:underline"
+              >
+                <Mail className="h-4 w-4" aria-hidden />
+                security@kontaflow.com
+              </a>
+            </div>
+            <div className="rounded-2xl border border-jade-200 bg-accent-soft p-6">
+              <h2 className="text-lg font-extrabold text-heading">{p.policiesTitle}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{p.policiesBody}</p>
+              <ul className="mt-4 space-y-2 text-sm font-semibold">
+                {[
+                  { label: dict.marketing.privacy, slug: "privacy" },
+                  { label: dict.marketing.cookies, slug: "cookies" },
+                  { label: dict.marketing.dataProcessing, slug: "data-processing" },
+                  { label: dict.marketing.acceptableUse, slug: "acceptable-use" },
+                ].map((item) => (
+                  <li key={item.slug}>
+                    <Link href={`/${locale}/legal/${item.slug}`} className="inline-flex items-center gap-1.5 text-accent-strong hover:underline">
+                      {item.label}
+                      <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
-
-      <CtaSection />
     </>
   );
 }

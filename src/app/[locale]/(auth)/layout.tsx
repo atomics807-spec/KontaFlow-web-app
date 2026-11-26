@@ -47,8 +47,10 @@ export default async function AuthLayout({
         </div>
 
         <div className="relative rounded-2xl border border-white/10 bg-white/5 p-5">
-          <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-jade-300">CAMEROON · XAF</p>
-          <p className="mt-2 text-sm leading-relaxed text-jade-50/85">{dict.marketing.stat1Label}</p>
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-jade-300">{dict.marketing.regionCurrency}</p>
+          <p className="mt-2 text-sm leading-relaxed text-jade-50/85">
+            <span className="font-bold text-white">{dict.marketing.stat1Value}</span> {dict.marketing.stat1Label}
+          </p>
         </div>
       </aside>
 

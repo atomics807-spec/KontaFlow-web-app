@@ -1,6 +1,10 @@
-import type { SVGProps } from "react";
+"use client";
+
+import { useId, type SVGProps } from "react";
 
 export function LogoMark({ className, ...props }: SVGProps<SVGSVGElement>) {
+  const gradientId = useId();
+
   return (
     <svg
       viewBox="0 0 40 40"
@@ -10,13 +14,13 @@ export function LogoMark({ className, ...props }: SVGProps<SVGSVGElement>) {
       {...props}
     >
       <defs>
-        <linearGradient id="kf-mark" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
           <stop stopColor="#16A97E" />
           <stop offset="0.55" stopColor="#0B7A5A" />
           <stop offset="1" stopColor="#083C2D" />
         </linearGradient>
       </defs>
-      <rect width="40" height="40" rx="11" fill="url(#kf-mark)" />
+      <rect width="40" height="40" rx="11" fill={`url(#${gradientId})`} />
       <path
         d="M12 10v20"
         stroke="#F8F5EE"
