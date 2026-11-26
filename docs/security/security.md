@@ -35,12 +35,69 @@
 
 Role matrix lives in `src/lib/permissions.ts` and is unit-tested.
 
+## Tenant isolation matrix
+
+Every tenant-owned table has `workspace_id`, RLS enabled and at least one
+policy. None of the policies trust a `workspace_id` from the client; they call
+`app.is_workspace_member`, `app.can_write_finance`, `app.can_manage_records` or
+`app.can_manage_workspace`, all of which resolve the caller from `auth.uid()`.
+
+| Surface | Read | Write | Delete |
+| --- | --- | --- | --- |
+| invoices, invoice_items, debts, debt_payments | any member | finance roles | managers (drafts only for invoices) |
+| budgets, financial_goals | any member | managers | managers |
+| inventory_items | any member | finance roles | managers |
+| financial_reports | any member | finance roles | managers or author |
+| business_settings | any member | owner/admin | — |
+| ai_interactions | author only | author only | — |
+| ai_suggestions | members, shared or own | author (status) | managers |
+| notification_preferences, privacy_consents | owner | owner | — |
+| offline_sync_records | owner | owner | — |
+| integration_accounts | owner/admin | owner/admin | — |
+| integration_messages | managers | service role | — |
+| subscription_plans, subscription_features, plan_features | authenticated | service role | service role |
+| subscriptions | owner/admin | owner/admin | — |
+| payment_webhooks, otp_verifications, idempotency_records | service role only | service role only | service role only |
+
+Child rows of tenant-owned parents also carry composite foreign keys
+`(workspace_id, parent_id)`, so a row cannot point at another tenant's parent
+even if a policy were wrong. This is defence in depth, not a replacement for
+RLS.
+
+Deleting a workspace is the one case where delete-protection triggers must
+yield: a transaction-local marker set by `workspaces_mark_deletion` lets
+invoice, payment and system-record guards allow the cascade, and tenant
+foreign keys are deferred so deletion order cannot fail. Normal deletes stay
+blocked.
+
+The throwaway-database suite exercises this matrix with a user who is not a
+member of the tenant: reads return zero rows and writes fail with `42501` for
+invoices, debts, budgets, inventory, AI suggestions, notification preferences,
+offline sync, financial accounts, and the reversal RPC. It also asserts that
+every table in `public` has RLS enabled and that the five compatibility views
+use `security_invoker`.
+
+## Storage isolation
+
+All buckets are private. Object paths begin with the tenant id
+(`<workspace_id>/...`) or the user id (`<user_id>/...` for profile images).
+Policies map that folder to membership or ownership; malformed folders return
+null through `app.uuid_or_null()` and therefore fail closed. Deletes are
+limited to the uploader or a workspace manager, and the app only ever hands out
+short-lived signed URLs. No bucket has `public = true`.
+
 ## Financial integrity as a security property
 
 * Amounts are positive `bigint` minor units; direction is explicit.
 * Two balanced ledger lines per transaction, enforced by a deferred trigger.
 * Posted rows are immutable; `void_transaction` keeps history and writes an
   audit event.
+* Corrections after a reporting period use `reverse_transaction`, which writes
+  a mirrored entry with swapped debit/credit lines, links it with
+  `reverses_transaction_id`, and audits both the original and the reversal. A
+  transaction can only be reversed once.
+* Invoice totals and debt balances are derived in SQL from integer values;
+  issued invoices and recorded payments freeze their financial fields.
 * Deleting a workspace is restricted to the owner, and the owner can never be
   removed or demoted while they are the last owner (trigger).
 
@@ -92,6 +149,6 @@ action, entity and workspace — never full message bodies or credentials.
   `WHATSAPP_ACCESS_TOKEN`, `CRON_SECRET`, `USSD_CALLBACK_TOKEN` on a schedule.
 - Keep Supabase network restrictions / SSL enforcement on.
 - Enable Cloudflare WAF and rate limiting in front of `/api/*`.
-- Run `npm run test:db` and `npm test` in CI before deploy.
+- Run `npm run test:db` (105 assertions) and `npm test` in CI before deploy.
 - Verify RLS after any migration that adds a table (`alter table ... enable row
   level security` must be present).

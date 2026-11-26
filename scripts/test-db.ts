@@ -16,10 +16,12 @@ const TEST_DB = "kontaflow_test";
 const ALICE = "11111111-1111-4111-8111-111111111111";
 const BOB = "22222222-2222-4222-8222-222222222222";
 const CHARLIE = "33333333-3333-4333-8333-333333333333";
+const DORA = "44444444-4444-4444-8444-444444444444";
 
 const alice = { sub: ALICE, email: "alice@example.com", role: "authenticated" };
 const bob = { sub: BOB, email: "bob@example.com", role: "authenticated" };
 const charlie = { sub: CHARLIE, email: "charlie@example.com", role: "authenticated" };
+const dora = { sub: DORA, email: "dora@example.com", role: "authenticated" };
 
 async function commitAs<T>(
   client: Client,
@@ -47,6 +49,8 @@ async function scalar(client: Client, sql: string, params: unknown[] = []): Prom
   return first === null || first === undefined ? "" : String(first);
 }
 
+
+
 async function main(): Promise<void> {
   const maintenance = await connect();
   const dbName = TEST_DB;
@@ -64,8 +68,9 @@ async function main(): Promise<void> {
       `insert into auth.users (id, email, raw_user_meta_data) values
          ($1, 'alice@example.com', '{"full_name":"Alice Nkeng"}'::jsonb),
          ($2, 'bob@example.com', '{"full_name":"Bob Mbarga"}'::jsonb),
-         ($3, 'charlie@example.com', '{"full_name":"Charlie Fotso"}'::jsonb)`,
-      [ALICE, BOB, CHARLIE],
+         ($3, 'charlie@example.com', '{"full_name":"Charlie Fotso"}'::jsonb),
+         ($4, 'dora@example.com', '{"full_name":"Dora Etaba"}'::jsonb)`,
+      [ALICE, BOB, CHARLIE, DORA],
     );
 
     console.log("\nProvisioning");
@@ -215,6 +220,10 @@ async function main(): Promise<void> {
     console.log("\nTenant isolation");
     const asBob = async (sql: string, params: unknown[] = []) =>
       asRole(client, "authenticated", bob, async (c) => scalar(c, sql, params));
+    const asAlice = async (sql: string, params: unknown[] = []) =>
+      asRole(client, "authenticated", alice, async (c) => scalar(c, sql, params));
+    const asDora = async (sql: string, params: unknown[] = []) =>
+      asRole(client, "authenticated", dora, async (c) => scalar(c, sql, params));
 
     eq("cannot read A transactions", await asBob(`select count(*) from transactions where workspace_id = $1`, [idA]), 0);
     eq("cannot read A ledger", await asBob(`select count(*) from ledger_lines where workspace_id = $1`, [idA]), 0);
@@ -516,6 +525,517 @@ async function main(): Promise<void> {
       },
     );
     eq("service summary returns totals", serviceSummary.totalIncomeMinor, "7000");
+
+    console.log("\nPhase 3 · schema invariants");
+    eq(
+      "business settings are auto-provisioned",
+      await scalar(client, `select count(*) from business_settings where workspace_id = $1`, [idA]),
+      "1",
+    );
+    eq("plan catalogue seeded", await scalar(client, `select count(*) from subscription_plans`), "3");
+    eq(
+      "subscription is linked to its plan",
+      await scalar(
+        client,
+        `select p.code from subscriptions s join subscription_plans p on p.id = s.plan_id where s.workspace_id = $1`,
+        [idA],
+      ),
+      "starter",
+    );
+    ok(
+      "plan features are catalogued",
+      Number(await scalar(client, `select count(*) from plan_features`)) >= 10,
+    );
+
+    const invoiceNumber1 = await commitAs(client, alice, async (c) =>
+      scalar(c, `select public.next_invoice_number($1)`, [idA]),
+    );
+    const invoiceNumber2 = await commitAs(client, alice, async (c) =>
+      scalar(c, `select public.next_invoice_number($1)`, [idA]),
+    );
+    eq("invoice numbering starts at INV-0001", invoiceNumber1, "INV-0001");
+    eq("invoice numbering increments once", invoiceNumber2, "INV-0002");
+
+    console.log("\nPhase 3 · invoices");
+    const customerA = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ id: string }>(
+        `insert into contacts (workspace_id, kind, name) values ($1, 'customer', 'Mami Fish') returning id`,
+        [idA],
+      );
+      return result.rows[0]!.id;
+    });
+    const invoiceId = await commitAs(client, alice, async (c) => {
+      const invoice = await c.query<{ id: string }>(
+        `insert into invoices (workspace_id, customer_id, number, due_on, currency)
+         values ($1, $2, 'INV-0001', current_date + 7, 'XAF') returning id`,
+        [idA, customerA],
+      );
+      const id = invoice.rows[0]!.id;
+      await c.query(
+        `insert into invoice_items (workspace_id, invoice_id, position, description, quantity, unit_price_minor, tax_rate_bp)
+         values ($1, $2, 1, 'Crates of fish', 3, 1000, 0),
+                ($1, $2, 2, 'Delivery', 1.5, 2000, 1000)`,
+        [idA, id],
+      );
+      return id;
+    });
+    eq(
+      "invoice subtotal is derived from items",
+      await scalar(client, `select subtotal_minor from invoices where id = $1`, [invoiceId]),
+      "6000",
+    );
+    eq(
+      "invoice tax uses basis points",
+      await scalar(client, `select tax_minor from invoices where id = $1`, [invoiceId]),
+      "300",
+    );
+    eq(
+      "invoice total is subtotal plus tax",
+      await scalar(client, `select total_minor from invoices where id = $1`, [invoiceId]),
+      "6300",
+    );
+    eq(
+      "invoice line total is rounded integer",
+      await scalar(client, `select line_total_minor from invoice_items where invoice_id = $1 and position = 2`, [invoiceId]),
+      "3000",
+    );
+    eq(
+      "invoice numbers are unique inside a workspace",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into invoices (workspace_id, customer_id, number, due_on) values ($1, $2, 'INV-0001', current_date + 3)`,
+        [idA, customerA],
+      ))?.code,
+      "23505",
+    );
+    eq(
+      "cross-tenant invoice inserts are rejected",
+      (await expectError(
+        client,
+        "authenticated",
+        dora,
+        `insert into invoices (workspace_id, customer_id, number, due_on) values ($1, $2, 'INV-X', current_date + 3)`,
+        [idA, customerA],
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "other tenants cannot read invoices",
+      await asDora(`select count(*) from invoices where workspace_id = $1`, [idA]),
+      "0",
+    );
+
+    await commitAs(client, alice, async (c) => {
+      await c.query(`update invoices set status = 'sent' where id = $1`, [invoiceId]);
+    });
+    eq(
+      "issued invoices lock their line items",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into invoice_items (workspace_id, invoice_id, position, description, quantity, unit_price_minor)
+         values ($1, $2, 3, 'Late addition', 1, 500)`,
+        [idA, invoiceId],
+      ))?.code,
+      "23514",
+    );
+    eq(
+      "issued invoices cannot change totals",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `update invoices set total_minor = 1 where id = $1`,
+        [invoiceId],
+      ))?.code,
+      "23514",
+    );
+    ok(
+      "only drafts can be deleted",
+      (await expectError(client, "authenticated", alice, `delete from invoices where id = $1`, [invoiceId]))?.code ===
+        "23514",
+    );
+
+    console.log("\nPhase 3 · debts");
+    const debtId = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ id: string }>(
+        `insert into debts (workspace_id, direction, contact_id, description, principal_minor, due_on)
+         values ($1, 'receivable', $2, 'Stock on credit', 5000, current_date + 14) returning id`,
+        [idA, customerA],
+      );
+      return result.rows[0]!.id;
+    });
+    await commitAs(client, alice, async (c) => {
+      await c.query(
+        `insert into debt_payments (workspace_id, debt_id, amount_minor, paid_on) values ($1, $2, 2000, current_date)`,
+        [idA, debtId],
+      );
+    });
+    eq(
+      "debt payment updates the paid amount",
+      await scalar(client, `select paid_minor from debts where id = $1`, [debtId]),
+      "2000",
+    );
+    eq(
+      "debt status becomes partially paid",
+      await scalar(client, `select status from debts where id = $1`, [debtId]),
+      "partially_paid",
+    );
+    eq(
+      "overpayments are rejected",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into debt_payments (workspace_id, debt_id, amount_minor, paid_on) values ($1, $2, 4000, current_date)`,
+        [idA, debtId],
+      ))?.code,
+      "23514",
+    );
+    await commitAs(client, alice, async (c) => {
+      await c.query(
+        `insert into debt_payments (workspace_id, debt_id, amount_minor, paid_on) values ($1, $2, 3000, current_date)`,
+        [idA, debtId],
+      );
+    });
+    eq(
+      "settled debt is closed",
+      await scalar(client, `select status || ':' || (closed_at is not null) from debts where id = $1`, [debtId]),
+      "settled:true",
+    );
+    const paymentRow = await scalar(client, `select id from debt_payments where debt_id = $1 order by amount_minor limit 1`, [
+      debtId,
+    ]);
+    eq(
+      "payments are voided, not deleted",
+      (await expectError(client, "authenticated", alice, `delete from debt_payments where id = $1`, [paymentRow]))?.code,
+      "23514",
+    );
+    eq(
+      "payment amounts are immutable",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `update debt_payments set amount_minor = 10 where id = $1`,
+        [paymentRow],
+      ))?.code,
+      "23514",
+    );
+    eq(
+      "cross-tenant debts are invisible",
+      await asDora(`select count(*) from debts where workspace_id = $1`, [idA]),
+      "0",
+    );
+
+    eq(
+      "paid amounts are not editable on issued invoices",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `update invoices set amount_paid_minor = 100 where id = $1`,
+        [invoiceId],
+      ))?.code,
+      "23514",
+    );
+
+    const linkedInvoice = await commitAs(client, alice, async (c) => {
+      const invoice = await c.query<{ id: string }>(
+        `insert into invoices (workspace_id, customer_id, number, due_on, currency)
+         values ($1, $2, 'INV-0002', current_date + 7, 'XAF') returning id`,
+        [idA, customerA],
+      );
+      const id = invoice.rows[0]!.id;
+      await c.query(
+        `insert into invoice_items (workspace_id, invoice_id, position, description, quantity, unit_price_minor)
+         values ($1, $2, 1, 'Repair kit', 1, 1000)`,
+        [idA, id],
+      );
+      await c.query(`update invoices set status = 'sent' where id = $1`, [id]);
+      return id;
+    });
+    await commitAs(client, alice, async (c) => {
+      const debt = await c.query<{ id: string }>(
+        `insert into debts (workspace_id, direction, contact_id, description, principal_minor, invoice_id)
+         values ($1, 'receivable', $2, 'Invoice INV-0002', 1000, $3) returning id`,
+        [idA, customerA, linkedInvoice],
+      );
+      await c.query(
+        `insert into debt_payments (workspace_id, debt_id, amount_minor, paid_on) values ($1, $2, 1000, current_date)`,
+        [idA, debt.rows[0]!.id],
+      );
+    });
+    eq(
+      "payments settle the linked invoice",
+      await scalar(
+        client,
+        `select status::text || ':' || amount_paid_minor || ':' || (paid_at is not null)
+           from invoices where id = $1`,
+        [linkedInvoice],
+      ),
+      "paid:1000:true",
+    );
+
+    console.log("\nPhase 3 · reversals and provenance");
+    const reversible = await commitAs(client, alice, async (c) => {
+      const account = (
+        await c.query<{ id: string }>(`select id from accounts where workspace_id = $1 and subtype = 'cash'`, [idA])
+      ).rows[0]!.id;
+      const result = await c.query<{ data: { id: string } }>(`select public.record_transaction($1::jsonb) as data`, [
+        JSON.stringify({
+          workspace_id: idA,
+          kind: "income",
+          amount_minor: 7000,
+          description: "Reversal fixture",
+          account_id: account,
+          channel: "ai",
+        }),
+      ]);
+      return result.rows[0]!.data;
+    });
+    eq(
+      "provenance is derived from the channel",
+      await scalar(client, `select source::text from transactions where id = $1`, [reversible.id]),
+      "ai",
+    );
+    const reversal = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string; reverses: string } }>(
+        `select public.reverse_transaction($1, 'wrong customer') as data`,
+        [reversible.id],
+      );
+      return result.rows[0]!.data;
+    });
+    ok("reversal returns a new transaction", Boolean(reversal.id) && reversal.reverses === reversible.id);
+    eq(
+      "original transaction stays posted",
+      await scalar(client, `select status::text from transactions where id = $1`, [reversible.id]),
+      "posted",
+    );
+    eq(
+      "reversal mirrors the ledger",
+      await scalar(
+        client,
+        `select count(*) || ':' || coalesce(sum(debit_minor), 0) || ':' || coalesce(sum(credit_minor), 0)
+           from ledger_lines where transaction_id = $1`,
+        [reversal.id],
+      ),
+      "2:7000:7000",
+    );
+    eq(
+      "reversal is audited",
+      await scalar(
+        client,
+        `select count(*) from audit_logs where entity = 'transaction' and action = 'transaction.reversed' and entity_id = $1`,
+        [reversible.id],
+      ),
+      "1",
+    );
+    eq(
+      "double reversal is blocked",
+      (await expectError(client, "authenticated", alice, `select public.reverse_transaction($1, 'again')`, [reversible.id]))
+        ?.code,
+      "23514",
+    );
+    eq(
+      "cross-tenant reversal is rejected",
+      (await expectError(client, "authenticated", dora, `select public.reverse_transaction($1, 'nope')`, [reversible.id]))
+        ?.code,
+      "42501",
+    );
+
+    console.log("\nPhase 3 · new table isolation");
+    eq(
+      "cross-tenant budgets are rejected",
+      (await expectError(
+        client,
+        "authenticated",
+        dora,
+        `insert into budgets (workspace_id, name, period_start, period_end, amount_minor)
+         values ($1, 'Sneaky budget', current_date, current_date + 30, 1000)`,
+        [idA],
+      ))?.code,
+      "42501",
+    );
+    ok(
+      "managers can budget",
+      Boolean(
+        await commitAs(client, alice, async (c) =>
+          scalar(
+            c,
+            `with inserted as (
+               insert into budgets (workspace_id, name, period_start, period_end, amount_minor)
+               values ($1, 'Monthly spend', current_date, current_date + 30, 250000) returning id
+             ) select id from inserted`,
+            [idA],
+          ),
+        ),
+      ),
+    );
+    eq(
+      "cross-tenant inventory is rejected",
+      (await expectError(
+        client,
+        "authenticated",
+        dora,
+        `insert into inventory_items (workspace_id, sku, name) values ($1, 'SKU-1', 'Hidden stock')`,
+        [idA],
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "AI suggestions stay inside the workspace",
+      await (async () => {
+        await client.query(
+          `insert into ai_suggestions (workspace_id, kind, title, body) values ($1, 'cashflow', 'Cash is tight', 'Collect receivables')`,
+          [idA],
+        );
+        return asDora(`select count(*) from ai_suggestions where workspace_id = $1`, [idA]);
+      })(),
+      "0",
+    );
+    eq(
+      "offline sync records are user scoped",
+      await (async () => {
+        await commitAs(client, alice, async (c) => {
+          await c.query(
+            `insert into offline_sync_records (workspace_id, user_id, device_id, client_generated_id, entity)
+             values ($1, $2, 'device-a', 'offline-1', 'transaction')`,
+            [idA, ALICE],
+          );
+        });
+        return asDora(`select count(*) from offline_sync_records where workspace_id = $1`, [idA]);
+      })(),
+      "0",
+    );
+    eq(
+      "cross-tenant notification preferences are rejected",
+      (await expectError(
+        client,
+        "authenticated",
+        dora,
+        `insert into notification_preferences (workspace_id, user_id, channel) values ($1, $2, 'email')`,
+        [idA, ALICE],
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "service-only tables have no authenticated access",
+      (await expectError(client, "authenticated", alice, `select count(*) from payment_webhooks`))?.code,
+      "42501",
+    );
+    eq(
+      "anon cannot read new tables",
+      (await expectError(client, "anon", null, `select count(*) from invoices`))?.code,
+      "42501",
+    );
+
+    console.log("\nPhase 3 · security coverage");
+    eq(
+      "every public table has RLS enabled",
+      await scalar(
+        client,
+        `select count(*) from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`,
+      ),
+      "0",
+    );
+    eq(
+      "every tenant table is reachable by a policy or is service-only",
+      await scalar(
+        client,
+        `select coalesce(string_agg(c.relname, ', '), '') from pg_class c
+           join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'public' and c.relkind = 'r' and c.relrowsecurity
+            and not exists (
+              select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
+            )
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records')`,
+      ),
+      "",
+    );
+    eq(
+      "compatibility views run with the caller's rights",
+      await scalar(
+        client,
+        `select count(*) from pg_class
+          where relname in ('financial_accounts', 'customers', 'suppliers', 'transaction_categories', 'business_categories')
+            and reloptions @> array['security_invoker=true']`,
+      ),
+      "5",
+    );
+    eq(
+      "views respect tenant isolation",
+      await asDora(`select count(*) from financial_accounts where workspace_id = $1`, [idA]),
+      "0",
+    );
+    ok(
+      "owner sees their accounts through the view",
+      Number(await asAlice(`select count(*) from financial_accounts where workspace_id = $1`, [idA])) > 0,
+    );
+
+    console.log("\nPhase 3 · tenant lifecycle");
+    const workspaceC = await commitAs(client, dora, async (c) => {
+      const result = await c.query<{ data: { id: string } }>(
+        `select public.create_workspace('Dora Traders', 'XAF', 'CM', 'Africa/Douala', null, 'en') as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    const idC = workspaceC.id;
+    await commitAs(client, dora, async (c) => {
+      const contact = await c.query<{ id: string }>(
+        `insert into contacts (workspace_id, kind, name) values ($1, 'customer', 'Cascade Customer') returning id`,
+        [idC],
+      );
+      const invoice = await c.query<{ id: string }>(
+        `insert into invoices (workspace_id, customer_id, number, due_on)
+         values ($1, $2, 'INV-C-1', current_date + 5) returning id`,
+        [idC, contact.rows[0]!.id],
+      );
+      await c.query(
+        `insert into invoice_items (workspace_id, invoice_id, position, description, quantity, unit_price_minor)
+         values ($1, $2, 1, 'Cascade item', 1, 2000)`,
+        [idC, invoice.rows[0]!.id],
+      );
+      await c.query(`update invoices set status = 'sent' where id = $1`, [invoice.rows[0]!.id]);
+      const debt = await c.query<{ id: string }>(
+        `insert into debts (workspace_id, direction, contact_id, description, principal_minor, invoice_id)
+         values ($1, 'receivable', $2, 'Cascade debt', 2000, $3) returning id`,
+        [idC, contact.rows[0]!.id, invoice.rows[0]!.id],
+      );
+      const account = (
+        await c.query<{ id: string }>(`select id from accounts where workspace_id = $1 and subtype = 'cash'`, [idC])
+      ).rows[0]!.id;
+      await c.query(
+        `insert into debt_payments (workspace_id, debt_id, amount_minor, paid_on, account_id)
+         values ($1, $2, 500, current_date, $3)`,
+        [idC, debt.rows[0]!.id, account],
+      );
+    });
+    ok(
+      "workspace owner can delete an active tenant",
+      Boolean(
+        await commitAs(client, dora, async (c) => {
+          await c.query(`delete from workspaces where id = $1`, [idC]);
+          return true;
+        }),
+      ),
+    );
+    eq("workspace rows are gone", await scalar(client, `select count(*) from workspaces where id = $1`, [idC]), "0");
+    eq(
+      "tenant children are gone",
+      await scalar(client, `select count(*) from invoices where workspace_id = $1`, [idC]),
+      "0",
+    );
+    eq(
+      "tenant payments are gone",
+      await scalar(client, `select count(*) from debt_payments where workspace_id = $1`, [idC]),
+      "0",
+    );
 
     console.log(`\nDatabase: ${databaseName()}/${dbName}`);
   } finally {
