@@ -1,6 +1,6 @@
 # API reference
 
-All HTML routes are localised: `/{en|fr|wes}/...`. Machine endpoints live under
+All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 `/api` and never trust a workspace id supplied by the caller.
 
 ## Route handlers
@@ -9,7 +9,8 @@ All HTML routes are localised: `/{en|fr|wes}/...`. Machine endpoints live under
 | --- | --- | --- | --- |
 | `/api/ai/chat` | POST | Supabase session | Assistant turn; body `{ message, conversationId? }`; returns `{ reply, conversationId }` |
 | `/api/sync` | POST | Supabase session | Flush offline outbox entries (idempotent per `clientGeneratedId`) |
-| `/api/reports/export` | GET | Supabase session | CSV export for a period (`from`, `to`) |
+| `/api/reports/export` | GET | Supabase session | Localized CSV export for a period (`from`, `to`, `locale`) |
+| `/api/reports/export/pdf` | GET | Supabase session | Localized PDF report for a period (`from`, `to`, `locale`) |
 | `/api/ussd` | POST | Optional shared token | Africa's Talking USSD menu |
 | `/api/whatsapp` | GET/POST | Verify token / HMAC | Meta webhook handshake and inbound messages |
 | `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails the previous day's close to workspace owners |

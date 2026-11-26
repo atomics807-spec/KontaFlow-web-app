@@ -106,7 +106,7 @@ export const workspaceSchema = z.object({
   currency: z.enum(SUPPORTED_CURRENCIES),
   country: z.string().trim().length(2, "Use a two-letter country code."),
   timezone: z.string().trim().min(3).max(64).default("Africa/Douala"),
-  locale: z.enum(["en", "fr", "wes"]).default("en"),
+  locale: z.enum(["en", "fr", "pcm"]).default("en"),
 });
 
 export const workspaceSettingsSchema = z.object({

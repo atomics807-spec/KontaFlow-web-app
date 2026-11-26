@@ -93,14 +93,14 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
             <ShieldCheck className="h-5 w-5 text-accent-strong" aria-hidden />
             <p className="mt-2 text-xs leading-relaxed text-muted">privacy@kontaflow.com</p>
             <Link href={`/${locale}/contact`} className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-accent-strong hover:underline">
-              Contact
+              {content.common.talkToUs}
               <ArrowRight className="h-3 w-3" aria-hidden />
             </Link>
           </div>
         </aside>
 
         <article className="max-w-3xl">
-          {locale === "wes" ? (
+          {locale === "pcm" ? (
             <p className="mb-6 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-xs leading-relaxed text-heading">
               Dis Pidgin version na to help understanding. If meaning differ, di English version go govern.
             </p>

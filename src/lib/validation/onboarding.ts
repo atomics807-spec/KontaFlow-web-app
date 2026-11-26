@@ -15,7 +15,7 @@ export const onboardingSchema = z
     fiscalYearStartMonth: z.coerce.number().int().min(1).max(12),
     country: z.string().trim().length(2),
     timezone: z.string().trim().min(3).max(64),
-    uiLocale: z.enum(["en", "fr", "wes"]),
+    uiLocale: z.enum(["en", "fr", "pcm"]),
     businessPhone: z.string().trim().max(24).optional().or(z.literal("")),
   })
   .superRefine((value, ctx) => {

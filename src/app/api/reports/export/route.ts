@@ -3,12 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { can } from "@/lib/permissions";
 import { exportTransactionsCsv } from "@/services/reports";
+import { resolveLocale } from "@/lib/i18n/config";
 import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const from = url.searchParams.get("from") ?? "";
   const to = url.searchParams.get("to") ?? "";
+  const requestedLocale = url.searchParams.get("locale");
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
     return NextResponse.json({ error: "invalid_period" }, { status: 422 });
@@ -27,7 +29,12 @@ export async function GET(request: Request) {
   }
 
   try {
-    const csv = await exportTransactionsCsv(context.workspace.id, from, to);
+    const csv = await exportTransactionsCsv(
+      context.workspace.id,
+      from,
+      to,
+      resolveLocale(requestedLocale ?? context.workspace.locale),
+    );
     return new NextResponse(`\uFEFF${csv}`, {
       headers: {
         "content-type": "text/csv; charset=utf-8",

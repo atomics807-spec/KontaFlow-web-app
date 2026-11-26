@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getDictionary } from "@/lib/i18n/server";
-import { resolveLocale } from "@/lib/i18n/config";
+import { LOCALE_COOKIE, localizePath, resolveLocale } from "@/lib/i18n/config";
 import { getPublicEnv } from "@/lib/env";
 import { emailSchema, passwordSchema } from "@/lib/validation/schemas";
 import { signupSchema } from "@/lib/validation/auth";
@@ -72,24 +73,38 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 
   const next = safeNextPath(formData.get("next"), `/${locale}/dashboard`);
   const user = data.user;
+  let preferredLocale = locale;
 
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("verification_required, phone_verified_at, email_verified_at")
+      .select("verification_required, phone_verified_at, email_verified_at, locale")
       .eq("id", user.id)
       .maybeSingle();
+
+    preferredLocale = resolveLocale(profile?.locale ?? locale);
+    const destination = localizePath(next, preferredLocale);
+    const cookieStore = await cookies();
+    cookieStore.set(LOCALE_COOKIE, preferredLocale, {
+      path: "/",
+      maxAge: 31536000,
+      sameSite: "lax",
+      httpOnly: false,
+    });
 
     if (profile?.verification_required) {
       if (!user.email_confirmed_at && !profile.email_verified_at) {
         redirect(
-          `/${locale}/verify-email?email=${encodeURIComponent(user.email ?? "")}&next=${encodeURIComponent(next)}`,
+          `/${preferredLocale}/verify-email?email=${encodeURIComponent(user.email ?? "")}&next=${encodeURIComponent(destination)}`,
         );
       }
       if (!profile.phone_verified_at) {
-        redirect(`/${locale}/verify-phone?next=${encodeURIComponent(next)}`);
+        redirect(`/${preferredLocale}/verify-phone?next=${encodeURIComponent(destination)}`);
       }
     }
+
+    revalidatePath("/", "layout");
+    redirect(destination);
   }
 
   revalidatePath("/", "layout");

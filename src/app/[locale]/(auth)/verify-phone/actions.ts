@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, getSessionUser } from "@/lib/supabase/auth";
 import { getDictionary } from "@/lib/i18n/server";
-import { resolveLocale } from "@/lib/i18n/config";
+import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { getRequestMeta } from "@/lib/security/request-meta";
 import { generateOtp, hashOtp } from "@/lib/security/otp";
 import { sendSms } from "@/lib/integrations/sms";
@@ -57,18 +57,18 @@ export async function sendPhoneCodeAction(_prev: FormState, formData: FormData):
   if (status === "verified") return formSuccess(dict.identity.phoneVerified);
   if (status === "no_phone") return formError(dict.identity.phoneRequired);
   if (status === "cooldown") {
-    return formError(fill(dict.identity.resendCooldown, { seconds: result?.retry_after_seconds ?? 60 }));
+    return formError(fill(dict.identity.resendCooldown, { seconds: result?.retry_after_seconds ?? 60 }, { locale: intlLocale(locale) }));
   }
   if (status === "rate_limited") return formError(dict.identity.tooManyAttempts);
   if (status !== "sent") return formError(dict.errors.generic);
 
   const delivery = await sendSms({
     to: profile.phone,
-    message: fill(dict.identity.smsBody, {
-      code,
-      minutes: 10,
-      brand: "KontaFlow",
-    }),
+    message: fill(
+      dict.identity.smsBody,
+      { code, minutes: 10, brand: "KontaFlow" },
+      { locale: intlLocale(locale) },
+    ),
   });
 
   if (!delivery.sent) {
@@ -117,7 +117,7 @@ export async function verifyPhoneCodeAction(
     }
     case "invalid":
       return formError(
-        fill(dict.identity.codeWrong, { attempts: result.attempts_remaining ?? 0 }),
+        fill(dict.identity.codeWrong, { attempts: result.attempts_remaining ?? 0 }, { locale: intlLocale(locale) }),
         { code: [dict.identity.codeInvalid] },
       );
     case "expired":

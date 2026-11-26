@@ -14,13 +14,13 @@ describe("marketing metadata", () => {
     expect(metadata.alternates?.canonical).toMatch(/\/fr\/pricing$/);
     expect(languages.en).toMatch(/\/en\/pricing$/);
     expect(languages.fr).toMatch(/\/fr\/pricing$/);
-    expect(languages.wes).toMatch(/\/wes\/pricing$/);
+    expect(languages.pcm).toMatch(/\/pcm\/pricing$/);
     expect(languages["x-default"]).toMatch(/\/en\/pricing$/);
   });
 
   it("sets localized Open Graph locale and absolute image URLs", () => {
     const metadata = marketingMetadata({
-      locale: "wes",
+      locale: "pcm",
       path: "/faq",
       title: "FAQ",
       description: "Answers.",

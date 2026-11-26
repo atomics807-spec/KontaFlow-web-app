@@ -3,7 +3,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/integrations/email";
 import { safeEqual } from "@/lib/integrations/whatsapp";
 import { addDays, todayInZone } from "@/lib/dates";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, moneyLocale } from "@/lib/money";
+import { resolveLocale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { logger } from "@/lib/logger";
 
 type Summary = {
@@ -18,6 +21,14 @@ type Summary = {
  * Schedule: 19:00 Africa/Douala (18:00 UTC) via Vercel Cron or Cloudflare Cron
  * Triggers, with `Authorization: Bearer $CRON_SECRET`.
  */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 async function run(request: Request): Promise<Response> {
   const secret = getServerEnv().CRON_SECRET;
   const authorization = request.headers.get("authorization") ?? "";
@@ -28,7 +39,7 @@ async function run(request: Request): Promise<Response> {
   const admin = createAdminClient();
   const { data: workspaces, error } = await admin
     .from("workspaces")
-    .select("id, name, owner_id, currency, timezone")
+    .select("id, name, owner_id, currency, timezone, locale")
     .order("created_at", { ascending: true })
     .limit(200);
 
@@ -70,37 +81,49 @@ async function run(request: Request): Promise<Response> {
         continue;
       }
 
-      const money = (value: bigint) => formatMoney(value, workspace.currency, "fr-CM");
+      const { data: ownerProfile } = await admin
+        .from("profiles")
+        .select("locale")
+        .eq("id", workspace.owner_id)
+        .maybeSingle();
+      const locale = resolveLocale(ownerProfile?.locale ?? workspace.locale);
+      const dict = await getDictionary(locale);
+      const copy = dict.emails;
+      const money = (value: bigint) => formatMoney(value, workspace.currency, moneyLocale(locale, workspace.currency));
       const net = BigInt(figures.netProfitMinor ?? "0");
       const cash = BigInt(figures.cashBalanceMinor ?? "0");
+      const subject = interpolate(copy.dailySubject, {
+        workspace: workspace.name.replace(/[\r\n]+/g, " "),
+        date: yesterday,
+      });
 
-      const text = [
-        `${workspace.name} · ${yesterday}`,
-        `Income: ${money(income)}`,
-        `Expenses: ${money(expense)}`,
-        `Net: ${money(net)}`,
-        `Cash on hand: ${money(cash)}`,
-        "",
-        "Open KontaFlow for the full breakdown.",
-      ].join("\n");
+      const text = interpolate(copy.dailyText, {
+        workspace: workspace.name,
+        date: yesterday,
+        income: money(income),
+        expense: money(expense),
+        net: money(net),
+        cash: money(cash),
+        open: copy.dailyOpen,
+      });
 
       const html = `
         <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#0b1f1a">
           <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0b7a5a;margin:0 0 20px">KontaFlow</p>
-          <h1 style="font-size:20px;margin:0 0 4px">${workspace.name}</h1>
-          <p style="font-size:13px;color:#7a8a83;margin:0 0 20px">${yesterday}</p>
+          <h1 style="font-size:20px;margin:0 0 4px">${escapeHtml(workspace.name)}</h1>
+          <p style="font-size:13px;color:#7a8a83;margin:0 0 20px">${escapeHtml(yesterday)}</p>
           <table style="width:100%;font-size:14px;border-collapse:collapse">
-            <tr><td style="padding:6px 0;color:#4b5f58">Income</td><td style="text-align:right;font-weight:600">${money(income)}</td></tr>
-            <tr><td style="padding:6px 0;color:#4b5f58">Expenses</td><td style="text-align:right;font-weight:600">${money(expense)}</td></tr>
-            <tr><td style="padding:6px 0;color:#4b5f58">Net</td><td style="text-align:right;font-weight:600">${money(net)}</td></tr>
-            <tr><td style="padding:6px 0;border-top:1px solid #e5dfd1;color:#4b5f58">Cash on hand</td><td style="text-align:right;font-weight:600;border-top:1px solid #e5dfd1">${money(cash)}</td></tr>
+            <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyIncome)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(income))}</td></tr>
+            <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyExpenses)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(expense))}</td></tr>
+            <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyNet)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(net))}</td></tr>
+            <tr><td style="padding:6px 0;border-top:1px solid #e5dfd1;color:#4b5f58">${escapeHtml(copy.dailyCash)}</td><td style="text-align:right;font-weight:600;border-top:1px solid #e5dfd1">${escapeHtml(money(cash))}</td></tr>
           </table>
-          <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">You receive this because you own this workspace.</p>
+          <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">${escapeHtml(copy.dailyFooter)}</p>
         </div>`;
 
       const result = await sendEmail({
         to: email,
-        subject: `${workspace.name} · ${yesterday} · KontaFlow`,
+        subject,
         html,
         text,
       });
@@ -111,7 +134,7 @@ async function run(request: Request): Promise<Response> {
           workspace_id: workspace.id,
           user_id: workspace.owner_id,
           channel: "email",
-          title: `Daily close · ${yesterday}`,
+          title: interpolate(copy.dailyTitle, { date: yesterday }),
           body: text.slice(0, 900),
           sent_at: new Date().toISOString(),
         });

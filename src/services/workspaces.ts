@@ -117,7 +117,7 @@ export async function getSubscription(workspaceId: string): Promise<Subscription
 
 export async function updateWorkspace(
   workspaceId: string,
-  input: { name: string; legalName?: string; currency: string; timezone: string; country: string },
+  input: { name: string; legalName?: string; currency: string; timezone: string; country: string; locale: string },
 ): Promise<void> {
   const supabase = await createClient();
 
@@ -151,6 +151,7 @@ export async function updateWorkspace(
       currency: input.currency,
       timezone: input.timezone,
       country_code: input.country.toUpperCase(),
+      locale: input.locale,
     })
     .eq("id", workspaceId);
 

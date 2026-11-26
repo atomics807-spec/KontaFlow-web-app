@@ -9,6 +9,7 @@ import { linkChannel, unlinkChannel, updateWorkspace } from "@/services/workspac
 import { workspaceSchema } from "@/lib/validation/schemas";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
+import { persistLocalePreference } from "@/app/[locale]/locale-actions";
 import { logger } from "@/lib/logger";
 
 export async function updateWorkspaceAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -33,6 +34,10 @@ export async function updateWorkspaceAction(_prev: FormState, formData: FormData
     await updateWorkspace(context.workspace.id, parsed.data);
   } catch (error) {
     return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
+  }
+
+  if (parsed.data.locale !== locale) {
+    await persistLocalePreference(parsed.data.locale);
   }
 
   revalidatePath("/", "layout");

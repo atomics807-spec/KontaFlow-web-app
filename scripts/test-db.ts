@@ -99,6 +99,19 @@ async function main(): Promise<void> {
       return result.rows[0]!.data;
     });
 
+    const workspacePcm = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string } }>(
+        `select public.create_workspace('Pidgin Shop', 'XAF', 'CM', 'Africa/Douala', null, 'pcm') as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("workspace creation accepts pcm", await scalar(client, `select locale from workspaces where id = $1`, [workspacePcm.id]), "pcm");
+    eq(
+      "starter categories carry pcm translations",
+      await scalar(client, `select translations ->> 'pcm' from categories where workspace_id = $1 and name = 'Sales'`, [workspacePcm.id]),
+      "Sale",
+    );
+
     const idA = workspaceA.id;
     const idB = workspaceB.id;
     ok("workspace A created", Boolean(idA));

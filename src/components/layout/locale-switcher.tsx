@@ -1,38 +1,37 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Globe } from "lucide-react";
-import { LOCALE_COOKIE, LOCALES, LOCALE_META, isLocale } from "@/lib/i18n/config";
+import { LOCALE_COOKIE, LOCALES, LOCALE_META, localizePath, resolveLocale } from "@/lib/i18n/config";
+import { persistLocalePreference } from "@/app/[locale]/locale-actions";
 import { useI18n } from "./i18n-provider";
 
 export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
-  const { locale } = useI18n();
-  const pathname = usePathname();
-  const router = useRouter();
+  const { locale, t } = useI18n();
   const [pending, startTransition] = useTransition();
 
   const change = (next: string) => {
     if (next === locale) return;
-    const segments = pathname.split("/");
-    if (isLocale(segments[1])) {
-      segments[1] = next;
-      // Persist the preference for the proxy and for emails.
-      document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
-      startTransition(() => router.push(segments.join("/") || `/${next}`));
-    }
+    // Set the cookie immediately so the proxy sees the choice, then persist
+    // the profile preference for other devices. A hard navigation avoids
+    // locale prefix bugs in the client router after a server action.
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    const target = localizePath(window.location.pathname, resolveLocale(next));
+    startTransition(() => {
+      void persistLocalePreference(next).finally(() => window.location.assign(target));
+    });
   };
 
   return (
     <label className="relative inline-flex items-center gap-1.5 text-sm font-medium text-muted">
       <Globe className="h-4 w-4" aria-hidden />
-      <span className="sr-only">{useI18n().dict.common.language}</span>
+      <span className="sr-only">{t("common.language")}</span>
       <select
         value={locale}
         disabled={pending}
         onChange={(event) => change(event.target.value)}
         className="-ml-1 cursor-pointer appearance-none rounded-full bg-transparent py-1 pl-1 pr-5 font-semibold text-inherit hover:text-heading focus:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/40"
-        aria-label={useI18n().dict.common.language}
+        aria-label={t("common.language")}
       >
         {LOCALES.map((code) => (
           <option key={code} value={code}>

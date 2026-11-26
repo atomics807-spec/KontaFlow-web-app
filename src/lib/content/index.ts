@@ -4,7 +4,7 @@ import type { Article, LegalDoc, SiteContent } from "./types";
 const loaders: Record<Locale, () => Promise<SiteContent>> = {
   en: async () => (await import("./en")).en,
   fr: async () => (await import("./fr")).fr,
-  wes: async () => (await import("./wes")).wes,
+  pcm: async () => (await import("./pcm")).pcm,
 };
 
 export async function getSiteContent(locale: Locale): Promise<SiteContent> {

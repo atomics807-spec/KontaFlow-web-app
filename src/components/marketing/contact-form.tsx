@@ -43,7 +43,7 @@ export function ContactForm() {
     <form action={action} className="surface relative p-5 sm:p-6" noValidate>
       <input type="hidden" name="locale" value={locale} />
       <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
-        <label htmlFor="contact-website">Website</label>
+        <label htmlFor="contact-website">{copy.honeypot}</label>
         <input id="contact-website" name="website" tabIndex={-1} autoComplete="off" />
       </div>
 

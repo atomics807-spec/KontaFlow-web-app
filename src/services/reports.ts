@@ -4,6 +4,8 @@ import { AppError } from "@/lib/errors";
 import { getCurrency } from "@/lib/currency";
 import { createClient } from "@/lib/supabase/server";
 import { assertNoError } from "@/lib/supabase/errors";
+import { getDictionary } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
 import type { ReportResult } from "@/types/database";
 
 export async function getReport(workspaceId: string, from: string, to: string): Promise<ReportResult> {
@@ -20,7 +22,12 @@ export async function getReport(workspaceId: string, from: string, to: string): 
 }
 
 /** CSV for accountants: one row per transaction, amounts in major units. */
-export async function exportTransactionsCsv(workspaceId: string, from: string, to: string): Promise<string> {
+export async function exportTransactionsCsv(
+  workspaceId: string,
+  from: string,
+  to: string,
+  locale: Locale = "en",
+): Promise<string> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("v_transactions")
@@ -32,17 +39,34 @@ export async function exportTransactionsCsv(workspaceId: string, from: string, t
 
   if (error) throw assertNoError(error, "Could not export transactions.");
 
-  const header = ["date", "type", "description", "category", "contact", "account", "amount", "currency", "status", "reference"];
+  const dict = await getDictionary(locale);
+  const labels = dict.reports.csv;
+  const kindLabel = (kind: string) =>
+    kind === "income" ? labels.income : kind === "expense" ? labels.expense : kind === "transfer" ? labels.transfer : kind;
+  const statusLabel = (status: string) => (status === "void" || status === "voided" ? labels.voided : labels.posted);
+
+  const header = [
+    labels.date,
+    labels.type,
+    labels.description,
+    labels.category,
+    labels.contact,
+    labels.account,
+    labels.amount,
+    labels.currency,
+    labels.status,
+    labels.reference,
+  ];
   const rows = (data ?? []).map((row) => [
     row.occurred_on,
-    row.kind,
+    kindLabel(row.kind),
     row.description,
     row.category_name ?? "",
     row.contact_name ?? "",
     row.account_name,
     formatMajor(row.amount_minor, row.currency),
     row.currency,
-    row.status,
+    statusLabel(row.status),
     row.reference ?? "",
   ]);
 

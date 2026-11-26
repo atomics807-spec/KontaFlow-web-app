@@ -1,12 +1,13 @@
 /**
  * Application locales.
  *
- * `wes` is the ISO 639-3 code for Cameroon Pidgin English (Kamtok / Wes Cos).
- * We use it instead of `pcm` (Nigerian Pidgin) so translation memory, analytics
- * and SEO signals refer to the correct language variety. `en-CM` / `fr-CM` are
- * used for Intl formatting because Intl does not ship a `wes` locale.
+ * `pcm` is the product locale code for Cameroonian Pidgin English. The public
+ * URL prefix is `/pcm/`. `wes` (West African Pidgin English, ISO 639-3) is
+ * accepted as a legacy alias and redirected to `/pcm/`. `en-CM` / `fr-CM` are
+ * used for Intl formatting because Intl does not ship a Cameroonian Pidgin
+ * locale; Pidgin uses English (Cameroon) number and date conventions.
  */
-export const LOCALES = ["en", "fr", "wes"] as const;
+export const LOCALES = ["en", "fr", "pcm"] as const;
 
 export type Locale = (typeof LOCALES)[number];
 
@@ -39,11 +40,11 @@ export const LOCALE_META: Record<Locale, LocaleMeta> = {
     dir: "ltr",
     ogLocale: "fr_CM",
   },
-  wes: {
-    code: "wes",
+  pcm: {
+    code: "pcm",
     label: "Pidgin",
     englishLabel: "Cameroonian Pidgin",
-    htmlLang: "wes",
+    htmlLang: "pcm",
     intlLocale: "en-CM",
     dir: "ltr",
     ogLocale: "en_CM",
@@ -54,6 +55,11 @@ export const DEFAULT_LOCALE: Locale = "en";
 
 export const LOCALE_COOKIE = "kontaflow_locale";
 
+/** Locale prefixes kept for existing bookmarks and already-sent emails. */
+export const LEGACY_LOCALE_ALIASES: Readonly<Record<string, Locale>> = {
+  wes: "pcm",
+};
+
 export function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value);
 }
@@ -62,14 +68,42 @@ export function resolveLocale(value: string | null | undefined): Locale {
   if (isLocale(value)) return value;
   const base = value?.trim().toLowerCase().split(/[-_]/)[0];
   if (isLocale(base)) return base;
-  // `pcm` is the widely used tag for Pidgin; keep it working as an alias.
-  if (base === "pcm") return "wes";
+  if (base && base in LEGACY_LOCALE_ALIASES) return LEGACY_LOCALE_ALIASES[base];
+  if (base === "pidgin") return "pcm";
   return DEFAULT_LOCALE;
+}
+
+/** Resolves a first path segment, including legacy aliases. */
+export function resolvePathLocale(segment: string | undefined): Locale | null {
+  if (!segment) return null;
+  if (isLocale(segment)) return segment;
+  return LEGACY_LOCALE_ALIASES[segment] ?? null;
 }
 
 export function localizedPath(locale: Locale, path = "/"): string {
   const normalised = path.startsWith("/") ? path : `/${path}`;
   return `/${locale}${normalised === "/" ? "" : normalised}`;
+}
+
+/** Replaces a leading locale segment while preserving the rest of a path. */
+export function localizePath(path: string, locale: Locale): string {
+  const segments = path.split("/");
+  if (resolvePathLocale(segments[1])) {
+    segments[1] = locale;
+    return segments.join("/") || `/${locale}`;
+  }
+  return localizedPath(locale, path);
+}
+
+/** Reads a translation row, including the legacy `wes` key for `pcm`. */
+export function pickTranslation(
+  translations: Record<string, string> | null | undefined,
+  locale: Locale,
+): string | undefined {
+  if (!translations) return undefined;
+  if (translations[locale]) return translations[locale];
+  if (locale === "pcm" && translations.wes) return translations.wes;
+  return undefined;
 }
 
 export function intlLocale(locale: Locale): string {
@@ -91,7 +125,9 @@ export function negotiateLocale(acceptLanguage: string | null): Locale {
 
   for (const { tag } of entries) {
     if (tag.startsWith("fr")) return "fr";
-    if (tag === "wes" || tag.startsWith("wes-") || tag.includes("pidgin")) return "wes";
+    if (tag === "pcm" || tag.startsWith("pcm-") || tag === "wes" || tag.startsWith("wes-") || tag.includes("pidgin")) {
+      return "pcm";
+    }
     if (tag.startsWith("en")) return "en";
   }
   return DEFAULT_LOCALE;

@@ -10,7 +10,7 @@ import { getTolgeeOverrides, applyOverrides } from "./tolgee";
 const loaders: Record<Locale, () => Promise<Dictionary>> = {
   en: async () => en,
   fr: async () => (await import("./dictionaries/fr")).fr,
-  wes: async () => (await import("./dictionaries/wes")).wes,
+  pcm: async () => (await import("./dictionaries/pcm")).pcm,
 };
 
 const cache = new Map<Locale, Dictionary>();
@@ -29,8 +29,4 @@ export async function getDictionary(locale: Locale = DEFAULT_LOCALE): Promise<Di
 }
 
 /** Replaces `{name}` placeholders in a translated string. */
-export function interpolate(template: string, values: Record<string, string | number>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in values ? String(values[key]) : match,
-  );
-}
+export { interpolate } from "./interpolate";

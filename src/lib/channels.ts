@@ -2,8 +2,8 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/errors";
-import { formatMoney } from "@/lib/money";
-import { getCurrency } from "@/lib/currency";
+import { formatMoney, moneyLocale } from "@/lib/money";
+import { resolveLocale, type Locale } from "@/lib/i18n/config";
 
 export type ChannelName = "ussd" | "whatsapp";
 
@@ -12,6 +12,7 @@ export type ChannelIdentity = {
   userId: string;
   channel: ChannelName;
   address: string;
+  locale: Locale;
 };
 
 function candidates(address: string): string[] {
@@ -39,11 +40,18 @@ export async function resolveChannelIdentity(
     .maybeSingle();
 
   if (!data) return null;
+
+  const [{ data: workspace }, { data: profile }] = await Promise.all([
+    admin.from("workspaces").select("locale").eq("id", data.workspace_id).maybeSingle(),
+    admin.from("profiles").select("locale").eq("id", data.user_id).maybeSingle(),
+  ]);
+
   return {
     workspaceId: data.workspace_id,
     userId: data.user_id,
     channel: data.channel as ChannelName,
     address: data.address,
+    locale: resolveLocale(profile?.locale ?? workspace?.locale),
   };
 }
 
@@ -141,8 +149,8 @@ export async function recentEntries(workspaceId: string, limit = 3) {
   return data ?? [];
 }
 
-export function formatMinor(minor: bigint, currency: string): string {
-  return `${formatMoney(minor, currency, "fr-CM")} ${getCurrency(currency).code}`;
+export function formatMinor(minor: bigint, currency: string, locale = "en"): string {
+  return formatMoney(minor, currency, moneyLocale(locale, currency));
 }
 
 export async function logUssdSession(params: {

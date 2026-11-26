@@ -5,6 +5,8 @@ import { logWhatsappMessage, resolveChannelIdentity } from "@/lib/channels";
 import { runAssistant } from "@/lib/ai/assistant";
 import { isAiConfigured } from "@/lib/ai/client";
 import { sendWhatsappText, verifyWhatsappSignature } from "@/lib/integrations/whatsapp";
+import { DEFAULT_LOCALE } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/server";
 import { logger } from "@/lib/logger";
 import type { WorkspaceRow } from "@/types/database";
 
@@ -84,17 +86,17 @@ export async function POST(request: Request) {
   }).catch(() => undefined);
 
   if (!identity) {
-    await reply(
-      from,
-      "This WhatsApp number is not linked to a KontaFlow business yet. Open Settings > Connected channels in KontaFlow and add this number.",
-      null,
-    );
+    const fallback = await getDictionary(DEFAULT_LOCALE);
+    await reply(from, fallback.channels.whatsapp.notLinked, null);
     return new Response("OK", { status: 200 });
   }
 
+  const dict = await getDictionary(identity.locale);
+  const copy = dict.channels.whatsapp;
+
   let answer: string;
   if (!isAiConfigured()) {
-    answer = "The KontaFlow assistant is not configured on this deployment. Please use the web app.";
+    answer = copy.assistantUnavailable;
   } else {
     try {
       const admin = createAdminClient();
@@ -105,12 +107,12 @@ export async function POST(request: Request) {
         .maybeSingle();
 
       if (!workspace) {
-        answer = "This workspace is no longer available.";
+        answer = copy.workspaceUnavailable;
       } else {
         const result = await runAssistant({
           workspace: workspace as WorkspaceRow,
           userId: identity.userId,
-          locale: "en",
+          locale: identity.locale,
           message: body,
           serviceRole: true,
         });
@@ -118,7 +120,7 @@ export async function POST(request: Request) {
       }
     } catch (error) {
       logger.error("whatsapp.assistant_failed", { error });
-      answer = "Sorry, I could not read your books just now. Please try again in a moment.";
+      answer = copy.assistantFailed;
     }
   }
 

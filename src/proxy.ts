@@ -5,6 +5,7 @@ import {
   LOCALE_COOKIE,
   isLocale,
   negotiateLocale,
+  resolvePathLocale,
 } from "@/lib/i18n/config";
 import { carryCookies, refreshSession } from "@/lib/supabase/proxy";
 
@@ -38,8 +39,23 @@ export async function proxy(request: NextRequest) {
   }
 
   const [first] = pathname.split("/").filter(Boolean);
+  const pathLocale = resolvePathLocale(first);
 
-  if (!isLocale(first)) {
+  // Keep old `/wes/...` links and already-sent emails working.
+  if (first && pathLocale && !isLocale(first)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${pathLocale}${pathname.slice(first.length)}`;
+    const response = NextResponse.redirect(url, 308);
+    response.cookies.set(LOCALE_COOKIE, pathLocale, {
+      path: "/",
+      maxAge: 31536000,
+      sameSite: "lax",
+      httpOnly: false,
+    });
+    return response;
+  }
+
+  if (!pathLocale) {
     const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
     const locale = isLocale(cookieLocale)
       ? cookieLocale
@@ -49,7 +65,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const locale = first;
+  const locale = pathLocale;
   const rest = pathname.slice(locale.length + 1) || "/";
   const { response, userId } = await refreshSession(request);
 

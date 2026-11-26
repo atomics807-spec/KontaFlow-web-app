@@ -11,7 +11,7 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url("NEXT_PUBLIC_SUPABASE_URL must be an absolute URL"),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
   NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET: z.string().min(1).default("kontaflow-documents"),
-  NEXT_PUBLIC_DEFAULT_LOCALE: z.enum(["en", "fr", "wes"]).default("en"),
+  NEXT_PUBLIC_DEFAULT_LOCALE: z.enum(["en", "fr", "pcm"]).default("en"),
   NEXT_PUBLIC_TOLGEE_PROJECT_ID: optionalSecret,
 });
 

@@ -14,6 +14,7 @@ export function CashflowChart({
   incomeLabel,
   expenseLabel,
   emptyLabel,
+  monthLabel,
 }: {
   data: CashflowPoint[];
   currency: string;
@@ -21,6 +22,7 @@ export function CashflowChart({
   incomeLabel: string;
   expenseLabel: string;
   emptyLabel: string;
+  monthLabel: string;
 }) {
   const palette = useChartPalette();
   const reduceMotion = useReducedMotion();
@@ -40,9 +42,9 @@ export function CashflowChart({
   return (
     <motion.figure
       className="m-0"
-      initial={{ opacity: 0 }}
+      initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      transition={{ duration: reduceMotion ? 0 : 0.5, ease: "easeOut" }}
     >
       <div className="h-64 w-full" role="img" aria-label={`${incomeLabel} / ${expenseLabel}`}>
         <ResponsiveContainer width="100%" height="100%">
@@ -114,7 +116,7 @@ export function CashflowChart({
         <table>
           <thead>
             <tr>
-              <th scope="col">Month</th>
+              <th scope="col">{monthLabel}</th>
               <th scope="col">{incomeLabel}</th>
               <th scope="col">{expenseLabel}</th>
             </tr>

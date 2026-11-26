@@ -42,9 +42,10 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: "/:locale(en|fr|wes)/overview", destination: "/:locale", permanent: true },
-      { source: "/:locale(en|fr|wes)/product", destination: "/:locale/features", permanent: true },
-      { source: "/:locale(en|fr|wes)/channels", destination: "/:locale/services", permanent: true },
+      { source: "/wes/:path*", destination: "/pcm/:path*", permanent: true },
+      { source: "/:locale(en|fr|pcm)/overview", destination: "/:locale", permanent: true },
+      { source: "/:locale(en|fr|pcm)/product", destination: "/:locale/features", permanent: true },
+      { source: "/:locale(en|fr|pcm)/channels", destination: "/:locale/services", permanent: true },
     ];
   },
   async headers() {

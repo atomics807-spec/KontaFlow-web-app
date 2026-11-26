@@ -353,7 +353,7 @@ export type ContactMessageRow = {
   company: string | null;
   topic: "sales" | "support" | "partnership" | "press" | "other";
   message: string;
-  locale: "en" | "fr" | "wes";
+  locale: "en" | "fr" | "pcm";
   status: "new" | "read" | "replied" | "closed" | "spam";
   source: string;
   handled_at: string | null;

@@ -10,6 +10,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { planFor } from "@/lib/plans";
 import { todayInZone } from "@/lib/dates";
+import { getDictionary } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 import type { WorkspaceRow } from "@/types/database";
 
@@ -30,9 +31,10 @@ export async function runAssistant(params: {
   /** Webhook channels have no user session; they run on the service role. */
   serviceRole?: boolean;
 }): Promise<AssistantReply> {
+  const dict = await getDictionary(params.locale);
   const openai = getAiClient();
   if (!openai) {
-    throw new AppError("integration_unavailable", "The assistant is not configured on this deployment yet.");
+    throw new AppError("integration_unavailable", dict.assistant.notConfigured);
   }
 
   const supabase = params.serviceRole ? createAdminClient() : await createClient();
@@ -53,13 +55,20 @@ export async function runAssistant(params: {
       });
   if (quotaError) {
     logger.error("ai.quota_failed", { code: quotaError.code });
-    throw new AppError("internal_error", "Could not verify your assistant quota.");
+    throw new AppError("internal_error", dict.assistant.quotaCheckFailed);
   }
   if (allowed === false) {
-    throw new AppError("rate_limited", "You have reached this month's AI message limit.");
+    throw new AppError("rate_limited", dict.assistant.quotaReached);
   }
 
-  const conversationId = await ensureConversation(supabase, workspace.id, userId, params.conversationId, params.message);
+  const conversationId = await ensureConversation(
+    supabase,
+    workspace.id,
+    userId,
+    params.conversationId,
+    params.message,
+    dict.assistant.startFailed,
+  );
 
   const { error: insertError } = await supabase.from("ai_messages").insert({
     conversation_id: conversationId,
@@ -67,7 +76,7 @@ export async function runAssistant(params: {
     role: "user",
     content: params.message.slice(0, 4000),
   });
-  if (insertError) throw new AppError("internal_error", "Could not save your message.");
+  if (insertError) throw new AppError("internal_error", dict.assistant.saveFailed);
 
   const { data: historyRows } = await supabase
     .from("ai_messages")
@@ -163,17 +172,10 @@ export async function runAssistant(params: {
     }
   } catch (error) {
     logger.error("ai.completion_failed", { error });
-    throw new AppError("integration_unavailable", "The assistant is temporarily unavailable. Try again.");
+    throw new AppError("integration_unavailable", dict.assistant.temporarilyUnavailable);
   }
 
-  if (!reply) {
-    reply =
-      locale === "fr"
-        ? "Je n'ai pas pu terminer cette réponse. Pouvez-vous reformuler ?"
-        : locale === "wes"
-          ? "I no fit finish that answer. Abeg talk am another way."
-          : "I could not finish that answer. Could you ask it another way?";
-  }
+  if (!reply) reply = dict.assistant.fallback;
 
   const { error: assistantError } = await supabase.from("ai_messages").insert({
     conversation_id: conversationId,
@@ -200,6 +202,7 @@ async function ensureConversation(
   userId: string,
   conversationId: string | null | undefined,
   message: string,
+  failureMessage: string,
 ): Promise<string> {
   if (conversationId) {
     const { data } = await supabase
@@ -222,6 +225,6 @@ async function ensureConversation(
     .select("id")
     .single();
 
-  if (error || !data) throw new AppError("internal_error", "Could not start the conversation.");
+  if (error || !data) throw new AppError("internal_error", failureMessage);
   return data.id;
 }

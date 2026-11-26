@@ -4,7 +4,7 @@ import type { WorkspaceRow } from "@/types/database";
 const LANGUAGE_INSTRUCTION: Record<Locale, string> = {
   en: "Reply in clear, simple English.",
   fr: "Réponds en français simple et clair.",
-  wes: "Reply in Cameroonian Pidgin English, simple and short.",
+  pcm: "Reply in Cameroonian Pidgin English, simple and short.",
 };
 
 export function buildSystemPrompt(params: {

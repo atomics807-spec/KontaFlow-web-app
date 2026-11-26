@@ -23,7 +23,7 @@ const inviteSchema = z.object({
 const roleCopy: Record<string, string> = {
   en: "Invitation created. Share this link:",
   fr: "Invitation créée. Partagez ce lien :",
-  wes: "Invite don ready. Share this link:",
+  pcm: "Invite don ready. Share this link:",
 };
 
 export async function inviteMemberAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -48,7 +48,7 @@ export async function inviteMemberAction(_prev: FormState, formData: FormData): 
     return formError(
       locale === "fr"
         ? `Votre forfait autorise ${seats} membres. Passez à un forfait supérieur pour inviter davantage de personnes.`
-        : locale === "wes"
+        : locale === "pcm"
           ? `Your plan allow ${seats} members. Upgrade before you add more people.`
           : `Your plan allows ${seats} members. Upgrade to invite more people.`,
     );

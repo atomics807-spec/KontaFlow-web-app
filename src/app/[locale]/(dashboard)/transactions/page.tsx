@@ -8,7 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 import { listTransactions } from "@/services/transactions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
-import { resolveLocale } from "@/lib/i18n/config";
+import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { TransactionKind } from "@/types/database";
@@ -132,7 +132,7 @@ export default async function TransactionsPage({
         </form>
       </Card>
 
-      <p className="text-xs text-muted">{interpolate(dict.transactions.showingCount, { count: items.length })}</p>
+      <p className="text-xs text-muted">{interpolate(dict.transactions.showingCount, { count: items.length }, { locale: intlLocale(locale) })}</p>
 
       <Card className="overflow-hidden">
         <TransactionsTable
@@ -145,7 +145,7 @@ export default async function TransactionsPage({
             currency: row.currency,
             occurredOn: row.occurred_on,
             description: row.description,
-            categoryName: row.category_translations?.[locale] ?? row.category_name,
+            categoryName: pickTranslation(row.category_translations, locale) ?? row.category_name,
             contactName: row.contact_name,
             channel: row.channel,
             accountName: row.account_name,

@@ -32,7 +32,7 @@ export function signupSchema(messages: SignupMessages) {
       phone: z.string().trim().min(6).max(24),
       password: passwordSchema,
       confirm: z.string().min(1, messages.passwordMismatch),
-      preferredLocale: z.enum(["en", "fr", "wes"]),
+      preferredLocale: z.enum(["en", "fr", "pcm"]),
       privacyAccepted: z.boolean().refine(Boolean, messages.privacyRequired),
       marketingOptIn: z.boolean(),
     })

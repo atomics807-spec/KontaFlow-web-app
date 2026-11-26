@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, FileBarChart2 } from "lucide-react";
+import { Download, FileBarChart2, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DailyChart } from "@/components/charts/daily-chart";
 import { buttonVariants } from "@/components/ui/button";
 import { getReport } from "@/services/reports";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
-import { resolveLocale } from "@/lib/i18n/config";
+import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
@@ -81,9 +81,9 @@ export default async function ReportsPage({
 
   const presetLabel: Record<Preset, string> = {
     month: dict.dashboard.thisMonthLabel,
-    "last-month": dict.common.back,
-    quarter: dict.reports.period,
-    year: dict.reports.period,
+    "last-month": dict.reports.lastMonth,
+    quarter: dict.reports.quarter,
+    year: dict.reports.year,
   };
 
   const series = (report?.dailySeries ?? []).map((point) => ({
@@ -101,7 +101,14 @@ export default async function ReportsPage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <a
-            href={`/api/reports/export?from=${from}&to=${to}`}
+            href={`/api/reports/export/pdf?from=${from}&to=${to}&locale=${locale}`}
+            className={buttonVariants({ variant: "secondary", size: "md" })}
+          >
+            <FileText className="h-4 w-4" aria-hidden />
+            {dict.reports.downloadPdf}
+          </a>
+          <a
+            href={`/api/reports/export?from=${from}&to=${to}&locale=${locale}`}
             className={buttonVariants({ variant: "secondary", size: "md" })}
           >
             <Download className="h-4 w-4" aria-hidden />
@@ -125,7 +132,7 @@ export default async function ReportsPage({
             {option === "month"
               ? dict.dashboard.thisMonthLabel
               : option === "last-month"
-                ? dict.reports.period
+                ? dict.reports.lastMonth
                 : option === "quarter"
                   ? `Q${Math.floor(Number(todayInZone(workspace.timezone).slice(5, 7)) / 3) + 1}`
                   : String(new Date().getFullYear())}
@@ -135,8 +142,8 @@ export default async function ReportsPage({
       </nav>
 
       <p className="text-xs text-muted">
-        {formatDate(from, locale === "fr" ? "fr-FR" : "en-GB", workspace.timezone, { day: "2-digit", month: "short", year: undefined })} —{" "}
-        {formatDate(to, locale === "fr" ? "fr-FR" : "en-GB", workspace.timezone, { day: "2-digit", month: "short", year: undefined })}
+        {formatDate(from, intlLocale(locale), workspace.timezone, { day: "2-digit", month: "short", year: undefined })} —{" "}
+        {formatDate(to, intlLocale(locale), workspace.timezone, { day: "2-digit", month: "short", year: undefined })}
       </p>
 
       {!report ? (
@@ -160,7 +167,7 @@ export default async function ReportsPage({
                 {margin === null ? "—" : `${margin}%`}
               </p>
               <p className="mt-1 text-xs text-muted">
-                {interpolate(dict.transactions.showingCount, { count: report.transactionCount })}
+                {interpolate(dict.transactions.showingCount, { count: report.transactionCount }, { locale: intlLocale(locale) })}
               </p>
             </Card>
           </section>
@@ -179,6 +186,10 @@ export default async function ReportsPage({
                 currency={currency}
                 locale={locale}
                 label={dict.reports.profitAndLoss}
+                monthLabel={dict.common.month}
+                incomeLabel={dict.reports.revenue}
+                expenseLabel={dict.reports.expenses}
+                emptyLabel={dict.reports.noData}
               />
             </div>
             {series.length === 0 ? <p className="mt-3 text-sm text-muted">{dict.reports.noData}</p> : null}
@@ -199,7 +210,7 @@ export default async function ReportsPage({
                       <li key={`${row.kind}-${row.name}`}>
                         <div className="flex items-baseline justify-between gap-3">
                           <p className="truncate text-sm font-medium text-heading">
-                            {row.translations?.[locale] ?? row.name}
+                            {pickTranslation(row.translations, locale) ?? row.name}
                           </p>
                           <p className="kpi-value shrink-0 text-sm text-heading">{money(total)}</p>
                         </div>

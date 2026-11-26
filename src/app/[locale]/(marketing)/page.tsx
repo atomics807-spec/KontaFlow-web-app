@@ -67,7 +67,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
       name: "KontaFlow",
       applicationCategory: "FinanceApplication",
       operatingSystem: "Web, Android, iOS",
-      inLanguage: ["en", "fr", "wes"],
+      inLanguage: ["en", "fr", "pcm"],
       description: content.home.metaDescription,
       offers: [
         { "@type": "Offer", price: "0", priceCurrency: "XAF", name: "Starter" },

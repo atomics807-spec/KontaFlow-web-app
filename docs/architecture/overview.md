@@ -67,11 +67,10 @@ first membership.
 
 ## Localisation
 
-Locales are `en`, `fr` and `wes` (ISO 639-3 for Cameroon Pidgin English).
+Locales are `en`, `fr` and `pcm` (ISO 639-3 for Cameroon Pidgin English). `/wes` remains a permanent redirect alias so old links and emails keep working.
 Dictionary modules are typed against the English shape, so a missing key is a
 compile error, and `tests/i18n.test.ts` asserts runtime parity across all three.
-Tolgee is used for translation memory and review; see
-`src/lib/i18n/tolgee.ts` and `scripts/tolgee-pull.ts`.
+Bundled dictionaries are the offline-safe source of truth. Tolgee can override any key at runtime through `src/lib/i18n/tolgee.ts`; when it is unreachable the app silently keeps the bundled copy. The client provider lives in `src/components/layout/i18n-provider.tsx`, and `npm run i18n:pull` checks the remote project against the bundled key set.
 
 ## Deployment-independent integrations
 

@@ -4,6 +4,8 @@ import { Resend } from "resend";
 import { getServerEnv } from "../env";
 import { logger } from "../logger";
 import type { Locale } from "../i18n/config";
+import { getDictionary } from "../i18n/server";
+import { interpolate } from "../i18n/interpolate";
 
 export type EmailMessage = {
   to: string;
@@ -47,27 +49,6 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   }
 }
 
-const INVITE_COPY: Record<Locale, { subject: (workspace: string) => string; intro: string; cta: string; note: string }> = {
-  en: {
-    subject: (workspace) => `You are invited to ${workspace} on KontaFlow`,
-    intro: "You have been invited to keep the books for",
-    cta: "Accept invitation",
-    note: "This invitation expires in 7 days.",
-  },
-  fr: {
-    subject: (workspace) => `Vous êtes invité à rejoindre ${workspace} sur KontaFlow`,
-    intro: "Vous avez été invité à tenir les comptes de",
-    cta: "Accepter l'invitation",
-    note: "Cette invitation expire dans 7 jours.",
-  },
-  wes: {
-    subject: (workspace) => `Dem invite you join ${workspace} for KontaFlow`,
-    intro: "Dem invite you come keep book for",
-    cta: "Accept the invite",
-    note: "This invite go expire for 7 days.",
-  },
-};
-
 export async function sendInvitationEmail(params: {
   to: string;
   workspaceName: string;
@@ -75,22 +56,30 @@ export async function sendInvitationEmail(params: {
   inviteUrl: string;
   locale: Locale;
 }): Promise<SendResult> {
-  const copy = INVITE_COPY[params.locale] ?? INVITE_COPY.en;
-  const subject = copy.subject(params.workspaceName);
+  const dict = await getDictionary(params.locale);
+  const copy = dict.emails;
+  const intro = interpolate(copy.inviteIntro, { workspace: params.workspaceName });
+  const subject = interpolate(copy.inviteSubject, { workspace: params.workspaceName });
   const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#0b1f1a">
       <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0b7a5a;margin:0 0 24px">KontaFlow</p>
-      <h1 style="font-size:22px;margin:0 0 16px">${escapeHtml(copy.intro)} ${escapeHtml(params.workspaceName)}</h1>
+      <h1 style="font-size:22px;margin:0 0 16px">${escapeHtml(intro)}</h1>
       <p style="font-size:15px;line-height:1.6;color:#4b5f58;margin:0 0 24px">
         ${escapeHtml(params.inviterName)} · KontaFlow
       </p>
       <a href="${escapeHtml(params.inviteUrl)}"
          style="display:inline-block;background:#0b7a5a;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">
-        ${escapeHtml(copy.cta)}
+        ${escapeHtml(copy.inviteCta)}
       </a>
-      <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">${escapeHtml(copy.note)}</p>
+      <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">${escapeHtml(copy.inviteNote)}</p>
     </div>`;
-  const text = `${copy.intro} ${params.workspaceName}\n\n${params.inviterName}\n\n${copy.cta}: ${params.inviteUrl}\n\n${copy.note}`;
+  const text = interpolate(copy.inviteText, {
+    intro,
+    inviter: params.inviterName,
+    cta: copy.inviteCta,
+    url: params.inviteUrl,
+    note: copy.inviteNote,
+  });
 
   return sendEmail({ to: params.to, subject, html, text });
 }

@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDashboardForMonth } from "@/services/dashboard";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
-import { resolveLocale, intlLocale } from "@/lib/i18n/config";
+import { resolveLocale, intlLocale, pickTranslation } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
@@ -56,7 +56,7 @@ export default async function DashboardPage({
           {firstName ? `, ${firstName}` : ""}
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {interpolate(dict.dashboard.subtitle, { business: workspace.name })}
+          {interpolate(dict.dashboard.subtitle, { business: workspace.name }, { locale: intlLocale(locale) })}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -113,14 +113,14 @@ export default async function DashboardPage({
   if (topCategory) {
     insights.push(
       interpolate(dict.insights.topCategory, {
-        name: topCategory.translations?.[locale] ?? topCategory.name,
+        name: pickTranslation(topCategory.translations, locale) ?? topCategory.name,
         amount: moneyFormat(toMinorUnits(topCategory.total)),
       }),
     );
   }
   if (share !== null) insights.push(interpolate(dict.insights.expenseShare, { share }));
   if (margin !== null && net > 0n) insights.push(interpolate(dict.insights.margin, { margin }));
-  if (runwayTenths !== null) insights.push(interpolate(dict.insights.runway, { months: (runwayTenths / 10).toFixed(1) }));
+  if (runwayTenths !== null) insights.push(interpolate(dict.insights.runway, { months: (runwayTenths / 10).toFixed(1) }, { locale: intlLocale(locale) }));
 
   return (
     <div className="space-y-6">
@@ -204,6 +204,7 @@ export default async function DashboardPage({
             incomeLabel={dict.dashboard.income}
             expenseLabel={dict.dashboard.expenses}
             emptyLabel={dict.dashboard.noTransactionsHint}
+            monthLabel={dict.common.month}
           />
         </section>
 
@@ -278,7 +279,7 @@ export default async function DashboardPage({
                   <li key={category.name}>
                     <div className="flex items-baseline justify-between gap-3">
                       <p className="truncate text-sm font-semibold text-heading">
-                        {category.translations?.[locale] ?? category.name}
+                        {pickTranslation(category.translations, locale) ?? category.name}
                       </p>
                       <p className="kpi-value shrink-0 text-sm text-heading">{moneyFormat(total)}</p>
                     </div>
@@ -307,7 +308,7 @@ export default async function DashboardPage({
             currency: row.currency,
             occurredOn: row.occurred_on,
             description: row.description,
-            categoryName: row.category_translations?.[locale] ?? row.category_name,
+            categoryName: pickTranslation(row.category_translations, locale) ?? row.category_name,
             contactName: row.contact_name,
             channel: row.channel,
             accountName: row.account_name,

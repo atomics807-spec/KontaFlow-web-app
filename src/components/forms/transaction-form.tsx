@@ -10,8 +10,9 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { SuccessCheck } from "@/components/motion/success-check";
 import { useI18n } from "@/components/layout/i18n-provider";
-import { parseMoneyToMinor } from "@/lib/money";
+import { moneyLocale, parseMoneyToMinor } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
+import { pickTranslation } from "@/lib/i18n/config";
 import { newClientId, queueItem, flushOutbox } from "@/lib/offline/outbox";
 import { cn } from "@/lib/utils";
 import type { AccountSubtype, CategoryKind, TransactionKind } from "@/types/database";
@@ -73,7 +74,7 @@ export function TransactionForm({
         ? dict.transactions.expense
         : dict.transactions.transfer;
 
-  const localised = (option: Option) => option.translations?.[locale] ?? option.name;
+  const localised = (option: Option) => pickTranslation(option.translations, locale) ?? option.name;
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -232,7 +233,7 @@ export function TransactionForm({
               onClick={() => setAmount(value)}
               className="rounded-full border border-line bg-panel px-2.5 py-1 text-xs font-semibold text-muted transition hover:border-accent-line hover:text-heading"
             >
-              {new Intl.NumberFormat("fr-CM").format(Number(value))}
+              {new Intl.NumberFormat(moneyLocale(locale, currency)).format(Number(value))}
             </button>
           ))}
         </div>

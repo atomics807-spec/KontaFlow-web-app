@@ -1,6 +1,6 @@
 import type { LegalDoc } from "./types";
 
-export const legalWes: LegalDoc[] = [
+export const legalPcm: LegalDoc[] = [
   {
     slug: "terms",
     title: "Rules wey yu dey follow",

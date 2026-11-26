@@ -1,7 +1,7 @@
 import type { SiteContent } from "./types";
-import { legalWes } from "./legal-wes";
+import { legalPcm } from "./legal-pcm";
 
-export const wes: SiteContent = {
+export const pcm: SiteContent = {
   common: {
     breadcrumb: "Breadcrumb",
     readMore: "Read di article",
@@ -1058,7 +1058,7 @@ export const wes: SiteContent = {
     location: "Douala, Cameroon",
     hours: "Monday–Friday · 8:00–18:00 WAT",
   },
-  legal: legalWes,
+  legal: legalPcm,
   photoCredits: {
     title: "Photo credits",
     intro:

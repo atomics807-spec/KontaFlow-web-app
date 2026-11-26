@@ -13,7 +13,7 @@ verified. This page tracks what is real today and what comes next.
 | Money in bigint minor units, XAF default, per-workspace currency | done |
 | Transactions: record, list, void, receipts metadata, offline idempotency | done |
 | Dashboard KPIs, cash-flow and daily charts | done |
-| Reports (P&L, categories, daily series) + CSV export | done |
+| Reports (P&L, categories, daily series) + localized CSV and PDF export | done |
 | Contacts (customers/suppliers/both) | done |
 | Team management, invitations by email, role changes | done |
 | Settings (business profile, currency/timezone guard, channels, audit trail) | done |
@@ -22,7 +22,7 @@ verified. This page tracks what is real today and what comes next.
 | USSD menu (Africa's Talking) writing to the ledger | done |
 | WhatsApp webhook with HMAC verification + assistant replies | done |
 | Daily close email job (Vercel cron / Cloudflare trigger) | done |
-| i18n en/fr/wes with typed dictionaries and runtime parity tests | done |
+| i18n en/fr/pcm (Cameroon Pidgin) with typed dictionaries, ICU plurals and runtime parity tests | done |
 | PWA manifest + service worker + offline fallback | done |
 | Security headers incl. CSP, HSTS, frame denial | done |
 | Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
@@ -37,7 +37,7 @@ verified. This page tracks what is real today and what comes next.
    the assistant.
 3. **Inventory**: items, stock movements and cost of goods sold.
 4. **Multi-currency**: per-transaction FX rate with reporting currency.
-5. **Reports**: balance sheet, aged receivables, tax summaries, PDF export.
+5. **Reports**: balance sheet, aged receivables and tax summaries.
 6. **Notifications**: in-app centre, email/SMS preferences, low-cash alerts.
 7. **Offline depth**: background sync, conflict review UI, storage for receipts
    captured offline.

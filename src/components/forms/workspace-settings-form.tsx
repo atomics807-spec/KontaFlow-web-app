@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Save } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
 import { SUPPORTED_CURRENCIES, CURRENCY_OPTIONS } from "@/lib/currency";
-import { LOCALES, LOCALE_META } from "@/lib/i18n/config";
+import { LOCALES, LOCALE_META, localizePath } from "@/lib/i18n/config";
 import { updateWorkspaceAction, linkChannelAction } from "@/app/[locale]/(dashboard)/settings/actions";
 
 const COUNTRIES = [
@@ -40,6 +41,15 @@ export function WorkspaceSettingsForm({
 }) {
   const { locale, dict } = useI18n();
   const [state, action, pending] = useActionState(updateWorkspaceAction, initialFormState);
+  const [selectedLocale, setSelectedLocale] = useState(locale);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "success" && selectedLocale !== locale) {
+      router.replace(localizePath(pathname, selectedLocale));
+    }
+  }, [state, selectedLocale, locale, pathname, router]);
 
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -82,7 +92,13 @@ export function WorkspaceSettingsForm({
           </Select>
         </Field>
         <Field label={dict.settings.language} htmlFor="ws-locale">
-          <Select id="ws-locale" name="uiLocale" defaultValue={locale} disabled={disabled}>
+          <Select
+            id="ws-locale"
+            name="uiLocale"
+            value={selectedLocale}
+            onChange={(event) => setSelectedLocale(event.target.value as typeof locale)}
+            disabled={disabled}
+          >
             {LOCALES.map((code) => (
               <option key={code} value={code}>
                 {LOCALE_META[code].label}

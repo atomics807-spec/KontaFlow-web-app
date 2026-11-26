@@ -7,7 +7,7 @@ npm ci
 npm run dev                 # Next.js dev server
 npm run typecheck           # tsc --noEmit (must be clean)
 npm test                    # vitest unit tests
-npm run test:db             # rebuilds kontaflow_test and runs 149 DB assertions
+npm run test:db             # rebuilds kontaflow_test and runs 151 DB assertions
 npm run lint
 npm run build
 npm run db:push             # applies pending supabase/migrations via SUPABASE_DB_URL
@@ -35,9 +35,12 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
 * Server actions live next to their route as `actions.ts`, validate with Zod,
   call `requireWorkspaceContext()` + `can(role, permission)`, and return
   `FormState` (`src/lib/action-utils.ts`).
-* i18n: dictionaries in `src/lib/i18n/dictionaries/{en,fr,wes}.ts` share one
-  shape. Add the key to all three or typecheck fails; `tests/i18n.test.ts`
-  asserts parity. Use `interpolate()` for placeholders.
+* i18n: dictionaries in `src/lib/i18n/dictionaries/{en,fr,pcm}.ts` share one
+  shape. `pcm` is Cameroon Pidgin English; `wes` only survives as a legacy
+  URL/translation-row alias that maps to `pcm`. Add the key to all three or
+  typecheck fails; `tests/i18n.test.ts` asserts parity. Use
+  `interpolate()` for placeholders and plural blocks, and `intlLocale()` for
+  dates/numbers. Tolgee overrides bundled values at runtime when configured.
 * Secrets are read only via `getPublicEnv()` / `getServerEnv()` from
   `src/lib/env.ts`; keep `.env.example` in sync.
 * Platform code must stay portable: no `@vercel/*` imports, no filesystem
