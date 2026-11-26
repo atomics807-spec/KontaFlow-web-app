@@ -118,7 +118,13 @@ export function WorkspaceSettingsForm({
   );
 }
 
-export function LinkChannelForm({ disabled }: { disabled: boolean }) {
+export function LinkChannelForm({
+  disabled,
+  businessNumber,
+}: {
+  disabled: boolean;
+  businessNumber?: string | null;
+}) {
   const { locale, dict } = useI18n();
   const [state, action, pending] = useActionState(linkChannelAction, initialFormState);
 
@@ -151,6 +157,13 @@ export function LinkChannelForm({ disabled }: { disabled: boolean }) {
           {pending ? dict.common.saving : dict.common.save}
         </Button>
       </div>
+
+      <p className="text-[0.7rem] leading-relaxed text-muted">{dict.settings.whatsappLinkHint}</p>
+      {businessNumber ? (
+        <p className="text-[0.7rem] font-semibold text-heading">
+          {dict.settings.whatsappBusinessNumber.replace("{number}", businessNumber)}
+        </p>
+      ) : null}
     </form>
   );
 }

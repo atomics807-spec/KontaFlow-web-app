@@ -734,7 +734,17 @@ export const en = {
     downloadCsv: "Download CSV",
     downloadPdf: "Download PDF",
     dataNote: "Exports cover up to 5,000 transactions.",
-    phoneNumber: "WhatsApp phone number",
+    phoneNumber: "Phone number",
+    phoneInvalid: "Enter a valid phone number for the workspace country.",
+    whatsappLinkHint:
+      "WhatsApp numbers are verified by a message sent from that phone. USSD numbers are added directly.",
+    whatsappBusinessNumber: "KontaFlow WhatsApp: {number}",
+    whatsappLinkRequested:
+      "Send VERIFY {code} from {phone} on WhatsApp to {business}. The code expires in 10 minutes.",
+    whatsappTemplateSent: "A copy was also sent by WhatsApp template.",
+    whatsappBusinessFallback: "the KontaFlow business number",
+    whatsappPending: "Awaiting verification",
+    whatsappVerified: "Verified",
   },
   insights: {
     title: "Quick read",
@@ -1214,7 +1224,43 @@ export const en = {
       invalidChoice: "Invalid choice. Dial again.",
     },
     whatsapp: {
-      notLinked: "This WhatsApp number is not linked to a KontaFlow business yet. Open Settings > Connected channels in KontaFlow and add this number.",
+      notLinked:
+        "This WhatsApp number is not linked to a KontaFlow business yet. Open Settings > Connected channels in KontaFlow, add this number and send the VERIFY code from WhatsApp.",
+      pendingVerification:
+        "This number is waiting for verification. Open KontaFlow Settings > Connected channels and send the VERIFY code shown there from this WhatsApp number.",
+      verificationSuccess:
+        "WhatsApp linked to {workspace}. You can now record sales and expenses, check sales, get a weekly report and see what customers owe.",
+      verificationInvalid: "That code is not correct. {remaining} attempts left.",
+      verificationExpired: "That verification code expired. Request a new one in KontaFlow Settings.",
+      verificationLocked: "Too many attempts. Request a new code in KontaFlow Settings.",
+      verificationMissing:
+        "There is no pending verification for this number. Add it in KontaFlow Settings > Connected channels.",
+      verificationAlready: "This WhatsApp number is already verified.",
+      verificationUnavailable: "WhatsApp verification is not configured on this deployment yet.",
+      help: "KontaFlow commands:\n• I spent 500 on transport\n• Show my sales today\n• Generate my weekly report\n• How much do customers owe me?\n• Cash on hand\nSend any normal sentence and I will use your book. Send STOP to opt out.",
+      salesToday:
+        "Sales today ({date})\nIncome: {income}\nExpenses: {expenses}\nNet: {net}\nCash on hand: {cash}",
+      weeklyReport:
+        "Weekly report ({from} – {to})\nSales: {income}\nExpenses: {expenses}\nNet: {net}\nTransactions: {count}\nTop expense: {top}",
+      noTopExpense: "None",
+      receivables:
+        "Customers owe you {total} across {count, plural, one {# open debt} other {# open debts}}.\nOverdue: {overdue}.",
+      noReceivables: "No customer owes you money right now.",
+      cash: "Cash on hand: {amount}",
+      accessRevoked:
+        "This number is no longer linked to an active workspace member. Ask the owner to link it again.",
+      restricted: "This account is restricted. Contact KontaFlow support.",
+      subscriptionInactive:
+        "This workspace's subscription is not active. Open KontaFlow billing to restore access.",
+      subscriptionReadOnly:
+        "This workspace is read-only while billing is past due. You can ask for totals, but not record new entries.",
+      noPermission: "Your role in this workspace does not allow that action.",
+      quotaReached: "You have reached this month's AI message limit.",
+      commandFailed: "I could not complete that just now. Please try again.",
+      optedOut: "You have opted out of KontaFlow WhatsApp messages. Send START to opt in again.",
+      optedIn: "You are opted in. Send HELP to see commands.",
+      stop: "You will not receive further KontaFlow messages on this number. Send START to opt in again.",
+      textOnly: "For now I can read text messages. Voice notes and receipt images are coming later.",
       assistantUnavailable: "The KontaFlow assistant is not configured on this deployment. Please use the web app.",
       workspaceUnavailable: "This workspace is no longer available.",
       assistantFailed: "Sorry, I could not read your books just now. Please try again in a moment.",

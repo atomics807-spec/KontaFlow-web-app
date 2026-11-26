@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { recordChannelTransaction } from "@/lib/channels";
+import { channelClientId, recordChannelTransaction } from "@/lib/channels";
 import { formatMoney, parseMoneyToMinor } from "@/lib/money";
 import { todayInZone } from "@/lib/dates";
 import { recordTransaction } from "@/services/transactions";
@@ -18,6 +18,10 @@ export type ToolContext = {
   workspace: WorkspaceRow;
   userId: string;
   conversationId: string;
+  /** Stable per inbound message; direct channels use it as the write key. */
+  requestId?: string;
+  /** Position of this tool call in the model turn, so multiple writes stay distinct. */
+  toolCallKey?: string;
   /** WhatsApp/USSD webhooks have no user session and run on the service role. */
   serviceRole?: boolean;
 };
@@ -191,7 +195,10 @@ async function record(
 
   try {
     const occurredOn = args.occurred_on ?? todayInZone(context.workspace.timezone);
-    const clientGeneratedId = `ai-${context.conversationId}-${Date.now()}`;
+    const clientGeneratedId = channelClientId(
+      context.serviceRole ? "wa" : "ai",
+      `${context.requestId ?? `${context.conversationId}:${Date.now()}`}:${context.toolCallKey ?? "0"}`,
+    );
     const created = context.serviceRole
       ? await recordChannelTransaction({
           workspaceId: context.workspace.id,

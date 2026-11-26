@@ -1,5 +1,6 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { AppError } from "@/lib/errors";
 import { formatMoney, moneyLocale } from "@/lib/money";
@@ -15,7 +16,7 @@ export type ChannelIdentity = {
   locale: Locale;
 };
 
-function candidates(address: string): string[] {
+export function channelAddressCandidates(address: string): string[] {
   const digits = address.replace(/[^\d]/g, "");
   const set = new Set<string>([address, digits, `+${digits}`]);
   if (digits.startsWith("237") && digits.length > 9) {
@@ -35,16 +36,25 @@ export async function resolveChannelIdentity(
     .from("channel_identities")
     .select("workspace_id, user_id, channel, address")
     .eq("channel", channel)
-    .in("address", candidates(address))
+    .not("verified_at", "is", null)
+    .in("address", channelAddressCandidates(address))
     .limit(1)
     .maybeSingle();
 
   if (!data) return null;
 
-  const [{ data: workspace }, { data: profile }] = await Promise.all([
+  const [{ data: workspace }, { data: profile }, { data: membership }] = await Promise.all([
     admin.from("workspaces").select("locale").eq("id", data.workspace_id).maybeSingle(),
     admin.from("profiles").select("locale").eq("id", data.user_id).maybeSingle(),
+    admin
+      .from("workspace_members")
+      .select("status")
+      .eq("workspace_id", data.workspace_id)
+      .eq("user_id", data.user_id)
+      .maybeSingle(),
   ]);
+
+  if (membership?.status !== "active") return null;
 
   return {
     workspaceId: data.workspace_id,
@@ -53,6 +63,11 @@ export async function resolveChannelIdentity(
     address: data.address,
     locale: resolveLocale(profile?.locale ?? workspace?.locale),
   };
+}
+
+/** Stable, bounded idempotency key for a channel message and tool call. */
+export function channelClientId(channel: string, requestId: string): string {
+  return `${channel}-${createHash("sha256").update(requestId).digest("hex").slice(0, 64)}`;
 }
 
 export async function recordChannelTransaction(params: {

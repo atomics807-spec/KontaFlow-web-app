@@ -1,49 +1,47 @@
 import { getServerEnv } from "@/lib/env";
-import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
-import { rateLimit } from "@/lib/rate-limit";
-import { logWhatsappMessage, resolveChannelIdentity } from "@/lib/channels";
-import { runAssistant } from "@/lib/ai/assistant";
-import { isAiConfigured } from "@/lib/ai/client";
-import { sendWhatsappText, verifyWhatsappSignature } from "@/lib/integrations/whatsapp";
-import { DEFAULT_LOCALE } from "@/lib/i18n/config";
-import { getDictionary } from "@/lib/i18n/server";
+import { hasServiceRole } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import type { WorkspaceRow } from "@/types/database";
+import {
+  verifyWhatsappChallenge,
+  verifyWhatsappSignature,
+} from "@/lib/integrations/whatsapp";
+import { processWhatsappWebhook } from "@/lib/whatsapp/processor";
+import type { WhatsappWebhookPayload } from "@/lib/whatsapp/payload";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const MAX_BODY_BYTES = 1_000_000;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge") ?? "";
-  const expected = getServerEnv().WHATSAPP_VERIFY_TOKEN;
+  const expected = getServerEnv().WHATSAPP_VERIFY_TOKEN ?? null;
 
-  if (mode === "subscribe" && expected && token === expected) {
-    return new Response(challenge, { status: 200, headers: { "content-type": "text/plain" } });
+  if (mode === "subscribe" && verifyWhatsappChallenge(token, expected) && challenge) {
+    return new Response(challenge, {
+      status: 200,
+      headers: { "content-type": "text/plain", "cache-control": "no-store" },
+    });
   }
-  return new Response("Forbidden", { status: 403 });
+  return new Response("Forbidden", { status: 403, headers: { "cache-control": "no-store" } });
 }
 
-type WebhookPayload = {
-  entry?: {
-    changes?: {
-      value?: {
-        metadata?: { phone_number_id?: string };
-        messages?: {
-          id?: string;
-          from?: string;
-          type?: string;
-          text?: { body?: string };
-        }[];
-      };
-    }[];
-  }[];
-};
-
 export async function POST(request: Request) {
-  const raw = await request.text();
-  const signature = request.headers.get("x-hub-signature-256");
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    return new Response("Payload too large", { status: 413 });
+  }
 
-  if (!verifyWhatsappSignature(raw, signature)) {
+  const raw = await request.text();
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    logger.warn("whatsapp.payload_too_large");
+    return new Response("Payload too large", { status: 413 });
+  }
+
+  if (!verifyWhatsappSignature(raw, request.headers.get("x-hub-signature-256"))) {
     logger.warn("whatsapp.bad_signature");
     return new Response("Forbidden", { status: 403 });
   }
@@ -53,92 +51,25 @@ export async function POST(request: Request) {
     return new Response("Not configured", { status: 503 });
   }
 
-  let payload: WebhookPayload;
+  let payload: WhatsappWebhookPayload;
   try {
-    payload = JSON.parse(raw) as WebhookPayload;
+    payload = JSON.parse(raw) as WhatsappWebhookPayload;
   } catch {
     return new Response("Bad payload", { status: 400 });
   }
 
-  const value = payload.entry?.[0]?.changes?.[0]?.value;
-  const message = value?.messages?.[0];
-  const from = message?.from;
-
-  if (!message || !from || message.type !== "text" || !message.text?.body) {
-    return new Response("OK", { status: 200 });
+  if (payload.object !== "whatsapp_business_account") {
+    return new Response("OK", { status: 200, headers: { "cache-control": "no-store" } });
   }
 
-  if (!rateLimit(`wa:${from}`, 20)) {
-    return new Response("OK", { status: 200 });
-  }
-
-  const body = message.text.body.slice(0, 2000);
-  const identity = await resolveChannelIdentity("whatsapp", from);
-
-  await logWhatsappMessage({
-    workspaceId: identity?.workspaceId ?? null,
-    waMessageId: message.id ?? null,
-    direction: "inbound",
-    fromPhone: from,
-    toPhone: value?.metadata?.phone_number_id ?? "kontaflow",
-    body,
-    status: "received",
-  }).catch(() => undefined);
-
-  if (!identity) {
-    const fallback = await getDictionary(DEFAULT_LOCALE);
-    await reply(from, fallback.channels.whatsapp.notLinked, null);
-    return new Response("OK", { status: 200 });
-  }
-
-  const dict = await getDictionary(identity.locale);
-  const copy = dict.channels.whatsapp;
-
-  let answer: string;
-  if (!isAiConfigured()) {
-    answer = copy.assistantUnavailable;
-  } else {
-    try {
-      const admin = createAdminClient();
-      const { data: workspace } = await admin
-        .from("workspaces")
-        .select("*")
-        .eq("id", identity.workspaceId)
-        .maybeSingle();
-
-      if (!workspace) {
-        answer = copy.workspaceUnavailable;
-      } else {
-        const result = await runAssistant({
-          workspace: workspace as WorkspaceRow,
-          userId: identity.userId,
-          locale: identity.locale,
-          message: body,
-          requestId: `wa:${message.id ?? Date.now()}`.slice(0, 100),
-          mode: "direct",
-          serviceRole: true,
-        });
-        answer = result.reply;
-      }
-    } catch (error) {
-      logger.error("whatsapp.assistant_failed", { error });
-      answer = copy.assistantFailed;
+  try {
+    const result = await processWhatsappWebhook(payload);
+    if (result.retryable) {
+      return new Response("Retry", { status: 500, headers: { "cache-control": "no-store" } });
     }
+    return new Response("OK", { status: 200, headers: { "cache-control": "no-store" } });
+  } catch (error) {
+    logger.error("whatsapp.webhook_failed", { error });
+    return new Response("Retry", { status: 500, headers: { "cache-control": "no-store" } });
   }
-
-  await reply(from, answer, identity.workspaceId);
-  return new Response("OK", { status: 200 });
-}
-
-async function reply(to: string, body: string, workspaceId: string | null): Promise<void> {
-  const result = await sendWhatsappText(to, body);
-  await logWhatsappMessage({
-    workspaceId,
-    waMessageId: result.id ?? null,
-    direction: "outbound",
-    fromPhone: "kontaflow",
-    toPhone: to,
-    body,
-    status: result.sent ? "sent" : "failed",
-  }).catch(() => undefined);
 }

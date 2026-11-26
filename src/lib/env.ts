@@ -40,6 +40,10 @@ const serverSchema = z.object({
   WHATSAPP_ACCESS_TOKEN: optionalSecret,
   WHATSAPP_VERIFY_TOKEN: optionalSecret,
   WHATSAPP_APP_SECRET: optionalSecret,
+  WHATSAPP_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/, "WHATSAPP_GRAPH_VERSION must look like v27.0").default("v27.0"),
+  WHATSAPP_DISPLAY_PHONE_NUMBER: optionalSecret,
+  WHATSAPP_VERIFICATION_TEMPLATE_NAME: optionalSecret,
+  WHATSAPP_VERIFICATION_TEMPLATE_LANG: z.string().default("en_US"),
   PAYMENT_PROVIDER: z.enum(["none", "mtn-momo", "orange-money", "stripe"]).default("none"),
   PAYMENT_API_BASE_URL: optionalSecret,
   PAYMENT_API_KEY: optionalSecret,
@@ -52,6 +56,7 @@ const serverSchema = z.object({
   SENTRY_DSN: optionalSecret,
   RATE_LIMIT_AI_PER_MINUTE: z.coerce.number().int().min(1).default(20),
   RATE_LIMIT_USSD_PER_MINUTE: z.coerce.number().int().min(1).default(30),
+  RATE_LIMIT_WHATSAPP_PER_MINUTE: z.coerce.number().int().min(1).default(30),
   RATE_LIMIT_WEBHOOK_PER_MINUTE: z.coerce.number().int().min(1).default(120),
 });
 
@@ -123,6 +128,10 @@ export function getServerEnv(): ServerEnv {
     WHATSAPP_ACCESS_TOKEN: process.env.WHATSAPP_ACCESS_TOKEN,
     WHATSAPP_VERIFY_TOKEN: process.env.WHATSAPP_VERIFY_TOKEN,
     WHATSAPP_APP_SECRET: process.env.WHATSAPP_APP_SECRET,
+    WHATSAPP_GRAPH_VERSION: process.env.WHATSAPP_GRAPH_VERSION,
+    WHATSAPP_DISPLAY_PHONE_NUMBER: process.env.WHATSAPP_DISPLAY_PHONE_NUMBER,
+    WHATSAPP_VERIFICATION_TEMPLATE_NAME: process.env.WHATSAPP_VERIFICATION_TEMPLATE_NAME,
+    WHATSAPP_VERIFICATION_TEMPLATE_LANG: process.env.WHATSAPP_VERIFICATION_TEMPLATE_LANG,
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
     PAYMENT_API_BASE_URL: process.env.PAYMENT_API_BASE_URL,
     PAYMENT_API_KEY: process.env.PAYMENT_API_KEY,
@@ -135,6 +144,7 @@ export function getServerEnv(): ServerEnv {
     SENTRY_DSN: process.env.SENTRY_DSN,
     RATE_LIMIT_AI_PER_MINUTE: process.env.RATE_LIMIT_AI_PER_MINUTE,
     RATE_LIMIT_USSD_PER_MINUTE: process.env.RATE_LIMIT_USSD_PER_MINUTE,
+    RATE_LIMIT_WHATSAPP_PER_MINUTE: process.env.RATE_LIMIT_WHATSAPP_PER_MINUTE,
     RATE_LIMIT_WEBHOOK_PER_MINUTE: process.env.RATE_LIMIT_WEBHOOK_PER_MINUTE,
   });
 

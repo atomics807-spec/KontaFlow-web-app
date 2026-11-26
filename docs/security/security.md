@@ -75,6 +75,9 @@ policy. None of the policies trust a `workspace_id` from the client; they call
 | offline_sync_records | owner | owner | — |
 | integration_accounts | owner/admin | owner/admin | — |
 | integration_messages | managers | service role | — |
+| channel_identities | own row, or owner/admin of the workspace | service role only | service role only |
+| whatsapp_messages | workspace managers (select) | service role | service role |
+| webhook_events | service role only | service role only | service role only |
 | subscription_plans, subscription_features, plan_features | authenticated | service role | service role |
 | subscriptions | owner/admin | owner/admin | — |
 | payment_webhooks, otp_verifications, idempotency_records, contact_messages | service role only | service role only | service role only |
@@ -135,9 +138,41 @@ short-lived signed URLs. No bucket has `public = true`.
 | --- | --- |
 | Signature | `X-Hub-Signature-256` HMAC-SHA256 over the raw body, constant-time compare |
 | Shared token | USSD callback URL `?token=` or `x-ussd-token`, constant-time compare |
-| Replay tolerance | Retries are idempotent through `client_generated_id` |
+| Replay tolerance | `claim_webhook_event` leases each provider message id once; transaction writes also use `client_generated_id` |
 | Rate limit | Per-phone sliding window (in-process) plus Postgres quota |
+| Body size | `/api/whatsapp` rejects bodies over 1 MB before parsing |
 | Fail closed | Missing app secret or service role returns 403/503, never "allow" |
+
+## WhatsApp channel security
+
+* **Ownership proof.** A phone number is linked only after the person sends a
+  six-digit code from that number on WhatsApp. The code is HMAC-hashed, expires
+  in ten minutes, allows five attempts, and is bound to the requesting user.
+  Possession of a browser session alone cannot create a verified link.
+* **No client-side linking.** Migration 35 revokes insert/update/delete on
+  `channel_identities` from `authenticated`. The server action checks an active
+  membership and `integrations:manage`, then uses the service role. A database
+  test proves both direct insert and self-verification fail with `42501`.
+* **Per-message authorisation.** Each inbound message re-checks that the linked
+  member is still active, is not restricted at platform level, belongs to an
+  active workspace, and has the role required for the requested operation.
+  Platform administrators cannot inherit tenant access through a phone link.
+* **Replay and concurrency.** The webhook verifies Meta's HMAC over the exact
+  raw body before parsing. Each `message:<wamid>` is claimed transactionally;
+  processed and ignored events are terminal, failed events are retryable, and a
+  concurrent worker's lease returns a retryable response instead of dropping
+  the message.
+* **Consent and windows.** `STOP` sets `opted_out_at`; only `START` clears it.
+  Free-form replies are refused outside the 24-hour customer-service window, so
+  the platform cannot use WhatsApp for unsolicited marketing.
+* **Audit without message bodies.** Link, verify and unlink write audit rows;
+  failed webhook processing is recorded in `webhook_events`. Message content is
+  stored in `whatsapp_messages` for the workspace, not copied into audit
+  metadata or logs.
+* **Service report boundary.** `get_report_as_service` and
+  `get_workspace_summary_as_service` are executable only by `service_role`;
+  the channel handler checks the member's read permission before calling them.
+  `authenticated` receives `42501`, covered by the database suite.
 
 ## HTTP headers
 

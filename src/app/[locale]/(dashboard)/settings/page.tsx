@@ -14,6 +14,7 @@ import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatDateTime, addDays, formatDate, todayInZone } from "@/lib/dates";
+import { getServerEnv } from "@/lib/env";
 import { unlinkChannelAction } from "./actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -26,6 +27,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const { workspace } = context;
+  const whatsappNumber = getServerEnv().WHATSAPP_DISPLAY_PHONE_NUMBER ?? null;
 
   const canEdit = context.can("workspace:update");
   const canIntegrate = context.can("integrations:manage");
@@ -165,7 +167,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
         </div>
 
         <div className="mt-4">
-          <LinkChannelForm disabled={!canIntegrate} />
+          <LinkChannelForm disabled={!canIntegrate} businessNumber={whatsappNumber} />
         </div>
 
         {identities.length > 0 ? (
@@ -181,9 +183,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
                   <p className="truncate text-sm font-semibold text-heading">{identity.address}</p>
                   <p className="text-[0.7rem] text-muted">
                     {identity.channel === "whatsapp" ? dict.transactions.channelWhatsapp : dict.transactions.channelUssd}
-                    {identity.verified_at ? ` · ${formatDateTime(identity.verified_at, intlLocale(locale), workspace.timezone)}` : ""}
+                    {identity.channel === "whatsapp"
+                      ? ` · ${identity.verified_at ? dict.settings.whatsappVerified : dict.settings.whatsappPending}`
+                      : ""}
+                    {identity.verified_at
+                      ? ` · ${formatDateTime(identity.verified_at, intlLocale(locale), workspace.timezone)}`
+                      : ""}
                   </p>
                 </div>
+                {identity.channel === "whatsapp" && !identity.verified_at ? (
+                  <Badge tone="mango">{dict.settings.whatsappPending}</Badge>
+                ) : null}
                 {canIntegrate ? (
                   <form action={unlinkChannelAction}>
                     <input type="hidden" name="locale" value={locale} />

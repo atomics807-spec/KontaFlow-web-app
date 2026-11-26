@@ -32,6 +32,11 @@ its tests cannot drift apart.
 | `0021_phase4_phone_change_reverification` | changing a phone number clears its verification and re-arms the onboarding gate |
 | `0022_phase4_bind_otp_to_destination` | a code is refused if the profile phone changed after it was sent |
 | `0030_phase8_ai_bookkeeping` | `ai_commands`, AI auto-post settings, creator-only confirm/dismiss/undo/reply RPCs |
+| `0031_phase9_ai_preferences` | owner-controlled AI insights, analysis window and retention settings |
+| `0032_phase9_business_intelligence` | tenant-scoped `get_business_intelligence` analytics |
+| `0033_phase9_ai_history_retention` | AI retention cutoff and honest history purge |
+| `0034_phase10_platform_admin` | `platform_admins`, account restrictions, platform console policies |
+| `0035_phase11_whatsapp` | WhatsApp link challenges, delivery state, webhook claim lease, service reporting wrappers, channel-link write revocation |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 

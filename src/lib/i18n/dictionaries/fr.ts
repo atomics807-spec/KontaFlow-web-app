@@ -737,7 +737,17 @@ export const fr: Dictionary = {
     downloadCsv: "Télécharger le CSV",
     downloadPdf: "Télécharger le PDF",
     dataNote: "Les exports couvrent jusqu'à 5 000 transactions.",
-    phoneNumber: "Numéro WhatsApp",
+    phoneNumber: "Numéro de téléphone",
+    phoneInvalid: "Saisissez un numéro valide pour le pays de l'espace.",
+    whatsappLinkHint:
+      "Les numéros WhatsApp sont vérifiés par un message envoyé depuis ce téléphone. Les numéros USSD sont ajoutés directement.",
+    whatsappBusinessNumber: "WhatsApp KontaFlow : {number}",
+    whatsappLinkRequested:
+      "Envoyez VERIFY {code} depuis {phone} sur WhatsApp au {business}. Le code expire dans 10 minutes.",
+    whatsappTemplateSent: "Une copie a aussi été envoyée par modèle WhatsApp.",
+    whatsappBusinessFallback: "numéro professionnel KontaFlow",
+    whatsappPending: "En attente de vérification",
+    whatsappVerified: "Vérifié",
   },
   insights: {
     title: "Lecture rapide",
@@ -1217,7 +1227,43 @@ export const fr: Dictionary = {
       invalidChoice: "Choix invalide. Recomposez.",
     },
     whatsapp: {
-      notLinked: "Ce numéro WhatsApp n'est pas encore lié à une entreprise KontaFlow. Ouvrez Paramètres > Canaux connectés dans KontaFlow et ajoutez ce numéro.",
+      notLinked:
+        "Ce numéro WhatsApp n'est pas encore lié à une entreprise KontaFlow. Ouvrez Paramètres > Canaux connectés dans KontaFlow, ajoutez ce numéro et envoyez le code VERIFY depuis WhatsApp.",
+      pendingVerification:
+        "Ce numéro attend une vérification. Ouvrez Paramètres > Canaux connectés dans KontaFlow et envoyez le code VERIFY affiché depuis ce numéro WhatsApp.",
+      verificationSuccess:
+        "WhatsApp lié à {workspace}. Vous pouvez maintenant enregistrer ventes et dépenses, consulter les ventes, obtenir un rapport hebdomadaire et voir ce que les clients doivent.",
+      verificationInvalid: "Ce code n'est pas correct. Il reste {remaining} essais.",
+      verificationExpired: "Ce code de vérification a expiré. Demandez-en un nouveau dans les paramètres KontaFlow.",
+      verificationLocked: "Trop de tentatives. Demandez un nouveau code dans les paramètres KontaFlow.",
+      verificationMissing:
+        "Aucune vérification en attente pour ce numéro. Ajoutez-le dans Paramètres > Canaux connectés.",
+      verificationAlready: "Ce numéro WhatsApp est déjà vérifié.",
+      verificationUnavailable: "La vérification WhatsApp n'est pas encore configurée sur ce déploiement.",
+      help: "Commandes KontaFlow :\n• J'ai dépensé 500 pour le transport\n• Montre mes ventes aujourd'hui\n• Génère mon rapport hebdomadaire\n• Combien les clients me doivent ?\n• Solde de caisse\nEnvoyez une phrase normale et j'utiliserai vos comptes. Envoyez STOP pour vous désabonner.",
+      salesToday:
+        "Ventes aujourd'hui ({date})\nRecettes : {income}\nDépenses : {expenses}\nNet : {net}\nSolde de caisse : {cash}",
+      weeklyReport:
+        "Rapport hebdomadaire ({from} – {to})\nRecettes : {income}\nDépenses : {expenses}\nNet : {net}\nTransactions : {count}\nDépense principale : {top}",
+      noTopExpense: "Aucune",
+      receivables:
+        "Les clients vous doivent {total} sur {count, plural, one {# dette ouverte} other {# dettes ouvertes}}.\nEn retard : {overdue}.",
+      noReceivables: "Aucun client ne vous doit d'argent pour le moment.",
+      cash: "Solde de caisse : {amount}",
+      accessRevoked:
+        "Ce numéro n'est plus lié à un membre actif de l'espace. Demandez au propriétaire de le lier à nouveau.",
+      restricted: "Ce compte est restreint. Contactez le support KontaFlow.",
+      subscriptionInactive:
+        "L'abonnement de cet espace n'est pas actif. Ouvrez la facturation KontaFlow pour rétablir l'accès.",
+      subscriptionReadOnly:
+        "Cet espace est en lecture seule car la facturation est en retard. Vous pouvez demander des totaux, mais pas enregistrer de nouvelles écritures.",
+      noPermission: "Votre rôle dans cet espace ne permet pas cette action.",
+      quotaReached: "Vous avez atteint la limite mensuelle de messages IA.",
+      commandFailed: "Je n'ai pas pu terminer cette action. Réessayez dans un instant.",
+      optedOut: "Vous vous êtes désabonné des messages WhatsApp KontaFlow. Envoyez START pour vous réabonner.",
+      optedIn: "Vous êtes réabonné. Envoyez HELP pour voir les commandes.",
+      stop: "Vous ne recevrez plus de messages KontaFlow sur ce numéro. Envoyez START pour vous réabonner.",
+      textOnly: "Pour l'instant, je lis les messages texte. Les notes vocales et les photos de reçus arrivent plus tard.",
       assistantUnavailable: "L'assistant KontaFlow n'est pas configuré sur ce déploiement. Utilisez l'application web.",
       workspaceUnavailable: "Cet espace de travail n'est plus disponible.",
       assistantFailed: "Désolé, je n'ai pas pu lire vos comptes. Réessayez dans un instant.",

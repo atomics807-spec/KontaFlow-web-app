@@ -241,34 +241,6 @@ export async function listChannelIdentities(workspaceId: string): Promise<Channe
   return (data ?? []) as ChannelIdentityRow[];
 }
 
-export async function linkChannel(
-  workspaceId: string,
-  userId: string,
-  channel: "whatsapp" | "ussd",
-  address: string,
-): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("channel_identities").insert({
-    workspace_id: workspaceId,
-    user_id: userId,
-    channel,
-    address: address.trim(),
-    verified_at: new Date().toISOString(),
-  });
-  if (error) {
-    if (error.code === "23505") {
-      throw new AppError("conflict", "That number is already linked to a workspace.");
-    }
-    throw assertNoError(error, "Could not link that number.");
-  }
-}
-
-export async function unlinkChannel(workspaceId: string, id: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase.from("channel_identities").delete().eq("id", id).eq("workspace_id", workspaceId);
-  if (error) throw assertNoError(error, "Could not unlink that number.");
-}
-
 export async function listPaymentTransactions(workspaceId: string): Promise<PaymentTransactionRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

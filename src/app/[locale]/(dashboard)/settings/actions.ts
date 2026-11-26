@@ -5,7 +5,8 @@ import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { can } from "@/lib/permissions";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
-import { linkChannel, unlinkChannel, updateWorkspace } from "@/services/workspaces";
+import { updateWorkspace } from "@/services/workspaces";
+import { linkUssdChannel, requestWhatsappLink, unlinkChannel } from "@/services/whatsapp";
 import { updateAiSettings } from "@/services/ai-commands";
 import { purgeAiHistory, updateAiPreferences } from "@/services/ai-preferences";
 import { parseMoneyToMinor } from "@/lib/money";
@@ -14,6 +15,9 @@ import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/a
 import { isAppError } from "@/lib/errors";
 import { persistLocalePreference } from "@/app/[locale]/locale-actions";
 import { logger } from "@/lib/logger";
+import { normalizePhone } from "@/lib/validation/phone";
+import { interpolate } from "@/lib/i18n/interpolate";
+import { getServerEnv } from "@/lib/env";
 
 export async function updateWorkspaceAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
@@ -145,13 +149,40 @@ export async function linkChannelAction(_prev: FormState, formData: FormData): P
   if (!can(context.role, "integrations:manage")) return formError(dict.errors.forbidden);
 
   const channel = String(formData.get("channel") ?? "whatsapp");
-  const address = String(formData.get("address") ?? "").replace(/[\s()-]/g, "");
+  const rawAddress = String(formData.get("address") ?? "");
+  const address = normalizePhone(rawAddress, context.workspace.country_code);
 
   if (channel !== "whatsapp" && channel !== "ussd") return formError(dict.errors.generic);
-  if (!/^\+?\d{8,15}$/.test(address)) return formError(dict.errors.generic);
+  if (!address) return formError(dict.settings.phoneInvalid);
 
   try {
-    await linkChannel(context.workspace.id, context.user.id, channel, address);
+    if (channel === "whatsapp") {
+      const result = await requestWhatsappLink({
+        workspaceId: context.workspace.id,
+        userId: context.user.id,
+        address,
+        countryCode: context.workspace.country_code,
+        locale,
+      });
+      const business =
+        getServerEnv().WHATSAPP_DISPLAY_PHONE_NUMBER ?? dict.settings.whatsappBusinessFallback;
+      const message = interpolate(dict.settings.whatsappLinkRequested, {
+        code: result.code,
+        phone: result.address,
+        business,
+      });
+      revalidatePath(`/${locale}/settings`);
+      return formSuccess(
+        result.templateSent ? `${message} ${dict.settings.whatsappTemplateSent}` : message,
+      );
+    }
+
+    await linkUssdChannel({
+      workspaceId: context.workspace.id,
+      userId: context.user.id,
+      address,
+      countryCode: context.workspace.country_code,
+    });
   } catch (error) {
     return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
   }
@@ -167,7 +198,7 @@ export async function unlinkChannelAction(formData: FormData): Promise<void> {
   const id = String(formData.get("channelId") ?? "");
   if (!id) return;
   try {
-    await unlinkChannel(context.workspace.id, id);
+    await unlinkChannel(context.workspace.id, id, context.user.id);
   } catch (error) {
     logger.warn("settings.unlink_channel_failed", { error });
   }

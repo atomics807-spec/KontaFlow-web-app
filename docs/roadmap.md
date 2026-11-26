@@ -20,14 +20,14 @@ verified. This page tracks what is real today and what comes next.
 | Billing view: plan catalogue, usage, payment history | done |
 | AI assistant with tool calling and monthly quotas | done |
 | USSD menu (Africa's Talking) writing to the ledger | done |
-| WhatsApp webhook with HMAC verification + assistant replies | done |
+| WhatsApp Business Platform: verified linking, commands, AI fallback, delivery statuses, consent and 24-hour window | done |
 | Daily close email job (Vercel cron / Cloudflare trigger) | done |
 | i18n en/fr/pcm (Cameroon Pidgin) with typed dictionaries, ICU plurals and runtime parity tests | done |
 | PWA manifest + service worker + offline fallback | done |
 | Security headers incl. CSP, HSTS, frame denial | done |
 | Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
 | Unit tests (money, permissions, i18n, validation, rate limits) | done |
-| Database integration suite (149 assertions on a fresh DB) | done |
+| Database integration suite (274 assertions on a fresh DB) | done |
 
 ## Next
 

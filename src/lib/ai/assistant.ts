@@ -161,6 +161,7 @@ export async function runAssistant(params: {
     workspace,
     userId,
     conversationId,
+    requestId: params.requestId,
     serviceRole: Boolean(params.serviceRole),
   };
   const interactiveContext: InteractiveToolContext | null =
@@ -207,7 +208,7 @@ export async function runAssistant(params: {
           tool_calls: choice.tool_calls,
         });
 
-        for (const call of choice.tool_calls) {
+        for (const [callIndex, call] of choice.tool_calls.entries()) {
           if (call.type !== "function") continue;
           let args: Record<string, unknown> = {};
           try {
@@ -216,10 +217,14 @@ export async function runAssistant(params: {
             args = {};
           }
 
+          const toolCallKey = `${step}:${callIndex}`;
           const result =
             mode === "interactive" && interactiveContext
-              ? await executeInteractiveTool(call.function.name, args, interactiveContext)
-              : await executeTool(call.function.name, args, baseContext);
+              ? await executeInteractiveTool(call.function.name, args, {
+                  ...interactiveContext,
+                  toolCallKey,
+                })
+              : await executeTool(call.function.name, args, { ...baseContext, toolCallKey });
           toolsUsed.push(call.function.name);
 
           await supabase.from("ai_messages").insert({

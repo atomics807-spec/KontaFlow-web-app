@@ -116,6 +116,7 @@ async function main(): Promise<void> {
 
     const idA = workspaceA.id;
     const idB = workspaceB.id;
+    const todayA = await scalar(client, `select (now() at time zone 'Africa/Douala')::date::text`);
     ok("workspace A created", Boolean(idA));
     ok("workspace B created", Boolean(idB));
     eq("A has 8 system accounts", await scalar(client, `select count(*) from accounts where workspace_id = $1`, [idA]), 8);
@@ -215,8 +216,8 @@ async function main(): Promise<void> {
 
     const dashboard = await asRole(client, "authenticated", alice, async (c) => {
       const result = await c.query<{ data: Record<string, string> }>(
-        `select public.get_dashboard_summary($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_dashboard_summary($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -419,8 +420,8 @@ async function main(): Promise<void> {
     });
     const afterVoid = await asRole(client, "authenticated", alice, async (c) => {
       const result = await c.query<{ data: Record<string, string> }>(
-        `select public.get_dashboard_summary($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_dashboard_summary($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -435,8 +436,8 @@ async function main(): Promise<void> {
     console.log("\nReporting");
     const report = await asRole(client, "authenticated", alice, async (c) => {
       const result = await c.query<{ data: Record<string, unknown> }>(
-        `select public.get_report($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_report($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -552,8 +553,8 @@ async function main(): Promise<void> {
       null,
       async (c) => {
         const result = await c.query<{ data: Record<string, string> }>(
-          `select public.get_workspace_summary_as_service($1, current_date - 30, current_date) as data`,
-          [idB],
+          `select public.get_workspace_summary_as_service($1, $2::date - 30, $2::date) as data`,
+          [idB, todayA],
         );
         return result.rows[0]!.data;
       },
@@ -1478,8 +1479,8 @@ async function main(): Promise<void> {
     );
     const phase7Dashboard = await commitAs(client, alice, async (c) => {
       const result = await c.query<{ data: Record<string, unknown> }>(
-        `select public.get_dashboard_summary($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_dashboard_summary($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -1508,7 +1509,6 @@ async function main(): Promise<void> {
       "5000",
     );
 
-    const todayA = await scalar(client, `select current_date::text`);
     const cashA = await scalar(client, `select id from accounts where workspace_id = $1 and subtype = 'cash'`, [idA]);
     const transportA = await scalar(client, `select id from categories where workspace_id = $1 and name = 'Transport'`, [idA]);
     const foodA = await scalar(client, `select id from categories where workspace_id = $1 and name = 'Food'`, [idA]);
@@ -1937,15 +1937,15 @@ async function main(): Promise<void> {
 
     const aIntelligence = await asRole(client, "authenticated", alice, async (c) => {
       const result = await c.query<{ data: Record<string, unknown> }>(
-        `select public.get_business_intelligence($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_business_intelligence($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
     const aReport = await asRole(client, "authenticated", alice, async (c) => {
       const result = await c.query<{ data: Record<string, unknown> }>(
-        `select public.get_report($1, current_date - 30, current_date) as data`,
-        [idA],
+        `select public.get_report($1, $2::date - 30, $2::date) as data`,
+        [idA, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -1969,8 +1969,8 @@ async function main(): Promise<void> {
 
     const bIntelligence = await asRole(client, "authenticated", charlie, async (c) => {
       const result = await c.query<{ data: Record<string, unknown> }>(
-        `select public.get_business_intelligence($1, current_date - 30, current_date) as data`,
-        [idB],
+        `select public.get_business_intelligence($1, $2::date - 30, $2::date) as data`,
+        [idB, todayA],
       );
       return result.rows[0]!.data;
     });
@@ -2361,6 +2361,211 @@ async function main(): Promise<void> {
       "tenant payments are gone",
       await scalar(client, `select count(*) from debt_payments where workspace_id = $1`, [idC]),
       "0",
+    );
+
+    console.log("\nPhase 11 · WhatsApp channel");
+
+    const firstClaim = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{ data: { claimed: boolean; event_id: string; attempt: number } }>(
+          `select public.claim_webhook_event('whatsapp', 'message:wamid.test-1') as data`,
+        );
+        return result.rows[0]!.data;
+      },
+      true,
+    );
+    eq("first webhook delivery is claimed", firstClaim.claimed, true);
+    eq("first claim starts at attempt 1", firstClaim.attempt, 1);
+
+    const concurrentClaim = await asRole(client, "service_role", null, async (c) => {
+      const result = await c.query<{ data: { claimed: boolean; status: string } }>(
+        `select public.claim_webhook_event('whatsapp', 'message:wamid.test-1') as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("concurrent webhook delivery is not claimed", concurrentClaim.claimed, false);
+    eq("concurrent webhook delivery sees processing", concurrentClaim.status, "processing");
+
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update webhook_events set status = 'processed' where id = $1`, [firstClaim.event_id]);
+      },
+      true,
+    );
+    const processedClaim = await asRole(client, "service_role", null, async (c) => {
+      const result = await c.query<{ data: { claimed: boolean; status: string } }>(
+        `select public.claim_webhook_event('whatsapp', 'message:wamid.test-1') as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("processed webhook delivery stays terminal", processedClaim.claimed, false);
+    eq("processed webhook delivery reports processed", processedClaim.status, "processed");
+
+    const failedFirst = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{ data: { claimed: boolean; event_id: string } }>(
+          `select public.claim_webhook_event('whatsapp', 'message:wamid.test-2') as data`,
+        );
+        return result.rows[0]!.data;
+      },
+      true,
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update webhook_events set status = 'failed' where id = $1`, [failedFirst.event_id]);
+      },
+      true,
+    );
+    const retryClaim = await asRole(client, "service_role", null, async (c) => {
+      const result = await c.query<{ data: { claimed: boolean; attempt: number; retry: boolean } }>(
+        `select public.claim_webhook_event('whatsapp', 'message:wamid.test-2') as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("failed webhook delivery is reclaimable", retryClaim.claimed, true);
+    eq("reclaim increments the attempt", retryClaim.attempt, 2);
+    eq("reclaim is marked as a retry", retryClaim.retry, true);
+
+    eq(
+      "authenticated callers cannot claim webhook events",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.claim_webhook_event('whatsapp', 'message:forbidden')`,
+          [],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `insert into channel_identities (workspace_id, user_id, channel, address, verification_code_hash, verification_expires_at)
+           values ($1, $2, 'whatsapp', '+237600000001', 'hash', now() + interval '10 minutes')`,
+          [idA, ALICE],
+        );
+      },
+      true,
+    );
+    eq(
+      "authenticated clients cannot self-assert a verified channel link",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `insert into channel_identities (workspace_id, user_id, channel, address, verified_at)
+           values ($1, $2, 'whatsapp', '+237600000002', now())`,
+          [idA, ALICE],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+    eq(
+      "authenticated clients cannot mark a channel link verified",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `update channel_identities set verified_at = now() where workspace_id = $1`,
+          [idA],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    const serviceReport = await asRole(client, "service_role", null, async (c) => {
+      const result = await c.query<{ data: { revenueMinor: string } }>(
+        `select public.get_report_as_service($1, '2000-01-01', '2100-01-01') as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    const ownerReport = await asRole(client, "authenticated", alice, async (c) => {
+      const result = await c.query<{ data: { revenueMinor: string } }>(
+        `select public.get_report($1, '2000-01-01', '2100-01-01') as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("service report matches the owner report", serviceReport.revenueMinor, ownerReport.revenueMinor);
+
+    const phase11Summary = await asRole(client, "service_role", null, async (c) => {
+      const result = await c.query<{ data: { totalIncomeMinor: string; cashBalanceMinor: string } }>(
+        `select public.get_workspace_summary_as_service($1, '2000-01-01', '2100-01-01') as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    const phase11OwnerSummary = await asRole(client, "authenticated", alice, async (c) => {
+      const result = await c.query<{ data: { totalIncomeMinor: string; cashBalanceMinor: string } }>(
+        `select public.get_dashboard_summary($1, '2000-01-01', '2100-01-01') as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("service summary matches the owner income", phase11Summary.totalIncomeMinor, phase11OwnerSummary.totalIncomeMinor);
+    eq("service summary matches the owner cash", phase11Summary.cashBalanceMinor, phase11OwnerSummary.cashBalanceMinor);
+
+    eq(
+      "authenticated callers cannot use the service summary",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.get_workspace_summary_as_service($1, '2000-01-01', '2100-01-01')`,
+          [idA],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    eq(
+      "authenticated callers cannot use the service report",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.get_report_as_service($1, '2000-01-01', '2100-01-01')`,
+          [idA],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    eq(
+      "service role can read the receivables view",
+      await asRole(client, "service_role", null, async (c) => {
+        await c.query(`select 1 from v_debts where workspace_id = $1 limit 1`, [idA]);
+        return true;
+      }),
+      true,
     );
 
     console.log(`\nDatabase: ${databaseName()}/${dbName}`);

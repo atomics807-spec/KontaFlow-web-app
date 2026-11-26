@@ -736,7 +736,17 @@ export const pcm: Dictionary = {
     downloadCsv: "Download CSV",
     downloadPdf: "Download PDF",
     dataNote: "Export fit carry up to 5,000 transactions.",
-    phoneNumber: "WhatsApp phone number",
+    phoneNumber: "Phone number",
+    phoneInvalid: "Put correct phone number for dis workspace country.",
+    whatsappLinkHint:
+      "We dey verify WhatsApp number with message wey you send from dat phone. USSD number dey join direct.",
+    whatsappBusinessNumber: "KontaFlow WhatsApp: {number}",
+    whatsappLinkRequested:
+      "Send VERIFY {code} from {phone} for WhatsApp go {business}. Di code go expire for 10 minutes.",
+    whatsappTemplateSent: "We still send one copy as WhatsApp template.",
+    whatsappBusinessFallback: "di KontaFlow business number",
+    whatsappPending: "We still dey wait verification",
+    whatsappVerified: "Verified",
   },
   insights: {
     title: "Quick read",
@@ -1213,7 +1223,43 @@ export const pcm: Dictionary = {
       invalidChoice: "Choice no correct. Dial again.",
     },
     whatsapp: {
-      notLinked: "Dis WhatsApp number no join any KontaFlow business yet. Open Settings > Connected channels inside KontaFlow and add dis number.",
+      notLinked:
+        "Dis WhatsApp number no join any KontaFlow business yet. Open Settings > Connected channels inside KontaFlow, add dis number and send di VERIFY code from WhatsApp.",
+      pendingVerification:
+        "Dis number dey wait verification. Open KontaFlow Settings > Connected channels and send di VERIFY code wey show there from dis WhatsApp number.",
+      verificationSuccess:
+        "WhatsApp don join {workspace}. You fit now record sale and expense, check sales, get weekly report and see wetin customers owe you.",
+      verificationInvalid: "Dat code no correct. {remaining} tries remain.",
+      verificationExpired: "Dat verification code don expire. Ask for new one inside KontaFlow Settings.",
+      verificationLocked: "Too many tries. Ask for new code inside KontaFlow Settings.",
+      verificationMissing:
+        "No verification dey wait for dis number. Add am inside KontaFlow Settings > Connected channels.",
+      verificationAlready: "Dem don verify dis WhatsApp number already.",
+      verificationUnavailable: "Dem never set up WhatsApp verification for dis deployment.",
+      help: "KontaFlow commands:\n• I spent 500 on transport\n• Show my sales today\n• Generate my weekly report\n• How much do customers owe me?\n• Cash on hand\nSend any normal sentence and I go use your book. Send STOP to opt out.",
+      salesToday:
+        "Sales today ({date})\nMoni enter: {income}\nExpense: {expenses}\nNet: {net}\nCash on hand: {cash}",
+      weeklyReport:
+        "Weekly report ({from} – {to})\nSales: {income}\nExpense: {expenses}\nNet: {net}\nTransactions: {count}\nBiggest expense: {top}",
+      noTopExpense: "None",
+      receivables:
+        "Customers owe you {total} for {count, plural, one {# open debt} other {# open debts}}.\nOverdue: {overdue}.",
+      noReceivables: "No customer owe you moni now.",
+      cash: "Cash on hand: {amount}",
+      accessRevoked:
+        "Dis number no join active workspace member again. Ask di owner make e link am again.",
+      restricted: "Dem restrict dis account. Contact KontaFlow support.",
+      subscriptionInactive:
+        "Dis workspace subscription no active. Open KontaFlow billing to bring access back.",
+      subscriptionReadOnly:
+        "Dis workspace dey read-only because billing dey past due. You fit ask for totals, but you no fit record new entry.",
+      noPermission: "Your role inside dis workspace no allow dat action.",
+      quotaReached: "You don reach this month AI message limit.",
+      commandFailed: "I no fit finish dat one now. Try again small time.",
+      optedOut: "You don opt out of KontaFlow WhatsApp messages. Send START to opt in again.",
+      optedIn: "You don opt in. Send HELP to see commands.",
+      stop: "You no go receive KontaFlow messages on dis number again. Send START to opt in again.",
+      textOnly: "For now I dey read text messages. Voice note and receipt photo dey come later.",
       assistantUnavailable: "Dem never set up di KontaFlow assistant for dis deployment. Abeg use di web app.",
       workspaceUnavailable: "Dis workspace no dey again.",
       assistantFailed: "Sorry, I no fit read your book now. Try again small time.",

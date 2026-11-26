@@ -408,6 +408,19 @@ export type ChannelIdentityRow = {
   channel: EntryChannel;
   address: string;
   verified_at: string | null;
+  verification_code_hash: string | null;
+  verification_expires_at: string | null;
+  verification_attempts: number;
+  verification_sent_at: string | null;
+  verification_method: "whatsapp_reply" | "template" | "ussd_link" | "legacy" | null;
+  consent_at: string | null;
+  consent_version: string | null;
+  opted_out_at: string | null;
+  last_inbound_at: string | null;
+  last_outbound_at: string | null;
+  service_window_expires_at: string | null;
+  display_name: string | null;
+  metadata: Json;
   created_at: string;
   updated_at: string;
 };
@@ -434,8 +447,28 @@ export type WhatsappMessageRow = {
   message_type: string;
   body: string | null;
   status: string | null;
+  status_updated_at: string | null;
+  error_code: string | null;
+  error_title: string | null;
+  wa_timestamp: string | null;
+  conversation_category: string | null;
+  display_name: string | null;
   payload: Json;
+  metadata: Json;
   created_at: string;
+};
+
+export type WebhookEventRow = {
+  id: string;
+  provider: string;
+  external_id: string | null;
+  status: "received" | "processing" | "processed" | "failed" | "ignored";
+  payload: Json;
+  error: string | null;
+  attempts: number;
+  received_at: string;
+  last_attempt_at: string | null;
+  processed_at: string | null;
 };
 
 export type NotificationRow = {
@@ -763,6 +796,7 @@ export type Database = {
       contact_messages: TableDefinition<ContactMessageRow>;
       ussd_sessions: TableDefinition<UssdSessionRow>;
       whatsapp_messages: TableDefinition<WhatsappMessageRow>;
+      webhook_events: TableDefinition<WebhookEventRow>;
       platform_admins: TableDefinition<PlatformAdminRow>;
       account_restrictions: TableDefinition<AccountRestrictionRow>;
       platform_admin_audit_log: TableDefinition<{
@@ -805,6 +839,21 @@ export type Database = {
       get_workspace_summary_as_service: {
         Args: { p_workspace_id: string; p_from: string; p_to: string };
         Returns: DashboardSummary | null;
+      };
+      get_report_as_service: {
+        Args: { p_workspace_id: string; p_from: string; p_to: string };
+        Returns: ReportResult;
+      };
+      claim_webhook_event: {
+        Args: { p_provider: string; p_external_id: string; p_payload?: Json };
+        Returns: {
+          claimed: boolean;
+          event_id?: string;
+          status?: string;
+          attempt?: number;
+          retry?: boolean;
+          retry_after_seconds?: number;
+        };
       };
       create_workspace: {
         Args: {
