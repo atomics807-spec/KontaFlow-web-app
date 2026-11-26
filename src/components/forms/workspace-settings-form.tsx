@@ -121,9 +121,11 @@ export function WorkspaceSettingsForm({
 export function LinkChannelForm({
   disabled,
   businessNumber,
+  ussdServiceCode,
 }: {
   disabled: boolean;
   businessNumber?: string | null;
+  ussdServiceCode?: string | null;
 }) {
   const { locale, dict } = useI18n();
   const [state, action, pending] = useActionState(linkChannelAction, initialFormState);
@@ -162,6 +164,11 @@ export function LinkChannelForm({
       {businessNumber ? (
         <p className="text-[0.7rem] font-semibold text-heading">
           {dict.settings.whatsappBusinessNumber.replace("{number}", businessNumber)}
+        </p>
+      ) : null}
+      {ussdServiceCode ? (
+        <p className="text-[0.7rem] font-semibold text-heading">
+          {dict.settings.ussdServiceCode.replace("{code}", ussdServiceCode)}
         </p>
       ) : null}
     </form>

@@ -27,7 +27,7 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `CONTACT_INBOX_EMAIL` | Destination for public contact form notifications (defaults to `info@kontaflow.com`) |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Assistant; omit to disable cleanly |
 | `WHATSAPP_*` | Phone number id, access token, verify token, app secret |
-| `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN` | Africa's Talking callback |
+| `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN`, `USSD_SESSION_TTL_SECONDS` | Africa's Talking callback |
 | `SMS_PROVIDER=africastalking` + `AFRICASTALKING_*` | Phone OTP delivery; `none` blocks onboarding, `console` is local-only |
 | `OTP_HMAC_SECRET` | Dedicated 32-byte secret for OTP hashing; do not reuse the service-role key |
 | `CRON_SECRET` | Bearer token for `/api/cron/daily-digest` |

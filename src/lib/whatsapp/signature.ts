@@ -1,11 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { safeEqual } from "@/lib/security/safe-equal";
 
-/** Constant-time string compare that tolerates unequal lengths. */
-export function safeEqual(left: string, right: string): boolean {
-  const a = Buffer.from(left);
-  const b = Buffer.from(right);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
+export { safeEqual };
 
 /**
  * Meta signs the exact raw webhook body with the app secret:

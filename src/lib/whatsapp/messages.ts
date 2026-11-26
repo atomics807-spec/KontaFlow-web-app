@@ -150,22 +150,4 @@ export async function updateWhatsappDeliveryStatus(params: {
   if (insertError) logger.warn("whatsapp.status_insert_failed", { code: insertError.code });
 }
 
-export async function auditWhatsappEvent(params: {
-  workspaceId: string;
-  actorId: string | null;
-  action: string;
-  entityId: string | null;
-  details?: Record<string, unknown>;
-}): Promise<void> {
-  const admin = createAdminClient();
-  const { error } = await admin.from("audit_logs").insert({
-    workspace_id: params.workspaceId,
-    actor_id: params.actorId,
-    actor_type: "channel",
-    action: params.action,
-    entity: "channel_identity",
-    entity_id: params.entityId,
-    after_data: (params.details ?? {}) as never,
-  });
-  if (error) logger.warn("whatsapp.audit_failed", { code: error.code });
-}
+export { auditChannelEvent as auditWhatsappEvent } from "@/lib/channels/audit";

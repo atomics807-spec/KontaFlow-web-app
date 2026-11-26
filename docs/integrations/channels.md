@@ -8,33 +8,27 @@ Secrets are read through `getServerEnv()` and never reach the client bundle.
 
 Endpoint: `POST /api/ussd` (`application/x-www-form-urlencoded`).
 
-Fields read: `sessionId`, `phoneNumber`, `text`, `serviceCode`.
+See [USSD integration](./ussd.md) for the full provider setup, menu map,
+verification flow and production checklist.
 
-Flow (menu state is encoded in `text`, so no session store is required):
+Summary:
 
-```
-""            → CON main menu (1 sale, 2 expense, 3 cash, 4 recent)
-"1"           → CON ask amount
-"1*12500"     → END recorded + new cash balance
-"2*3000"      → END expense recorded
-"3"           → END cash on hand
-"4"           → END last three entries
-```
-
-Security and correctness:
-
-* Optional `USSD_CALLBACK_TOKEN` must match `?token=` or `x-ussd-token`
-  (constant-time compare). Set it in production.
-* The phone number must exist in `channel_identities` (Settings → Connected
-  channels). Unknown numbers get an instruction message instead of data.
-* Entries are written through `public.record_channel_transaction`, which
-  re-checks membership; `client_generated_id` makes gateway retries idempotent.
-* Response bodies are plain text with `CON ` (continue) or `END ` prefixes, as
-  the gateway expects.
-
-Configure the callback URL in Africa's Talking as
-`https://<app>/api/ussd?token=<USSD_CALLBACK_TOKEN>` and point the short code at
-it. `AFRICASTALKING_API_KEY` is reserved for outbound SMS notifications.
+* Required fields: `sessionId`, `phoneNumber`, `serviceCode`, `text`.
+* `USSD_CALLBACK_TOKEN` is required and must match `?token=` or
+  `x-ussd-token` using a constant-time compare.
+* A number must be linked in Settings and verified by entering a six-digit code
+  from the handset. Browser possession of the code is not proof of control.
+* `public.ussd_sessions` enforces a sliding timeout (default 180 seconds),
+  path continuity, wrong-phone/workspace checks and cached terminal responses.
+* Entries go through `public.record_channel_transaction` with
+  `channel = 'ussd'`; `client_generated_id` is derived from the session and
+  cumulative path so provider retries are idempotent.
+* Role, account restriction and subscription checks run on every verified
+  callback. `past_due` is read-only.
+* Responses are plain text with `CON ` or `END ` prefixes and are clamped to
+  182 characters.
+* `AFRICASTALKING_API_KEY` is reserved for outbound SMS; the USSD callback uses
+  the service-role Supabase client.
 
 ## WhatsApp Business Platform (Meta Cloud API)
 

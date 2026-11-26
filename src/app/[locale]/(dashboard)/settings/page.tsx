@@ -28,6 +28,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const context = await requireWorkspaceContext(locale);
   const { workspace } = context;
   const whatsappNumber = getServerEnv().WHATSAPP_DISPLAY_PHONE_NUMBER ?? null;
+  const ussdServiceCode = getServerEnv().USSD_SERVICE_CODE ?? null;
 
   const canEdit = context.can("workspace:update");
   const canIntegrate = context.can("integrations:manage");
@@ -167,7 +168,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
         </div>
 
         <div className="mt-4">
-          <LinkChannelForm disabled={!canIntegrate} businessNumber={whatsappNumber} />
+          <LinkChannelForm disabled={!canIntegrate} businessNumber={whatsappNumber} ussdServiceCode={ussdServiceCode} />
         </div>
 
         {identities.length > 0 ? (
@@ -183,16 +184,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
                   <p className="truncate text-sm font-semibold text-heading">{identity.address}</p>
                   <p className="text-[0.7rem] text-muted">
                     {identity.channel === "whatsapp" ? dict.transactions.channelWhatsapp : dict.transactions.channelUssd}
-                    {identity.channel === "whatsapp"
-                      ? ` · ${identity.verified_at ? dict.settings.whatsappVerified : dict.settings.whatsappPending}`
-                      : ""}
+                    {` · ${identity.verified_at ? dict.settings.channelVerified : dict.settings.channelPending}`}
                     {identity.verified_at
                       ? ` · ${formatDateTime(identity.verified_at, intlLocale(locale), workspace.timezone)}`
                       : ""}
                   </p>
                 </div>
-                {identity.channel === "whatsapp" && !identity.verified_at ? (
-                  <Badge tone="mango">{dict.settings.whatsappPending}</Badge>
+                {!identity.verified_at ? (
+                  <Badge tone="mango">{dict.settings.channelPending}</Badge>
                 ) : null}
                 {canIntegrate ? (
                   <form action={unlinkChannelAction}>

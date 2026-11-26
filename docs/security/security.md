@@ -174,6 +174,27 @@ short-lived signed URLs. No bucket has `public = true`.
   the channel handler checks the member's read permission before calling them.
   `authenticated` receives `42501`, covered by the database suite.
 
+## USSD channel
+
+* **Shared callback secret.** `USSD_CALLBACK_TOKEN` is required. The callback
+  accepts it as `?token=` or `x-ussd-token` and compares it in constant time;
+  a missing token disables the route instead of accepting anonymous input.
+* **Handset verification.** A link starts as pending with an HMAC of a
+  six-digit code, a ten-minute expiry and a five-attempt limit. The code is
+  only accepted from the same phone number through the USSD session. Browser
+  clients cannot insert, update or self-verify `channel_identities`.
+* **Bounded sessions.** `sessionId` is required. The callback rejects missing,
+  expired, wrong-phone, wrong-workspace and non-monotonic input paths. A
+  terminal response is cached so provider retries do not write twice.
+* **Role and subscription checks.** Each verified request re-reads membership,
+  restrictions and subscription status. A `past_due` workspace is read-only;
+  suspended or restricted accounts receive no financial data.
+* **Idempotent writes.** The transaction key is a SHA-256 of
+  `sessionId + cumulative text`, so a retry resolves to the existing entry.
+* **Output and logging.** Responses are plain text, clamped to 182 characters.
+  Phone numbers and verification codes are not logged. The route sets
+  `no-store`, `nosniff` and `no-referrer`.
+
 ## HTTP headers
 
 Set in `next.config.ts` for every response:

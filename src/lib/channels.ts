@@ -109,33 +109,27 @@ export async function recordChannelTransaction(params: {
   return { id: result.id, duplicate: result.duplicate };
 }
 
+const CASH_ACCOUNT_PRIORITY: Record<string, number> = {
+  cash: 0,
+  mobile_money: 1,
+  bank: 2,
+};
+
 export async function defaultCashAccount(workspaceId: string): Promise<{ id: string; currency: string } | null> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("accounts")
-    .select("id, currency, subtype, name")
+    .select("id, currency, subtype")
     .eq("workspace_id", workspaceId)
     .eq("is_archived", false)
-    .in("subtype", ["cash", "mobile_money", "bank"])
-    .order("subtype", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .in("subtype", ["cash", "mobile_money", "bank"]);
 
-  return data ? { id: data.id, currency: data.currency } : null;
-}
+  const account = (data ?? []).sort(
+    (left, right) =>
+      (CASH_ACCOUNT_PRIORITY[left.subtype] ?? 99) - (CASH_ACCOUNT_PRIORITY[right.subtype] ?? 99),
+  )[0];
 
-export async function categoryFor(workspaceId: string, kind: "income" | "expense"): Promise<string | null> {
-  const admin = createAdminClient();
-  const preferred = kind === "income" ? "Sales" : "Other expenses";
-  const { data } = await admin
-    .from("categories")
-    .select("id, name")
-    .eq("workspace_id", workspaceId)
-    .eq("kind", kind)
-    .eq("is_archived", false);
-
-  if (!data || data.length === 0) return null;
-  return data.find((row) => row.name.toLowerCase() === preferred.toLowerCase())?.id ?? data[0].id;
+  return account ? { id: account.id, currency: account.currency } : null;
 }
 
 export async function cashBalance(workspaceId: string): Promise<{ minor: bigint; currency: string }> {
@@ -153,42 +147,8 @@ export async function cashBalance(workspaceId: string): Promise<{ minor: bigint;
   return { minor: total, currency };
 }
 
-export async function recentEntries(workspaceId: string, limit = 3) {
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("v_transactions")
-    .select("occurred_on, kind, description, amount_minor, currency")
-    .eq("workspace_id", workspaceId)
-    .order("occurred_on", { ascending: false })
-    .limit(limit);
-  return data ?? [];
-}
-
 export function formatMinor(minor: bigint, currency: string, locale = "en"): string {
   return formatMoney(minor, currency, moneyLocale(locale, currency));
-}
-
-export async function logUssdSession(params: {
-  sessionId: string;
-  phone: string;
-  workspaceId?: string | null;
-  userId?: string | null;
-  state?: Record<string, unknown>;
-  serviceCode?: string | null;
-}): Promise<void> {
-  const admin = createAdminClient();
-  await admin.from("ussd_sessions").upsert(
-    {
-      session_id: params.sessionId.slice(0, 120),
-      phone: params.phone,
-      workspace_id: params.workspaceId ?? null,
-      user_id: params.userId ?? null,
-      state: (params.state ?? {}) as never,
-      service_code: params.serviceCode ?? null,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
-    },
-    { onConflict: "session_id" },
-  );
 }
 
 export async function logWhatsappMessage(params: {

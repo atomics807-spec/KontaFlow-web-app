@@ -514,6 +514,69 @@ async function main(): Promise<void> {
     );
     ok("channel retries are idempotent", channelRetry.duplicate === true && channelRetry.id === channelTx.id);
 
+    console.log("\nUSSD sessions and pending links");
+    const ussdSessionId = `db-ussd-${Date.now()}`;
+    const ussdPhone = "+237699999999";
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `insert into ussd_sessions (session_id, phone, workspace_id, user_id, state, service_code, expires_at)
+           values ($1, $2, $3, $4, $5::jsonb, '*384*1234#', now() + interval '3 minutes')`,
+          [ussdSessionId, ussdPhone, idB, CHARLIE, JSON.stringify({ version: 1, stage: "category", amountMinor: "500" })],
+        );
+      },
+      true,
+    );
+    eq(
+      "USSD session state is stored",
+      await scalar(client, `select state ->> 'stage' from ussd_sessions where session_id = $1`, [ussdSessionId]),
+      "category",
+    );
+    eq(
+      "browser clients cannot read USSD sessions",
+      await asRole(client, "authenticated", alice, (c) =>
+        scalar(c, `select count(*) from ussd_sessions where session_id = $1`, [ussdSessionId]),
+      ),
+      "0",
+    );
+    const ussdSessionInsertDenied = await expectError(
+      client,
+      "authenticated",
+      alice,
+      `insert into ussd_sessions (session_id, phone, state) values ('browser-made', $1, '{}'::jsonb)`,
+      [ussdPhone],
+    );
+    ok("browser clients cannot write USSD sessions", ussdSessionInsertDenied?.code === "42501", ussdSessionInsertDenied);
+
+    const pendingUssdId = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{ id: string }>(
+          `insert into channel_identities
+             (workspace_id, user_id, channel, address, verified_at, verification_code_hash, verification_expires_at, verification_method)
+           values ($1, $2, 'ussd', $3, null, 'test-hash', now() + interval '10 minutes', 'ussd_link')
+           returning id`,
+          [idB, CHARLIE, ussdPhone],
+        );
+        return result.rows[0]!.id;
+      },
+      true,
+    );
+    ok("pending USSD link is stored without verified_at", Boolean(pendingUssdId));
+    const selfVerify = await expectError(
+      client,
+      "authenticated",
+      charlie,
+      `update channel_identities set verified_at = now() where id = $1`,
+      [pendingUssdId],
+    );
+    ok("browser clients cannot self-verify a USSD number", selfVerify?.code === "42501", selfVerify);
+
     const rpcDenied = await expectError(
       client,
       "authenticated",

@@ -51,7 +51,7 @@ npm run build
 * Dashboard KPIs, cash-flow charts, reports plus CSV and localized PDF export.
 * Contacts, categories, cash/mobile-money/bank accounts.
 * AI assistant that reads the books and records entries through validated tools.
-* USSD menu and WhatsApp webhook writing real transactions for linked numbers.
+* USSD menu and WhatsApp webhook writing real transactions for verified linked numbers, with role, subscription and idempotency checks.
 * Offline outbox with idempotent sync.
 * Billing page with plan catalogue, usage and payment history; daily close email.
 * PWA shell, strict security headers, audit trail, i18n EN/FR/PCM (Cameroon Pidgin).
@@ -67,6 +67,7 @@ Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).
 | [docs/security/security.md](docs/security/security.md) | Threat model, authz layers, webhook hardening, headers |
 | [docs/deployment/deployment.md](docs/deployment/deployment.md) | Vercel and Cloudflare procedures, env matrix, smoke tests |
 | [docs/integrations/channels.md](docs/integrations/channels.md) | USSD, WhatsApp, OpenAI, Resend, payments, offline sync |
+| [docs/integrations/ussd.md](docs/integrations/ussd.md) | Africa's Talking setup, handset verification, menu map and USSD checklist |
 | [docs/integrations/localization.md](docs/integrations/localization.md) | Locales, Pidgin convention, Tolgee overrides and formatting rules |
 | [docs/api/reference.md](docs/api/reference.md) | Routes, actions, RPCs, sync payloads |
 | [docs/roadmap.md](docs/roadmap.md) | Shipped vs next |

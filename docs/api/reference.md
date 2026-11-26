@@ -14,7 +14,7 @@ All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 | `/api/sync` | POST | Supabase session | Flush offline outbox entries (idempotent per `clientGeneratedId`) |
 | `/api/reports/export` | GET | Supabase session | Localized CSV export for a period (`from`, `to`, `locale`) |
 | `/api/reports/export/pdf` | GET | Supabase session | Localized PDF report for a period (`from`, `to`, `locale`) |
-| `/api/ussd` | POST | Optional shared token | Africa's Talking USSD menu |
+| `/api/ussd` | POST | Required `USSD_CALLBACK_TOKEN` | Africa's Talking USSD menu; returns plain-text `CON`/`END` |
 | `/api/whatsapp` | GET/POST | Verify token / HMAC | Meta webhook handshake and inbound messages |
 | `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails the previous day's close to workspace owners |
 

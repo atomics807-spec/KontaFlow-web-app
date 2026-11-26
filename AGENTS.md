@@ -319,3 +319,26 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   manual toggle in the app shell. Keep low-data behavior in presentational
   components, not in financial calculations.
 * See `docs/architecture/offline-first.md` for the full contract.
+
+## USSD channel
+
+* Callback: `POST /api/ussd`, form fields `sessionId`, `phoneNumber`,
+  `serviceCode`, `text`. Return plain text `CON ...` or `END ...`; responses
+  are clamped to 182 characters in `src/lib/ussd/menu.ts`.
+* `USSD_CALLBACK_TOKEN` is required (`?token=` or `x-ussd-token`). Do not make
+  it optional again.
+* The provider sends the cumulative `text` path. `parseUssdText` and the route
+  enforce path continuity; do not treat `text` as a single current input.
+* `public.ussd_sessions` is service-role only. It stores a bounded JSON state,
+  sliding `expires_at`, last cumulative input and a cached terminal response.
+  Never expose it to browser clients or log phone numbers/codes.
+* Linking uses `src/services/ussd.ts`: a pending row holds an HMAC of a
+  six-digit code, expiry and attempt counter; only the handset callback can set
+  `verified_at`. Browser clients must not self-verify `channel_identities`.
+* Verified callbacks re-check `buildChannelAccess` (membership, restrictions,
+  subscription) before any read or write. `past_due` is read-only.
+* Writes use `record_channel_transaction` with `channel = 'ussd'` and
+  `ussdClientId(sessionId, text)` so provider retries are idempotent.
+* Menu categories come from `listUssdCategories`; `Stock purchases` is shown
+  as `Inventory` and `Other expenses` as `Other` for short USSD menus.
+* Full setup and provider checklist: `docs/integrations/ussd.md`.

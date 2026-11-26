@@ -185,6 +185,21 @@ Webhooks and cron have no user session. `0010` wrappers accept an explicit
 actor, verify an active membership, then set `request.jwt.claims` locally before
 delegating to the user-facing RPC. They are granted to `service_role` only.
 
+### USSD sessions (migration 0036)
+
+`public.ussd_sessions` stores one short-lived row per provider `sessionId`:
+phone, workspace/user, bounded JSON state, service code and `expires_at`.
+Authenticated clients have no read or write policy; only `service_role` can
+access it. The state holds the menu stage, selected kind/category, account and
+currency, the last cumulative input, and a cached terminal response for
+provider retries. The table is indexed by `expires_at` and
+`(workspace_id, created_at desc)`.
+
+USSD links use the same `channel_identities` verification columns as WhatsApp:
+an HMAC of the six-digit code, a ten-minute expiry, an attempt counter and
+`verification_method = 'ussd_link'`. `verified_at` is only set by the
+service-role verification path, never by a browser update.
+
 ## Platform administration tables (migration 0034)
 
 | Table | Purpose |

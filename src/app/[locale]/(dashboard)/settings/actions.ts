@@ -6,7 +6,9 @@ import { can } from "@/lib/permissions";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { updateWorkspace } from "@/services/workspaces";
-import { linkUssdChannel, requestWhatsappLink, unlinkChannel } from "@/services/whatsapp";
+import { requestWhatsappLink } from "@/services/whatsapp";
+import { unlinkChannel } from "@/services/channels";
+import { linkUssdChannel } from "@/services/ussd";
 import { updateAiSettings } from "@/services/ai-commands";
 import { purgeAiHistory, updateAiPreferences } from "@/services/ai-preferences";
 import { parseMoneyToMinor } from "@/lib/money";
@@ -177,18 +179,23 @@ export async function linkChannelAction(_prev: FormState, formData: FormData): P
       );
     }
 
-    await linkUssdChannel({
+    const result = await linkUssdChannel({
       workspaceId: context.workspace.id,
       userId: context.user.id,
       address,
       countryCode: context.workspace.country_code,
     });
+    const service = getServerEnv().USSD_SERVICE_CODE ?? dict.settings.ussdServiceFallback;
+    const message = interpolate(dict.settings.ussdLinkRequested, {
+      code: result.code,
+      phone: result.address,
+      service,
+    });
+    revalidatePath(`/${locale}/settings`);
+    return formSuccess(message);
   } catch (error) {
     return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
   }
-
-  revalidatePath(`/${locale}/settings`);
-  return formSuccess(dict.settings.saved);
 }
 
 export async function unlinkChannelAction(formData: FormData): Promise<void> {

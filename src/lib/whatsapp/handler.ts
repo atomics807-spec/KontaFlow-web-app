@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
 import { isAiConfigured } from "@/lib/ai/client";
 import { runAssistant } from "@/lib/ai/assistant";
 import { parseWhatsappIntent } from "@/lib/whatsapp/commands";
-import { dashboardSummaryAsService, receivablesAsService, reportAsService } from "@/lib/whatsapp/data";
+import { dashboardSummaryAsService, receivablesAsService, reportAsService } from "@/lib/channels/data";
 import type { WhatsappAccess } from "@/lib/whatsapp/access";
 import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
