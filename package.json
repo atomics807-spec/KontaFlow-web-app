@@ -15,7 +15,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "tsx scripts/test-db.ts",
-    "demo:super-admin": "tsx scripts/seed-platform-admin.ts",
     "db:push": "tsx scripts/push-migrations.ts",
     "i18n:pull": "tsx scripts/tolgee-pull.ts",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",

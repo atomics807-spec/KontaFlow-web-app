@@ -281,9 +281,10 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   data but allows sign-in; `suspended` also sets a GoTrue `ban_duration` from
   the server action. Keep the DB expiry and Auth ban in sync when changing the
   restriction flow.
-* Provision demos with `npm run demo:super-admin` (reads `.env.local`); it
-  creates `superadmin@kontaflow.demo` and refuses the known demo password when
-  `APP_ENV=production` or `VERCEL_ENV=production`.
+* No platform administrator account, seed script or default credential is
+  committed. Provision the first operator out of band with Supabase Auth and the
+  SQL steps in `docs/architecture/platform-administration.md`, then manage
+  further operators from the console. Never commit operator emails or passwords.
 * The auth sign-in action special-cases platform admins before the tenant
   verification redirects, and tenant pages redirect platform admins to `/admin`.
 

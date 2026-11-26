@@ -88,22 +88,33 @@ dashboard; a platform admin who opens a tenant page is sent to `/admin`.
 
 ## Provisioning
 
-Demo and preview:
+No platform administrator account, operator email, seed script or default
+password is committed to this repository. Create the first operator out of band:
 
-```bash
-npm run demo:super-admin
-# superadmin@kontaflow.demo
+1. Create the account in Supabase Authentication with a strong, unique password
+   kept in a password manager.
+2. Grant the platform role in the Supabase SQL editor, replacing the placeholder:
+
+```sql
+insert into public.platform_admins (user_id, role, is_active)
+select id, 'super_admin', true
+from auth.users
+where lower(email) = lower('<operator-email>')
+on conflict (user_id) do update
+  set role = excluded.role,
+      is_active = true;
+
+update public.profiles
+set verification_required = false,
+    email_verified_at = coalesce(email_verified_at, now())
+where lower(email) = lower('<operator-email>');
 ```
 
-The script reads `.env.local`, creates or updates the Auth user, disables tenant
-verification requirements for the operator, and upserts the `super_admin` row.
-Production provisioning requires `KONTAFLOW_SUPER_ADMIN_PASSWORD`; the known demo
-fallback is refused when `APP_ENV=production` or `VERCEL_ENV=production`.
-
-Ongoing administrators are created from the console by a `super_admin`. The
-server action uses the service-role client only for Auth user creation and the
-subsequent `platform_admins` insert. The database triggers still enforce
-separation.
+The operator must not own or join a workspace; the separation triggers reject
+that. After the first super admin exists, further administrators are created from
+the console by a `super_admin`. The server action uses the service-role client
+only for Auth user creation and the subsequent `platform_admins` insert. Never
+commit operator credentials, seed data or environment values.
 
 ## Audit trail
 

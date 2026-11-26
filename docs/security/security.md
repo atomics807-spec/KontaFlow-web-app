@@ -178,9 +178,9 @@ create or deactivate other platform administrators; the last active super admin
 is protected by a database trigger. Every platform command writes an append-only
 audit row with the acting operator, target, safe details and request IP.
 
-The demo bootstrap script (`npm run demo:super-admin`) refuses to use its known
-demo password when `APP_ENV=production` or `VERCEL_ENV=production`; production provisioning requires an
-explicit `KONTAFLOW_SUPER_ADMIN_PASSWORD`.
+Platform administrator accounts are provisioned out of band. No seed script,
+default password, operator email or credential is committed to the repository.
+Provisioning steps live in `docs/architecture/platform-administration.md`.
 
 ## Logging and privacy
 
