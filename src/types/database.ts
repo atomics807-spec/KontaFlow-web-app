@@ -333,6 +333,21 @@ export type NotificationRow = {
   created_at: string;
 };
 
+export type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  company: string | null;
+  topic: "sales" | "support" | "partnership" | "press" | "other";
+  message: string;
+  locale: "en" | "fr" | "wes";
+  status: "new" | "read" | "replied" | "closed" | "spam";
+  source: string;
+  handled_at: string | null;
+  handled_by: string | null;
+  created_at: string;
+};
+
 export type DashboardSummary = {
   workspace: { id: string; name: string; currency: string; timezone: string; plan: WorkspacePlan };
   period: { from: string; to: string };
@@ -400,6 +415,7 @@ export type Database = {
       usage_events: TableDefinition<UsageEventRow>;
       channel_identities: TableDefinition<ChannelIdentityRow>;
       notifications: TableDefinition<NotificationRow>;
+      contact_messages: TableDefinition<ContactMessageRow>;
       ussd_sessions: TableDefinition<UssdSessionRow>;
       whatsapp_messages: TableDefinition<WhatsappMessageRow>;
     };

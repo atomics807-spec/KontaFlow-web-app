@@ -57,7 +57,7 @@ policy. None of the policies trust a `workspace_id` from the client; they call
 | integration_messages | managers | service role | — |
 | subscription_plans, subscription_features, plan_features | authenticated | service role | service role |
 | subscriptions | owner/admin | owner/admin | — |
-| payment_webhooks, otp_verifications, idempotency_records | service role only | service role only | service role only |
+| payment_webhooks, otp_verifications, idempotency_records, contact_messages | service role only | service role only | service role only |
 
 Child rows of tenant-owned parents also carry composite foreign keys
 `(workspace_id, parent_id)`, so a row cannot point at another tenant's parent

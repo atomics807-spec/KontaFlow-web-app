@@ -111,3 +111,24 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
 * Marketing art is original SVG under `public/illustrations/`; load with
   `next/image` plus `unoptimized` (hand-authored SVGs, served statically).
 * Design documentation: `docs/design/design-system.md`.
+
+## Public marketing pages (Phase 2.1)
+
+* Authenticated app routes and public pages share `src/app/[locale]/`. Public
+  pages live in the `(marketing)` route group, whose layout renders
+  `MarketingHeader`/`MarketingFooter` and `<main id="main">`.
+* Routes: `/{locale}` (home), `overview`, `channels`, `product`, `security`,
+  `pricing`, `contact`. Header/footer use real paths, never anchors. Add new
+  public routes to `src/app/sitemap.ts` and give them `marketingMetadata`
+  (`src/lib/seo.ts`) for canonical + hreflang.
+* Shared page hero: `src/components/marketing/page-hero.tsx`; reusable sections
+  stay in `src/components/marketing/sections.tsx`.
+* Contact flow: `contact/page.tsx` + `contact/actions.ts` (server action)
+  validate with `src/lib/validation/contact.ts`, rate-limit per IP, insert
+  through the service-role client into `contact_messages`, and send a Resend
+  notification to `CONTACT_INBOX_EMAIL` with the sender as `replyTo`. The form
+  stores first, so a missing Resend key still captures the lead. A hidden
+  `website` honeypot is checked before validation.
+* Copy for the pages lives under `pages.*` in each locale dictionary. All three
+  locales must keep identical keys (`satisfies Dictionary` enforces it at
+  typecheck time).

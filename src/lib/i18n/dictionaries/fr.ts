@@ -436,6 +436,120 @@ export const fr: Dictionary = {
     docs: "Documentation",
     rights: "Tous droits réservés.",
   },
+  pages: {
+    overview: {
+      eyebrow: "Vue d'ensemble",
+    },
+    channels: {
+      eyebrow: "Canaux",
+      tableTitle: "Ce qui fonctionne sur chaque canal",
+      tableSubtitle: "Un seul grand livre derrière chaque porte d'entrée.",
+      colChannel: "Canal",
+      colData: "Données requises",
+      colSmartphone: "Smartphone",
+      colOffline: "Hors ligne",
+      yes: "Oui",
+      no: "Non",
+      lowData: "Peu de données",
+      noData: "Aucune donnée",
+      anyPhone: "Tout téléphone",
+      partial: "Partiel",
+      integrationTitle: "Un seul grand livre derrière chaque canal",
+      integrationSubtitle:
+        "Chaque écriture conserve son canal et sa source, puis se réconcilie dans le même grand livre en partie double.",
+      integration1Title: "La provenance est enregistrée",
+      integration1Desc:
+        "Web, USSD, WhatsApp, IA et synchronisation hors ligne marquent chaque écriture selon son origine.",
+      integration2Title: "Les reprises restent idempotentes",
+      integration2Desc:
+        "Une requête webhook ou de synchronisation répétée avec le même identifiant client renvoie l'écriture d'origine au lieu de la dupliquer.",
+      integration3Title: "Les files hors ligne se réconcilient sans risque",
+      integration3Desc:
+        "Les écritures saisies sans réseau restent sur l'appareil et sont envoyées une seule fois, avec leur date métier d'origine.",
+    },
+    product: {
+      eyebrow: "Produit",
+    },
+    security: {
+      eyebrow: "Sécurité",
+      title: "Des contrôles que votre banque et votre comptable peuvent vérifier",
+      subtitle:
+        "L'isolation des espaces, les permissions par rôle et l'immuabilité financière sont appliquées dans PostgreSQL, pas seulement masquées dans l'interface.",
+      controlsTitle: "Ce qui est appliqué dans la base de données",
+      control1Title: "Isolation des espaces",
+      control1Desc:
+        "La sécurité au niveau des lignes protège chaque table. L'accès vient de votre session, jamais d'un identifiant d'espace envoyé par le navigateur.",
+      control2Title: "Accès par rôle",
+      control2Desc:
+        "Propriétaires, administrateurs, comptables, gestionnaires et employés ont des permissions limitées, revérifiées côté serveur et dans la base.",
+      control3Title: "Grand livre immuable",
+      control3Desc:
+        "Les écritures comptabilisées sont figées. Les corrections créent une contre-écriture miroir, donc l'historique reste complet.",
+      control4Title: "Piste d'audit",
+      control4Desc:
+        "Les actions financières enregistrent acteur, action, entité et espace. Les lignes d'audit ne peuvent pas être modifiées.",
+      control5Title: "Stockage privé",
+      control5Desc:
+        "Reçus, factures et documents vivent dans des compartiments privés, accessibles par liens signés à durée limitée.",
+      control6Title: "Isolation des webhooks",
+      control6Desc:
+        "Les rappels de canaux et de paiement utilisent des secrets partagés, des signatures et des tables réservées au service.",
+    },
+    pricing: {
+      eyebrow: "Tarifs",
+      note: "Prix en FCFA, facturés mensuellement. Annulez à tout moment.",
+      faqTitle: "Questions avant de commencer",
+      faq1Q: "Le forfait Starter est-il vraiment gratuit ?",
+      faq1A:
+        "Oui. Il comprend un espace, des transactions illimitées, le web, l'USSD et WhatsApp, et 100 messages d'assistant par mois.",
+      faq2Q: "Puis-je changer de forfait plus tard ?",
+      faq2A:
+        "Oui. Changez de forfait depuis la facturation ; les nouvelles limites s'appliquent immédiatement et vos livres restent intacts.",
+      faq3Q: "Faut-il une carte pour essayer ?",
+      faq3A:
+        "Non. Commencez l'essai de sept jours, saisissez de vraies transactions et décidez avant la fin du mois gratuit.",
+    },
+    contact: {
+      eyebrow: "Contact",
+      title: "Parlez à l'équipe derrière KontaFlow",
+      subtitle:
+        "Une question sur les tarifs, la migration, un partenariat ou une démo ? Écrivez-nous et un humain vous répondra.",
+      formTitle: "Envoyez-nous un message",
+      formSubtitle: "Dites-nous ce dont vous avez besoin. Nous répondons sous un jour ouvré.",
+      name: "Nom complet",
+      email: "E-mail professionnel",
+      company: "Nom de l'entreprise (facultatif)",
+      topic: "Quel est le sujet ?",
+      message: "Message",
+      consent: "J'accepte d'être contacté au sujet de cette demande.",
+      submit: "Envoyer le message",
+      sending: "Envoi…",
+      successTitle: "Message reçu",
+      successBody: "Merci. Nous avons votre message et répondrons par e-mail.",
+      errorGeneric: "Nous n'avons pas pu envoyer votre message. Réessayez ou écrivez-nous directement.",
+      errName: "Entrez votre nom (2 caractères minimum).",
+      errEmail: "Entrez une adresse e-mail valide.",
+      errMessage: "Écrivez au moins 10 caractères pour que nous puissions aider.",
+      errTopic: "Choisissez un sujet.",
+      errConsent: "Veuillez accepter d'être contacté.",
+      errSpam: "Quelque chose semble automatisé. Réessayez.",
+      topicSales: "Ventes et tarifs",
+      topicSupport: "Support produit",
+      topicPartnership: "Partenariat",
+      topicPress: "Presse",
+      topicOther: "Autre chose",
+      infoEmailLabel: "E-mail",
+      infoOfficeLabel: "Bureau",
+      infoOfficeValue: "Douala, Cameroun",
+      infoHoursLabel: "Horaires",
+      infoHoursValue: "Lundi–vendredi · 8h00–18h00 WAT",
+      infoResponseLabel: "Délai de réponse",
+      infoResponseValue: "Sous un jour ouvré",
+      directTitle: "Vous préférez l'e-mail ?",
+      directSubtitle: "Écrivez à hello@kontaflow.com et nous répondrons depuis une vraie boîte.",
+      privacyNote: "Nous utilisons vos coordonnées uniquement pour répondre à cette demande.",
+    },
+  },
   pwa: {
     install: "Installer KontaFlow",
     installHint: "Ajoutez KontaFlow à votre écran d'accueil pour un accès instantané, même hors ligne.",

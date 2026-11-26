@@ -933,6 +933,41 @@ async function main(): Promise<void> {
       "42501",
     );
 
+    eq(
+      "contact messages are service-only",
+      (await expectError(client, "authenticated", alice, `select count(*) from contact_messages`))?.code,
+      "42501",
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `insert into contact_messages (name, email, company, topic, message, locale)
+           values ('Awa Nkeng', 'awa@example.cm', 'Awa Traders', 'sales', 'Please show me the Growth plan.', 'en')`,
+        );
+      },
+      true,
+    );
+    eq(
+      "contact messages are stored for operations",
+      await scalar(client, `select count(*) from contact_messages where email = 'awa@example.cm'`),
+      "1",
+    );
+    eq(
+      "contact messages validate the email",
+      (await expectError(
+        client,
+        "service_role",
+        null,
+        `insert into contact_messages (name, email, message) values ('Bad', 'not-an-email', 'This should fail.')`,
+        [],
+        { commit: true },
+      ))?.code,
+      "23514",
+    );
+
     console.log("\nPhase 3 · security coverage");
     eq(
       "every public table has RLS enabled",
@@ -954,7 +989,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages')`,
       ),
       "",
     );

@@ -433,6 +433,120 @@ export const en = {
     docs: "Documentation",
     rights: "All rights reserved.",
   },
+  pages: {
+    overview: {
+      eyebrow: "Platform overview",
+    },
+    channels: {
+      eyebrow: "Channels",
+      tableTitle: "What works on each channel",
+      tableSubtitle: "One ledger behind every front door.",
+      colChannel: "Channel",
+      colData: "Data needed",
+      colSmartphone: "Smartphone",
+      colOffline: "Works offline",
+      yes: "Yes",
+      no: "No",
+      lowData: "Low data",
+      noData: "No data",
+      anyPhone: "Any phone",
+      partial: "Partial",
+      integrationTitle: "One ledger behind every channel",
+      integrationSubtitle:
+        "Every entry keeps its channel and source, then reconciles into the same double-entry ledger.",
+      integration1Title: "Provenance is recorded",
+      integration1Desc:
+        "Web, USSD, WhatsApp, AI and offline sync each stamp the entry with how it arrived.",
+      integration2Title: "Retries stay idempotent",
+      integration2Desc:
+        "A repeated webhook or sync request with the same client id returns the original entry instead of duplicating it.",
+      integration3Title: "Offline queues reconcile safely",
+      integration3Desc:
+        "Entries captured without network wait on the device and post once, with the original business date kept.",
+    },
+    product: {
+      eyebrow: "Product",
+    },
+    security: {
+      eyebrow: "Security",
+      title: "Controls your bank and accountant can inspect",
+      subtitle:
+        "Tenant isolation, role-based permissions and financial immutability are enforced in PostgreSQL, not just hidden in the interface.",
+      controlsTitle: "What is enforced in the database",
+      control1Title: "Tenant isolation",
+      control1Desc:
+        "Row-level security protects every tenant table. Access comes from your session, never from a workspace id sent by the browser.",
+      control2Title: "Role-based access",
+      control2Desc:
+        "Owners, admins, accountants, managers and staff get scoped permissions, checked again on the server and in the database.",
+      control3Title: "Immutable ledger",
+      control3Desc:
+        "Posted entries are frozen. Corrections create a mirrored reversal, so history stays complete and auditable.",
+      control4Title: "Audit trail",
+      control4Desc:
+        "Financial actions record actor, action, entity and workspace. Audit rows are append-only.",
+      control5Title: "Private storage",
+      control5Desc:
+        "Receipts, invoices and documents live in private buckets, reachable only through short-lived signed links.",
+      control6Title: "Webhook isolation",
+      control6Desc:
+        "Channel and payment callbacks use shared secrets, signature checks and service-only tables with no public policy.",
+    },
+    pricing: {
+      eyebrow: "Pricing",
+      note: "Prices in FCFA, billed monthly. Cancel anytime.",
+      faqTitle: "Questions before you start",
+      faq1Q: "Is the starter plan really free?",
+      faq1A:
+        "Yes. It includes one workspace, unlimited transactions, web, USSD and WhatsApp, and 100 assistant messages per month.",
+      faq2Q: "Can I change plan later?",
+      faq2A:
+        "Yes. Upgrade or downgrade from billing; the new limits apply immediately and your books stay untouched.",
+      faq3Q: "Do I need a card to try it?",
+      faq3A:
+        "No. Start the seven-day trial, record real transactions and decide when the free month ends.",
+    },
+    contact: {
+      eyebrow: "Contact",
+      title: "Talk to the team behind KontaFlow",
+      subtitle:
+        "Questions about pricing, migrations, partnerships or a demo? Send a message and a human will reply.",
+      formTitle: "Send us a message",
+      formSubtitle: "Tell us what you need. We reply within one business day.",
+      name: "Full name",
+      email: "Work email",
+      company: "Business name (optional)",
+      topic: "What is this about?",
+      message: "Message",
+      consent: "I agree to be contacted about this request.",
+      submit: "Send message",
+      sending: "Sending…",
+      successTitle: "Message received",
+      successBody: "Thanks. We have your message and will reply by email.",
+      errorGeneric: "We could not send your message. Please try again or email us directly.",
+      errName: "Enter your name (at least 2 characters).",
+      errEmail: "Enter a valid email address.",
+      errMessage: "Write at least 10 characters so we can help.",
+      errTopic: "Choose a topic.",
+      errConsent: "Please agree to be contacted.",
+      errSpam: "Something looked automated. Please try again.",
+      topicSales: "Sales and pricing",
+      topicSupport: "Product support",
+      topicPartnership: "Partnership",
+      topicPress: "Press",
+      topicOther: "Something else",
+      infoEmailLabel: "Email",
+      infoOfficeLabel: "Office",
+      infoOfficeValue: "Douala, Cameroon",
+      infoHoursLabel: "Hours",
+      infoHoursValue: "Monday–Friday · 8:00–18:00 WAT",
+      infoResponseLabel: "Response time",
+      infoResponseValue: "Within one business day",
+      directTitle: "Prefer email?",
+      directSubtitle: "Write to hello@kontaflow.com and we will reply from a real inbox.",
+      privacyNote: "We use your details only to answer this request.",
+    },
+  },
   pwa: {
     install: "Install KontaFlow",
     installHint: "Add KontaFlow to your home screen for instant access, even offline.",

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { MarketingHeader } from "@/components/layout/marketing-header";
-import { MarketingFooter } from "@/components/layout/marketing-footer";
 import { Hero } from "@/components/marketing/hero";
 import {
   ChannelsSection,
@@ -22,7 +20,7 @@ export async function generateMetadata({
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   return {
-    title: `${dict.common.appName} — ${dict.common.tagline}`,
+    title: { absolute: `${dict.common.appName} — ${dict.common.tagline}` },
     description: dict.marketing.heroSubtitle,
   };
 }
@@ -50,18 +48,14 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <MarketingHeader />
-      <main id="main">
-        <Hero />
-        <ChannelsSection />
-        <FeaturesSection />
-        <ShowcaseSection />
-        <HowSection />
-        <SecuritySection />
-        <PricingSection />
-        <CtaSection />
-      </main>
-      <MarketingFooter />
+      <Hero />
+      <ChannelsSection />
+      <FeaturesSection />
+      <ShowcaseSection />
+      <HowSection />
+      <SecuritySection />
+      <PricingSection />
+      <CtaSection />
     </>
   );
 }

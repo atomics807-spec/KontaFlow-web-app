@@ -13,24 +13,26 @@ export function MarketingFooter() {
     {
       title: dict.marketing.footerProduct,
       links: [
-        { label: dict.marketing.navChannels, href: `/${locale}#channels` },
-        { label: dict.marketing.navFeatures, href: `/${locale}#features` },
-        { label: dict.marketing.navPricing, href: `/${locale}#pricing` },
+        { label: dict.marketing.navProduct, href: `/${locale}/overview` },
+        { label: dict.marketing.navChannels, href: `/${locale}/channels` },
+        { label: dict.marketing.navFeatures, href: `/${locale}/product` },
+        { label: dict.marketing.navPricing, href: `/${locale}/pricing` },
       ],
     },
     {
       title: dict.marketing.footerCompany,
       links: [
-        { label: dict.marketing.about, href: `/${locale}#story` },
+        { label: dict.marketing.about, href: `/${locale}/overview` },
         { label: dict.marketing.docs, href: "/docs/architecture/overview.md" },
-        { label: dict.marketing.contact, href: "mailto:hello@kontaflow.com" },
+        { label: dict.marketing.contact, href: `/${locale}/contact` },
       ],
     },
     {
       title: dict.marketing.footerLegal,
       links: [
-        { label: dict.marketing.privacy, href: `/${locale}#security` },
-        { label: dict.marketing.terms, href: `/${locale}#security` },
+        { label: dict.marketing.navSecurity, href: `/${locale}/security` },
+        { label: dict.marketing.privacy, href: `/${locale}/security` },
+        { label: dict.marketing.terms, href: `/${locale}/security` },
       ],
     },
   ];

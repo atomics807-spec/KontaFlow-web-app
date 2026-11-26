@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -12,15 +13,19 @@ import { useI18n } from "./i18n-provider";
 
 export function MarketingHeader() {
   const { locale, dict } = useI18n();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   const links = [
-    { href: `/${locale}#product`, label: dict.marketing.navProduct },
-    { href: `/${locale}#channels`, label: dict.marketing.navChannels },
-    { href: `/${locale}#features`, label: dict.marketing.navFeatures },
-    { href: `/${locale}#security`, label: dict.marketing.navSecurity },
-    { href: `/${locale}#pricing`, label: dict.marketing.navPricing },
+    { href: `/${locale}/overview`, label: dict.marketing.navProduct },
+    { href: `/${locale}/channels`, label: dict.marketing.navChannels },
+    { href: `/${locale}/product`, label: dict.marketing.navFeatures },
+    { href: `/${locale}/security`, label: dict.marketing.navSecurity },
+    { href: `/${locale}/pricing`, label: dict.marketing.navPricing },
+    { href: `/${locale}/contact`, label: dict.marketing.contact },
   ];
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-page/85 backdrop-blur-md">
@@ -29,15 +34,20 @@ export function MarketingHeader() {
           <Logo />
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-7 md:flex">
+        <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
           {links.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-semibold text-muted transition-colors duration-200 hover:text-heading"
+              aria-current={isActive(link.href) ? "page" : undefined}
+              className={
+                isActive(link.href)
+                  ? "text-sm font-semibold text-accent-strong"
+                  : "text-sm font-semibold text-muted transition-colors duration-200 hover:text-heading"
+              }
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -79,14 +89,19 @@ export function MarketingHeader() {
           >
             <nav aria-label="Mobile" className="flex flex-col">
               {links.map((link) => (
-                <a
+                <Link
                   key={link.href}
                   href={link.href}
                   onClick={() => setOpen(false)}
-                  className="rounded-lg px-2 py-3 text-sm font-semibold text-heading transition hover:bg-panel"
+                  aria-current={isActive(link.href) ? "page" : undefined}
+                  className={
+                    isActive(link.href)
+                      ? "rounded-lg bg-accent-soft px-2 py-3 text-sm font-semibold text-accent-strong"
+                      : "rounded-lg px-2 py-3 text-sm font-semibold text-heading transition hover:bg-panel"
+                  }
                 >
                   {link.label}
-                </a>
+                </Link>
               ))}
             </nav>
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-4">

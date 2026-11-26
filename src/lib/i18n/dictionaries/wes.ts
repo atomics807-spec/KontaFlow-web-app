@@ -435,6 +435,120 @@ export const wes: Dictionary = {
     docs: "Documentation",
     rights: "All rights reserved.",
   },
+  pages: {
+    overview: {
+      eyebrow: "How di system work",
+    },
+    channels: {
+      eyebrow: "Channels",
+      tableTitle: "Wetin each channel fit do",
+      tableSubtitle: "One book behind every door.",
+      colChannel: "Channel",
+      colData: "Data need",
+      colSmartphone: "Smartphone",
+      colOffline: "Offline",
+      yes: "Yes",
+      no: "No",
+      lowData: "Small data",
+      noData: "No data",
+      anyPhone: "Any phone",
+      partial: "Small small",
+      integrationTitle: "One book behind every channel",
+      integrationSubtitle:
+        "Every entry keep di channel and source wey e come from, den e join di same double-entry book.",
+      integration1Title: "Dem mark where e come from",
+      integration1Desc:
+        "Web, USSD, WhatsApp, AI and offline sync each mark di entry with how e reach.",
+      integration2Title: "Repeat no go double am",
+      integration2Desc:
+        "If webhook or sync come again with di same client id, e go return di first entry, no copy.",
+      integration3Title: "Offline queue go join safe",
+      integration3Desc:
+        "Entry wey you capture without network go wait for phone, den post once, with di original business date.",
+    },
+    product: {
+      eyebrow: "Product",
+    },
+    security: {
+      eyebrow: "Security",
+      title: "Controls wey your bank and accountant fit check",
+      subtitle:
+        "Tenant isolation, role permissions and financial immutability dey inside PostgreSQL, no be only hide for interface.",
+      controlsTitle: "Wetin di database enforce",
+      control1Title: "Tenant isolation",
+      control1Desc:
+        "Row-level security dey every tenant table. Access dey come from your session, never from workspace id wey browser send.",
+      control2Title: "Role access",
+      control2Desc:
+        "Owner, admin, accountant, manager and staff get different powers; server and database check am again.",
+      control3Title: "Book no dey change",
+      control3Desc:
+        "Posted entry no fit change. Correction go create mirror reversal, so history complete.",
+      control4Title: "Audit trail",
+      control4Desc:
+        "Financial action dey record who do am, wetin e do, which record and which workspace. Audit row no fit change.",
+      control5Title: "Private storage",
+      control5Desc:
+        "Receipt, invoice and document dey private bucket; only short signed link fit open am.",
+      control6Title: "Webhook isolation",
+      control6Desc:
+        "Channel and payment callback use shared secret, signature check and service-only table.",
+    },
+    pricing: {
+      eyebrow: "Price",
+      note: "Price na FCFA, dem dey bill every month. You fit stop anytime.",
+      faqTitle: "Questions before you start",
+      faq1Q: "Starter plan free true true?",
+      faq1A:
+        "Yes. E get one workspace, unlimited transaction, web, USSD and WhatsApp, plus 100 assistant message every month.",
+      faq2Q: "I fit change plan later?",
+      faq2A:
+        "Yes. Change am from billing; new limit start sharp sharp and your book no go spoil.",
+      faq3Q: "I need card to try am?",
+      faq3A:
+        "No. Start di seven-day trial, record real transaction and decide before di free month end.",
+    },
+    contact: {
+      eyebrow: "Contact",
+      title: "Talk to di team behind KontaFlow",
+      subtitle:
+        "Question about price, migration, partnership or demo? Send message and human go reply.",
+      formTitle: "Send us message",
+      formSubtitle: "Tell us wetin you need. We dey reply within one business day.",
+      name: "Full name",
+      email: "Work email",
+      company: "Business name (if you want)",
+      topic: "Wetin dis one concern?",
+      message: "Message",
+      consent: "I agree make dem contact me about dis request.",
+      submit: "Send message",
+      sending: "E dey send…",
+      successTitle: "Message don land",
+      successBody: "Thank you. We get your message and go reply by email.",
+      errorGeneric: "We no fit send your message. Try again or email us direct.",
+      errName: "Put your name (at least 2 character).",
+      errEmail: "Put correct email address.",
+      errMessage: "Write at least 10 character so we fit help.",
+      errTopic: "Choose one topic.",
+      errConsent: "Abeg agree make dem contact you.",
+      errSpam: "Something look like machine. Try again.",
+      topicSales: "Sales and price",
+      topicSupport: "Product support",
+      topicPartnership: "Partnership",
+      topicPress: "Press",
+      topicOther: "Other thing",
+      infoEmailLabel: "Email",
+      infoOfficeLabel: "Office",
+      infoOfficeValue: "Douala, Cameroon",
+      infoHoursLabel: "Hours",
+      infoHoursValue: "Monday–Friday · 8:00–18:00 WAT",
+      infoResponseLabel: "How long reply take",
+      infoResponseValue: "Within one business day",
+      directTitle: "You prefer email?",
+      directSubtitle: "Write hello@kontaflow.com and we go reply from real inbox.",
+      privacyNote: "We dey use your details only to answer dis request.",
+    },
+  },
   pwa: {
     install: "Install KontaFlow",
     installHint: "Put KontaFlow for your home screen so you fit open am any time, even offline.",

@@ -25,6 +25,7 @@ its tests cannot drift apart.
 | `0014_phase3_rls` | RLS and privileges for every Phase 3 table |
 | `0015_phase3_storage` | five workspace buckets + profile images, tenant-scoped policies |
 | `0016_phase3_cascade_deletion` | cascade-safe tenant deletion: deferred tenant FKs, workspace-delete marker, guards that yield only during a cascade |
+| `0017_contact_messages` | inbound public contact form: `contact_messages` (service-role only, no tenant, RLS enabled, topic/status/locale checks) |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 

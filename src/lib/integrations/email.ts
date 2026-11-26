@@ -10,6 +10,7 @@ export type EmailMessage = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 };
 
 export type SendResult = { sent: boolean; id?: string; reason?: string };
@@ -34,7 +35,9 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
       subject: message.subject,
       html: message.html,
       text: message.text,
-      ...(env.EMAIL_REPLY_TO ? { replyTo: env.EMAIL_REPLY_TO } : {}),
+      ...(message.replyTo ?? env.EMAIL_REPLY_TO
+        ? { replyTo: message.replyTo ?? env.EMAIL_REPLY_TO }
+        : {}),
     });
     if (error) throw new Error(error.message);
     return { sent: true, id: data?.id };
@@ -90,6 +93,46 @@ export async function sendInvitationEmail(params: {
   const text = `${copy.intro} ${params.workspaceName}\n\n${params.inviterName}\n\n${copy.cta}: ${params.inviteUrl}\n\n${copy.note}`;
 
   return sendEmail({ to: params.to, subject, html, text });
+}
+
+export async function sendContactNotification(params: {
+  name: string;
+  email: string;
+  company: string | null;
+  topic: string;
+  message: string;
+  locale: string;
+}): Promise<SendResult> {
+  const env = getServerEnv();
+  const subject = `[KontaFlow contact] ${params.topic} — ${params.name.replace(/[\r\n]+/g, " ")}`;
+  const lines = [
+    `Name: ${params.name}`,
+    `Email: ${params.email}`,
+    `Company: ${params.company ?? "—"}`,
+    `Topic: ${params.topic}`,
+    `Locale: ${params.locale}`,
+    "",
+    params.message,
+  ];
+  const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:620px;margin:0 auto;padding:32px;color:#0b1f1a">
+      <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0b7a5a;margin:0 0 24px">KontaFlow contact</p>
+      <h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(params.topic)} from ${escapeHtml(params.name)}</h1>
+      <table style="font-size:14px;line-height:1.6;color:#4b5f58;border-collapse:collapse">
+        <tr><td style="padding:2px 12px 2px 0;font-weight:600">Email</td><td>${escapeHtml(params.email)}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;font-weight:600">Company</td><td>${escapeHtml(params.company ?? "—")}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;font-weight:600">Locale</td><td>${escapeHtml(params.locale)}</td></tr>
+      </table>
+      <div style="margin-top:20px;padding:16px;border-radius:12px;background:#f4f8f6;font-size:14px;line-height:1.7;white-space:pre-wrap">${escapeHtml(params.message)}</div>
+    </div>`;
+
+  return sendEmail({
+    to: env.CONTACT_INBOX_EMAIL,
+    replyTo: params.email,
+    subject,
+    html,
+    text: lines.join("\n"),
+  });
 }
 
 function escapeHtml(value: string): string {
