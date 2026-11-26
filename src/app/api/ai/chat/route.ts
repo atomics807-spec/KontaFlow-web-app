@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { can } from "@/lib/permissions";
 import { resolveLocale } from "@/lib/i18n/config";
 import { runAssistant } from "@/lib/ai/assistant";
+import { aiRequestSchema } from "@/lib/ai/schemas";
+import { findAiCommandByRequest } from "@/services/ai-commands";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-
-const schema = z.object({
-  message: z.string().trim().min(1).max(2000),
-  conversationId: z.uuid().nullable().optional(),
-  locale: z.string().optional(),
-});
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -26,18 +21,34 @@ export async function POST(request: Request) {
   if (!can(context.role, "ai:use")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const payload = await request.json().catch(() => null);
-  const parsed = schema.safeParse(payload);
+  const parsed = aiRequestSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 422 });
   }
 
   try {
+    const existing = await findAiCommandByRequest(context.workspace.id, parsed.data.requestId);
+    if (existing) {
+      return NextResponse.json(
+        {
+          conversationId: existing.conversationId ?? parsed.data.conversationId ?? null,
+          reply: existing.reply,
+          toolsUsed: [],
+          command: existing,
+          clarification: false,
+        },
+        { headers: { "cache-control": "no-store" } },
+      );
+    }
+
     const result = await runAssistant({
       workspace: context.workspace,
       userId: user.id,
       locale: resolveLocale(parsed.data.locale ?? "en"),
       message: parsed.data.message,
+      requestId: parsed.data.requestId,
       conversationId: parsed.data.conversationId ?? null,
+      mode: "interactive",
     });
     return NextResponse.json(result, { headers: { "cache-control": "no-store" } });
   } catch (error) {

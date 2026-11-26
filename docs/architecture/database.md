@@ -31,6 +31,7 @@ its tests cannot drift apart.
 | `0020_phase4_column_privileges` | column grants so browser clients cannot write verification flags, onboarding state, ownership or plan |
 | `0021_phase4_phone_change_reverification` | changing a phone number clears its verification and re-arms the onboarding gate |
 | `0022_phase4_bind_otp_to_destination` | a code is refused if the profile phone changed after it was sent |
+| `0030_phase8_ai_bookkeeping` | `ai_commands`, AI auto-post settings, creator-only confirm/dismiss/undo/reply RPCs |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 

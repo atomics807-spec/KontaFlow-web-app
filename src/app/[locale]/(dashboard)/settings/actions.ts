@@ -6,6 +6,8 @@ import { can } from "@/lib/permissions";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { linkChannel, unlinkChannel, updateWorkspace } from "@/services/workspaces";
+import { updateAiSettings } from "@/services/ai-commands";
+import { parseMoneyToMinor } from "@/lib/money";
 import { workspaceSchema } from "@/lib/validation/schemas";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
@@ -42,6 +44,39 @@ export async function updateWorkspaceAction(_prev: FormState, formData: FormData
 
   revalidatePath("/", "layout");
   return formSuccess(dict.settings.saved);
+}
+
+export async function updateAiSettingsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await getWorkspaceContext();
+  if (!context) return formError(dict.errors.unauthorized);
+  if (!can(context.role, "workspace:update")) return formError(dict.errors.forbidden);
+
+  const rawLimit = String(formData.get("aiAutoPostMax") ?? "").trim();
+  let maxMinor: bigint;
+  try {
+    maxMinor = parseMoneyToMinor(rawLimit, context.workspace.currency);
+  } catch {
+    return formError(dict.settings.aiAutoPostLimit);
+  }
+  if (maxMinor <= 0n || maxMinor > 1_000_000_000_000n) {
+    return formError(dict.settings.aiAutoPostLimit);
+  }
+
+  try {
+    await updateAiSettings({
+      workspaceId: context.workspace.id,
+      autoPost: formData.get("aiAutoPost") === "on",
+      autoPostMaxMinor: maxMinor,
+    });
+  } catch (error) {
+    return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
+  }
+
+  revalidatePath(`/${locale}/settings`);
+  revalidatePath(`/${locale}/assistant`);
+  return formSuccess(dict.settings.aiAutoPostSaved);
 }
 
 export async function linkChannelAction(_prev: FormState, formData: FormData): Promise<FormState> {

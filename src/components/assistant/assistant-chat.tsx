@@ -1,14 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Send, Settings2, Sparkles } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useI18n } from "@/components/layout/i18n-provider";
+import { CommandPreview } from "@/components/assistant/command-preview";
 import { cn } from "@/lib/utils";
+import { formatMoney, moneyLocale } from "@/lib/money";
+import { interpolate } from "@/lib/i18n/interpolate";
+import type { AiCommandView } from "@/lib/ai/types";
 
-export type ChatMessage = { id: string; role: "user" | "assistant"; content: string };
+export type ChatMessage = { id: string; role: "user" | "assistant"; content: string; command?: AiCommandView | null };
+
+type Retry = { text: string; requestId: string } | null;
+type BusyAction = "confirm" | "dismiss" | "undo" | null;
 
 let localMessageSeq = 0;
 function nextLocalMessageId(): string {
@@ -19,28 +28,44 @@ function nextLocalMessageId(): string {
 export function AssistantChat({
   conversationId,
   initialMessages,
+  initialCommand,
   configured,
+  autoPostEnabled,
+  autoPostMaxMinor,
+  currency,
+  canManageAiSettings,
 }: {
   conversationId: string | null;
   initialMessages: ChatMessage[];
+  initialCommand: AiCommandView | null;
   configured: boolean;
+  autoPostEnabled: boolean;
+  autoPostMaxMinor: bigint;
+  currency: string;
+  canManageAiSettings: boolean;
 }) {
   const { locale, dict } = useI18n();
+  const router = useRouter();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [conversation, setConversation] = useState<string | null>(conversationId);
+  const [restoredCommand, setRestoredCommand] = useState<AiCommandView | null>(initialCommand);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retry, setRetry] = useState<Retry>(null);
+  const [busyCommand, setBusyCommand] = useState<{ id: string; action: BusyAction } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, pending]);
+  }, [messages, pending, restoredCommand]);
 
   async function send(text: string) {
     const message = text.trim();
     if (!message || pending) return;
 
+    const requestId = retry && retry.text === message ? retry.requestId : globalThis.crypto.randomUUID();
+    setRetry(null);
     setError(null);
     setInput("");
     setPending(true);
@@ -52,11 +77,11 @@ export function AssistantChat({
       const response = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message, conversationId: conversation, locale }),
+        body: JSON.stringify({ message, conversationId: conversation, requestId, locale }),
       });
 
       const body = (await response.json().catch(() => null)) as
-        | { reply?: string; conversationId?: string; message?: string }
+        | { reply?: string; conversationId?: string; message?: string; command?: AiCommandView | null }
         | null;
 
       if (!response.ok || !body?.reply) {
@@ -68,19 +93,78 @@ export function AssistantChat({
               : (body?.message ?? dict.errors.generic),
         );
         setInput(message);
+        setMessages((current) => current.filter((item) => item.id !== optimistic.id));
+        if (response.status >= 500 || response.status === 429) setRetry({ text: message, requestId });
         return;
       }
 
       setConversation(body.conversationId ?? conversation);
+      setRestoredCommand(null);
       setMessages((current) => [
         ...current,
-        { id: `a-${Date.now()}`, role: "assistant", content: body.reply as string },
+        {
+          id: globalThis.crypto.randomUUID(),
+          role: "assistant",
+          content: body.reply as string,
+          command: body.command ?? null,
+        },
       ]);
     } catch {
       setError(dict.errors.network);
       setInput(message);
+      setMessages((current) => current.filter((item) => item.id !== optimistic.id));
+      setRetry({ text: message, requestId });
     } finally {
       setPending(false);
+    }
+  }
+
+  async function runCommand(command: AiCommandView, action: "confirm" | "dismiss" | "undo") {
+    if (busyCommand) return;
+    setBusyCommand({ id: command.id, action });
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/ai/commands/${command.id}/${action}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: action === "undo" ? JSON.stringify({ reason: "Undo from assistant" }) : "{}",
+      });
+      const body = (await response.json().catch(() => null)) as
+        | { command?: AiCommandView; message?: string }
+        | null;
+
+      if (!response.ok || !body?.command) {
+        setError(
+          action === "confirm"
+            ? dict.assistant.confirmError
+            : action === "dismiss"
+              ? dict.assistant.dismissError
+              : dict.assistant.undoError,
+        );
+        return;
+      }
+
+      const next = body.command;
+      setMessages((current) =>
+        current.map((message) =>
+          message.command?.id === next.id ? { ...message, command: next.status === "dismissed" ? null : next } : message,
+        ),
+      );
+      setRestoredCommand((current) =>
+        current?.id === next.id ? (next.status === "dismissed" ? null : next) : current,
+      );
+      router.refresh();
+    } catch {
+      setError(
+        action === "confirm"
+          ? dict.assistant.confirmError
+          : action === "dismiss"
+            ? dict.assistant.dismissError
+            : dict.assistant.undoError,
+      );
+    } finally {
+      setBusyCommand(null);
     }
   }
 
@@ -92,15 +176,35 @@ export function AssistantChat({
   ];
 
   if (!configured) {
-    return (
-      <Alert tone="warning">{dict.assistant.notConfigured}</Alert>
-    );
+    return <Alert tone="warning">{dict.assistant.notConfigured}</Alert>;
   }
 
+  const autoPostText = autoPostEnabled
+    ? interpolate(dict.assistant.autoPostOn, {
+        amount: formatMoney(autoPostMaxMinor, currency, moneyLocale(locale, currency)),
+      })
+    : dict.assistant.autoPostOff;
+
   return (
-    <div className="flex h-[calc(100dvh-13rem)] min-h-[26rem] flex-col">
+    <div className="flex h-[calc(100dvh-13rem)] min-h-[28rem] flex-col">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-page/70 px-3 py-2">
+        <p className="flex items-start gap-2 text-xs text-muted">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-strong" aria-hidden />
+          {autoPostText}
+        </p>
+        {canManageAiSettings ? (
+          <Link
+            href={`/${locale}/settings`}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-accent-strong hover:underline"
+          >
+            <Settings2 className="h-3.5 w-3.5" aria-hidden />
+            {dict.assistant.autoPostSettings}
+          </Link>
+        ) : null}
+      </div>
+
       <div className="flex-1 space-y-4 overflow-y-auto pb-4" aria-live="polite" aria-relevant="additions">
-        {messages.length === 0 ? (
+        {messages.length === 0 && !restoredCommand ? (
           <div className="rounded-2xl border border-line bg-panel p-5">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-forest text-mango-400">
               <Sparkles className="h-5 w-5" aria-hidden />
@@ -122,18 +226,41 @@ export function AssistantChat({
           </div>
         ) : (
           messages.map((message) => (
-            <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
-              <div
-                className={cn(
-                  "max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  message.role === "user" ? "bg-forest text-white" : "border border-line bg-panel text-heading",
-                )}
-              >
-                {message.content}
+            <div key={message.id} className="space-y-1">
+              <div className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                <div
+                  className={cn(
+                    "max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                    message.role === "user" ? "bg-forest text-white" : "border border-line bg-panel text-heading",
+                  )}
+                >
+                  {message.content}
+                </div>
               </div>
+              {message.command ? (
+                <div className="max-w-3xl">
+                  <CommandPreview
+                    command={message.command}
+                    busy={busyCommand?.id === message.command.id ? busyCommand.action : null}
+                    onConfirm={() => void runCommand(message.command as AiCommandView, "confirm")}
+                    onDismiss={() => void runCommand(message.command as AiCommandView, "dismiss")}
+                    onUndo={() => void runCommand(message.command as AiCommandView, "undo")}
+                  />
+                </div>
+              ) : null}
             </div>
           ))
         )}
+
+        {restoredCommand ? (
+          <CommandPreview
+            command={restoredCommand}
+            busy={busyCommand?.id === restoredCommand.id ? busyCommand.action : null}
+            onConfirm={() => void runCommand(restoredCommand, "confirm")}
+            onDismiss={() => void runCommand(restoredCommand, "dismiss")}
+            onUndo={() => void runCommand(restoredCommand, "undo")}
+          />
+        ) : null}
 
         {pending ? (
           <div className="flex items-center gap-2 text-xs text-muted">

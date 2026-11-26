@@ -98,6 +98,27 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   `npm run db:push` and record progress in
   `supabase_migrations.schema_migrations`.
 
+## AI bookkeeping (Phase 8)
+
+* Natural-language input flows through `/api/ai/chat` → `runAssistant` →
+  OpenAI tools → `command-builder` → `ai_commands` (pending) → preview →
+  confirm/dismiss/undo RPCs. Interactive tools never expose
+  `record_transaction`; only the direct WhatsApp/USSD mode writes immediately
+  through `record_channel_transaction`.
+* `ai_commands` is creator-only and read-only for browsers. `UPDATE` is denied;
+  lifecycle changes go through `confirm_ai_command`, `dismiss_ai_command`,
+  `undo_ai_command` and `set_ai_command_reply`. Keep the creator check in any
+  new RPC.
+* Interactive drafts support multiple transactions, one debt or one debt
+  payment per message. Builder failures must produce a localized clarification,
+  never a guessed category, account or amount.
+* Auto-post is opt-in per workspace and limited to one simple, matched,
+  today-dated transaction under `ai_auto_post_max_minor`. It is not a security
+  boundary; entries still use `channel='ai'` and remain reversible for 24 hours.
+* Food and Water are starter categories; `create_workspace` seeds both so
+  ordinary meal/water instructions match instead of falling back to "Other".
+* `docs/architecture/ai-bookkeeping.md` documents the flow and limits.
+
 ## Design system (Phase 2)
 
 * Tokens live in `src/app/globals.css`: raw brand palette in `@theme`, semantic

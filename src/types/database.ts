@@ -28,6 +28,7 @@ export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled"
 export type MemberStatus = "invited" | "active" | "suspended";
 export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
 export type AiMessageRole = "user" | "assistant" | "tool";
+export type AiCommandStatus = "pending" | "confirmed" | "dismissed" | "reversed" | "failed";
 export type UsageKind = "ai_message" | "ussd_session" | "whatsapp_message" | "sync_push";
 export type InvoiceStatus = "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "void";
 export type DebtDirection = "receivable" | "payable";
@@ -254,6 +255,69 @@ export type AiMessageRow = {
   prompt_tokens: number | null;
   completion_tokens: number | null;
   created_at: string;
+};
+
+export type AiInteractionRow = {
+  id: string;
+  workspace_id: string;
+  user_id: string | null;
+  conversation_id: string | null;
+  message_id: string | null;
+  channel: EntryChannel;
+  model: string | null;
+  prompt_preview: string | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  latency_ms: number | null;
+  cost_minor: number;
+  tool_calls: Json;
+  status: string;
+  error: string | null;
+  created_at: string;
+};
+
+export type AiCommandRow = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  conversation_id: string | null;
+  message_id: string | null;
+  request_id: string;
+  command_text: string;
+  reply: string;
+  locale: string;
+  status: AiCommandStatus;
+  auto_posted: boolean;
+  interpretation: Json;
+  preview: Json;
+  result: Json | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  reversed_at: string | null;
+  reversed_by: string | null;
+  undo_expires_at: string | null;
+  expires_at: string;
+};
+
+export type BusinessSettingsRow = {
+  workspace_id: string;
+  invoice_prefix: string;
+  invoice_next_number: number;
+  default_tax_rate_bp: number;
+  prices_include_tax: boolean;
+  receipt_footer: string | null;
+  date_format: string;
+  inventory_enabled: boolean;
+  low_stock_alerts: boolean;
+  ai_auto_categorize: boolean;
+  ai_auto_post: boolean;
+  ai_auto_post_max_minor: number;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
 };
 
 export type AuditLogRow = {
@@ -656,6 +720,9 @@ export type Database = {
       attachments: TableDefinition<AttachmentRow>;
       ai_conversations: TableDefinition<AiConversationRow>;
       ai_messages: TableDefinition<AiMessageRow>;
+      ai_commands: TableDefinition<AiCommandRow>;
+      ai_interactions: TableDefinition<AiInteractionRow>;
+      business_settings: TableDefinition<BusinessSettingsRow>;
       audit_logs: TableDefinition<AuditLogRow>;
       subscriptions: TableDefinition<SubscriptionRow>;
       payment_transactions: TableDefinition<PaymentTransactionRow>;
@@ -778,6 +845,22 @@ export type Database = {
       record_debt_payment: {
         Args: { p_payload: Json };
         Returns: { id: string; transaction_id: string | null; status: DebtStatus };
+      };
+      confirm_ai_command: {
+        Args: { p_command_id: string; p_auto_posted?: boolean };
+        Returns: Json;
+      };
+      dismiss_ai_command: {
+        Args: { p_command_id: string };
+        Returns: Json;
+      };
+      undo_ai_command: {
+        Args: { p_command_id: string; p_reason?: string | null };
+        Returns: Json;
+      };
+      set_ai_command_reply: {
+        Args: { p_command_id: string; p_reply: string };
+        Returns: Json;
       };
       void_invoice: {
         Args: { p_invoice_id: string; p_reason: string | null };

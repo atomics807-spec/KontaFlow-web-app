@@ -83,7 +83,7 @@ behave identically:
 | Email | `src/lib/integrations/email.ts` | Resend HTTP API |
 | USSD/SMS | `src/app/api/ussd/route.ts` | Africa's Talking form posts |
 | WhatsApp | `src/lib/integrations/whatsapp.ts` | Meta Cloud API + HMAC check |
-| AI | `src/lib/ai/*` | OpenAI Responses API, server-side only |
+| AI | `src/lib/ai/*` | OpenAI Chat Completions tool calling, server-side only; interactive drafts require confirmation |
 | Payments | `src/lib/plans.ts` + `PAYMENT_PROVIDER` | Catalog exists; gateway adapter pending |
 
 No Vercel-only SDK (KV, Blob, Cron JSON config, Image Optimization API) is used

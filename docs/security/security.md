@@ -9,7 +9,7 @@
 | Webhook spoofer | Posts to `/api/ussd`, `/api/whatsapp` | Shared USSD token, Meta HMAC signature, fail-closed when secrets are absent |
 | Stolen service-role key | Full database access | Server-only env, never bundled; blast radius limited by audited RPCs and an out-of-band rotation runbook |
 | Abusive user | Costs via AI or floods | Per-plan monthly quota in Postgres, per-minute limiter, 900-token output cap |
-| Prompt injection through receipts | Trick the assistant into writing bad data | AI tools only call `record_transaction`, which re-validates amounts, currency and category server-side |
+| Prompt injection through receipts | Trick the assistant into writing bad data | Interactive AI tools can only create drafts; confirmation re-validates through audited RPCs. Direct-channel tools call `record_channel_transaction`, which re-checks actor membership and amounts |
 
 ## Identity and sessions
 
@@ -69,6 +69,7 @@ policy. None of the policies trust a `workspace_id` from the client; they call
 | financial_reports | any member | finance roles | managers or author |
 | business_settings | any member | owner/admin | — |
 | ai_interactions | author only | author only | — |
+| ai_commands | author only | insert (RLS); lifecycle via RPCs | — |
 | ai_suggestions | members, shared or own | author (status) | managers |
 | notification_preferences, privacy_consents | owner | owner | — |
 | offline_sync_records | owner | owner | — |

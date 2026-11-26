@@ -117,7 +117,7 @@ async function main(): Promise<void> {
     ok("workspace A created", Boolean(idA));
     ok("workspace B created", Boolean(idB));
     eq("A has 8 system accounts", await scalar(client, `select count(*) from accounts where workspace_id = $1`, [idA]), 8);
-    eq("A has 13 starter categories", await scalar(client, `select count(*) from categories where workspace_id = $1`, [idA]), 13);
+    eq("A has 15 starter categories", await scalar(client, `select count(*) from categories where workspace_id = $1`, [idA]), 15);
     eq(
       "A subscription is trialing",
       await scalar(client, `select status from subscriptions where workspace_id = $1`, [idA]),
@@ -1488,6 +1488,380 @@ async function main(): Promise<void> {
       await asDora(`select count(*) from v_invoices where workspace_id = $1`, [idA]),
       "0",
     );
+
+    console.log("\nPhase 8 · AI bookkeeping");
+    eq(
+      "Food and Water categories are available for AI mapping",
+      await scalar(client, `select string_agg(name, ',' order by name) from categories where workspace_id = $1 and name in ('Food','Water')`, [idA]),
+      "Food,Water",
+    );
+    eq(
+      "AI auto-post is off by default",
+      await scalar(client, `select ai_auto_post::text from business_settings where workspace_id = $1`, [idA]),
+      "false",
+    );
+    eq(
+      "AI auto-post limit defaults to 5000 FCFA",
+      await scalar(client, `select ai_auto_post_max_minor::text from business_settings where workspace_id = $1`, [idA]),
+      "5000",
+    );
+
+    const todayA = await scalar(client, `select current_date::text`);
+    const cashA = await scalar(client, `select id from accounts where workspace_id = $1 and subtype = 'cash'`, [idA]);
+    const transportA = await scalar(client, `select id from categories where workspace_id = $1 and name = 'Transport'`, [idA]);
+    const foodA = await scalar(client, `select id from categories where workspace_id = $1 and name = 'Food'`, [idA]);
+    const waterA = await scalar(client, `select id from categories where workspace_id = $1 and name = 'Water'`, [idA]);
+
+    const transactionPreview = (description: string, amount: string, categoryId: string, categoryName: string) => ({
+      type: "transaction",
+      kind: "expense",
+      amountMinor: amount,
+      currency: "XAF",
+      description,
+      categoryId,
+      categoryName,
+      accountId: cashA,
+      accountName: "Cash",
+      counterAccountId: null,
+      counterAccountName: null,
+      contactId: null,
+      contactName: null,
+      occurredOn: todayA,
+      paymentMethod: "cash",
+    });
+
+    const createAiCommand = async (
+      user: { sub: string; email: string; role: string },
+      workspaceId: string,
+      requestId: string,
+      actions: unknown[],
+      autoPostEligible = false,
+    ) => {
+      return commitAs(client, user, async (c) => {
+        const result = await c.query<{ id: string }>(
+          `insert into ai_commands
+             (workspace_id, user_id, request_id, command_text, reply, locale, interpretation, preview)
+           values ($1, $2, $3, 'test command', 'Review this draft.', 'en', '{}'::jsonb, $4::jsonb)
+           returning id`,
+          [
+            workspaceId,
+            user.sub,
+            requestId,
+            JSON.stringify({
+              version: 1,
+              actions,
+              warnings: [],
+              autoPostEligible,
+            }),
+          ],
+        );
+        return result.rows[0]!.id;
+      });
+    };
+
+    const commandA = await createAiCommand(
+      alice,
+      idA,
+      "phase8-transactions-1",
+      [
+        transactionPreview("Transport", "500", transportA, "Transport"),
+        transactionPreview("Food", "1000", foodA, "Food"),
+        transactionPreview("Water", "200", waterA, "Water"),
+      ],
+      true,
+    );
+    ok("an AI draft can hold several transactions", Boolean(commandA));
+    eq(
+      "another tenant cannot read an AI draft",
+      await asBob(`select count(*) from ai_commands where workspace_id = $1`, [idA]),
+      "0",
+    );
+    const directEdit = await expectError(
+      client,
+      "authenticated",
+      alice,
+      `update ai_commands set preview = '{}'::jsonb where id = $1`,
+      [commandA],
+    );
+    ok("AI drafts cannot be edited directly", directEdit?.code === "42501", directEdit);
+    const crossConfirm = await expectError(
+      client,
+      "authenticated",
+      dora,
+      `select public.confirm_ai_command($1, false)`,
+      [commandA],
+    );
+    ok("another tenant cannot confirm an AI draft", crossConfirm?.code === "42501", crossConfirm);
+    const otherMemberConfirm = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `select public.confirm_ai_command($1, false)`,
+      [commandA],
+    );
+    ok("another member cannot confirm someone else's AI draft", otherMemberConfirm?.code === "42501", otherMemberConfirm);
+
+    const dismissCommand = await createAiCommand(
+      alice,
+      idA,
+      "phase8-dismiss-1",
+      [transactionPreview("Dismiss me", "300", transportA, "Transport")],
+    );
+    await commitAs(client, alice, async (c) => {
+      await c.query(`select public.set_ai_command_reply($1, 'Updated AI reply')`, [dismissCommand]);
+    });
+    eq(
+      "the AI reply can be updated by its creator",
+      await scalar(client, `select reply from ai_commands where id = $1`, [dismissCommand]),
+      "Updated AI reply",
+    );
+    const otherMemberDismiss = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `select public.dismiss_ai_command($1)`,
+      [dismissCommand],
+    );
+    ok("another member cannot discard someone else's AI draft", otherMemberDismiss?.code === "42501", otherMemberDismiss);
+    const dismissResult = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.dismiss_ai_command($1) as data`,
+        [dismissCommand],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("an AI draft can be discarded", dismissResult.status, "dismissed");
+    const dismissAgain = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.dismiss_ai_command($1) as data`,
+        [dismissCommand],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("discard is idempotent", dismissAgain.already_dismissed, true);
+
+    const confirmA = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.confirm_ai_command($1, false) as data`,
+        [commandA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("AI confirmation reports posted", confirmA.status, "confirmed");
+    eq("AI confirmation returns three ledger transactions", (confirmA.transactions as string[]).length, 3);
+    eq(
+      "AI confirmation creates three transactions",
+      await scalar(
+        client,
+        `select count(*) from transactions where workspace_id = $1 and client_generated_id like $2`,
+        [idA, `ai:${commandA}:%`],
+      ),
+      "3",
+    );
+    eq(
+      "AI transactions are in the ai channel",
+      await scalar(
+        client,
+        `select count(*) from transactions where workspace_id = $1 and client_generated_id like $2 and channel = 'ai'`,
+        [idA, `ai:${commandA}:%`],
+      ),
+      "3",
+    );
+    eq(
+      "AI transactions are balanced",
+      await scalar(
+        client,
+        `select (sum(debit_minor) = sum(credit_minor))::text from ledger_lines where transaction_id in (
+           select id from transactions where workspace_id = $1 and client_generated_id like $2
+         )`,
+        [idA, `ai:${commandA}:%`],
+      ),
+      "true",
+    );
+    eq(
+      "AI confirmation is audited",
+      await scalar(client, `select count(*) from audit_logs where workspace_id = $1 and action = 'ai.command_confirmed' and entity_id = $2`, [idA, commandA]),
+      "1",
+    );
+
+    const confirmAgain = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.confirm_ai_command($1, false) as data`,
+        [commandA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("confirmation is idempotent", confirmAgain.already_confirmed, true);
+    eq(
+      "idempotent confirmation does not duplicate entries",
+      await scalar(
+        client,
+        `select count(*) from transactions where workspace_id = $1 and client_generated_id like $2`,
+        [idA, `ai:${commandA}:%`],
+      ),
+      "3",
+    );
+
+    await commitAs(client, alice, async (c) => {
+      await c.query(
+        `update business_settings set ai_auto_post = true, ai_auto_post_max_minor = 5000 where workspace_id = $1`,
+        [idA],
+      );
+    });
+    eq(
+      "workspace owners can enable AI auto-post",
+      await scalar(client, `select ai_auto_post::text from business_settings where workspace_id = $1`, [idA]),
+      "true",
+    );
+
+    const autoCommand = await createAiCommand(
+      alice,
+      idA,
+      "phase8-auto-1",
+      [transactionPreview("Auto transport", "500", transportA, "Transport")],
+      true,
+    );
+    await commitAs(client, alice, async (c) => {
+      await c.query(`select public.confirm_ai_command($1, true)`, [autoCommand]);
+    });
+    eq(
+      "auto-posted commands are marked",
+      await scalar(client, `select auto_posted::text from ai_commands where id = $1`, [autoCommand]),
+      "true",
+    );
+
+    const undoA = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.undo_ai_command($1, 'Wrong entry') as data`,
+        [commandA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("AI commands can be undone", undoA.status, "reversed");
+    eq("undo creates one reversal per entry", (undoA.reversals as unknown[]).length, 3);
+    eq(
+      "undo creates one linked reversal per AI entry",
+      await scalar(
+        client,
+        `select count(*) from transactions
+         where workspace_id = $1
+           and reverses_transaction_id in (
+             select id from transactions where workspace_id = $1 and client_generated_id like $2
+           )`,
+        [idA, `ai:${commandA}:%`],
+      ),
+      "3",
+    );
+    eq(
+      "the AI command records its reversal state",
+      await scalar(client, `select status from ai_commands where id = $1`, [commandA]),
+      "reversed",
+    );
+    const undoAgain = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.undo_ai_command($1, 'Again') as data`,
+        [commandA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("undo is idempotent", undoAgain.already_reversed, true);
+
+    const debtCommand = await createAiCommand(alice, idA, "phase8-debt-1", [
+      {
+        type: "debt",
+        direction: "receivable",
+        contactId: customerA,
+        contactName: "Mami Fish",
+        description: "Phase 8 credit sale",
+        amountMinor: "1500",
+        currency: "XAF",
+        openedOn: todayA,
+        dueOn: null,
+        notes: null,
+      },
+    ]);
+    const debtConfirm = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.confirm_ai_command($1, false) as data`,
+        [debtCommand],
+      );
+      return result.rows[0]!.data;
+    });
+    const aiDebtId = (debtConfirm.debts as string[])[0]!;
+    eq(
+      "AI can prepare a receivable",
+      await scalar(client, `select principal_minor::text || ':' || status from debts where id = $1`, [aiDebtId]),
+      "1500:open",
+    );
+
+    const paymentCommand = await createAiCommand(alice, idA, "phase8-payment-1", [
+      {
+        type: "debt_payment",
+        debtId: aiDebtId,
+        debtDescription: "Phase 8 credit sale",
+        contactId: customerA,
+        contactName: "Mami Fish",
+        amountMinor: "500",
+        currency: "XAF",
+        paidOn: todayA,
+        accountId: cashA,
+        accountName: "Cash",
+        paymentMethod: "cash",
+      },
+    ]);
+    const paymentConfirm = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.confirm_ai_command($1, false) as data`,
+        [paymentCommand],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("AI repayment returns a ledger transaction", (paymentConfirm.transactions as string[]).length, 1);
+    eq(
+      "AI repayment updates the debt",
+      await scalar(client, `select paid_minor::text || ':' || status from debts where id = $1`, [aiDebtId]),
+      "500:partially_paid",
+    );
+    eq(
+      "AI repayment creates a debt payment record",
+      await scalar(client, `select count(*) from debt_payments where debt_id = $1`, [aiDebtId]),
+      "1",
+    );
+
+    const staffContactB = await commitAs(client, bob, async (c) => {
+      const result = await c.query<{ id: string }>(
+        `insert into contacts (workspace_id, kind, name) values ($1, 'customer', 'Staff Customer') returning id`,
+        [idB],
+      );
+      return result.rows[0]!.id;
+    });
+    const staffDebtCommand = await createAiCommand(
+      charlie,
+      idB,
+      "phase8-staff-debt-1",
+      [
+        {
+          type: "debt",
+          direction: "receivable",
+          contactId: staffContactB,
+          contactName: "Staff Customer",
+          description: "Staff draft",
+          amountMinor: "1000",
+          currency: "XAF",
+          openedOn: todayA,
+          dueOn: null,
+          notes: null,
+        },
+      ],
+    );
+    const staffDebtConfirm = await expectError(
+      client,
+      "authenticated",
+      charlie,
+      `select public.confirm_ai_command($1, false)`,
+      [staffDebtCommand],
+    );
+    ok("staff cannot post AI-created debts", staffDebtConfirm?.code === "42501", staffDebtConfirm);
 
     console.log("\nPhase 3 · tenant lifecycle");
     const workspaceC = await commitAs(client, dora, async (c) => {

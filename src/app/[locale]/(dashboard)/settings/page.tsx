@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Download, FileText, History, MessageCircle, ShieldCheck, Smartphone } from "lucide-react";
+import { ChevronRight, Download, FileText, History, MessageCircle, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkChannelForm, WorkspaceSettingsForm } from "@/components/forms/workspace-settings-form";
+import { AiSettingsForm } from "@/components/forms/ai-settings-form";
+import { getAiSettings } from "@/services/ai-commands";
 import { listAuditLogs, listChannelIdentities } from "@/services/workspaces";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
@@ -28,9 +30,10 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const canAudit = context.can("audit:read");
   const canExport = context.can("reports:export");
 
-  const [identities, audit] = await Promise.all([
+  const [identities, audit, aiSettings] = await Promise.all([
     canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
     canAudit ? listAuditLogs(workspace.id, 25) : Promise.resolve([]),
+    getAiSettings(workspace.id),
   ]);
 
   return (
@@ -91,6 +94,26 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
             </a>
           </div>
           <p className="mt-3 text-[0.7rem] text-muted">{dict.settings.dataNote}</p>
+        </Card>
+      ) : null}
+
+      {canEdit ? (
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-start gap-2">
+            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
+            <div>
+              <h2 className="text-sm font-bold text-heading">{dict.settings.aiTitle}</h2>
+              <p className="mt-0.5 text-xs text-muted">{dict.settings.aiSubtitle}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <AiSettingsForm
+              autoPost={aiSettings.autoPost}
+              maxMinor={aiSettings.autoPostMaxMinor}
+              currency={workspace.currency}
+              disabled={!canEdit}
+            />
+          </div>
         </Card>
       ) : null}
 

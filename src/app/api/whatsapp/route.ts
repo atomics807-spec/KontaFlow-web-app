@@ -114,6 +114,8 @@ export async function POST(request: Request) {
           userId: identity.userId,
           locale: identity.locale,
           message: body,
+          requestId: `wa:${message.id ?? Date.now()}`.slice(0, 100),
+          mode: "direct",
           serviceRole: true,
         });
         answer = result.reply;

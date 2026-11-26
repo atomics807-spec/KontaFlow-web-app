@@ -1,21 +1,33 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { recordChannelTransaction } from "@/lib/channels";
 import { formatMoney, parseMoneyToMinor } from "@/lib/money";
 import { todayInZone } from "@/lib/dates";
 import { recordTransaction } from "@/services/transactions";
 import type { AccountRow, CategoryRow, ContactRow, WorkspaceRow } from "@/types/database";
+import { aiDebtPaymentProposalSchema, aiDebtProposalSchema, aiTransactionsProposalSchema } from "./schemas";
+import { buildDebtDraft, buildDebtPaymentDraft, buildTransactionsDraft, type AiReferenceData, type BuildResult } from "./command-builder";
+import type { AiCommandDraft, Clarification } from "./types";
 
 export type ToolContext = {
   workspace: WorkspaceRow;
   userId: string;
   conversationId: string;
+  /** WhatsApp/USSD webhooks have no user session and run on the service role. */
+  serviceRole?: boolean;
 };
+
+function database(context: ToolContext) {
+  return context.serviceRole ? createAdminClient() : createClient();
+}
 
 type ToolResult = { ok: true; data: unknown } | { ok: false; error: string };
 
-async function loadReferenceData(workspaceId: string) {
-  const supabase = await createClient();
+async function loadReferenceData(context: ToolContext) {
+  const supabase = await database(context);
+  const workspaceId = context.workspace.id;
   const [accounts, categories, contacts] = await Promise.all([
     supabase.from("accounts").select("*").eq("workspace_id", workspaceId).eq("is_archived", false),
     supabase.from("categories").select("*").eq("workspace_id", workspaceId).eq("is_archived", false),
@@ -61,7 +73,7 @@ function matchContact(contacts: ContactRow[], wanted: string | undefined): Conta
 }
 
 async function overview(context: ToolContext, args: { from?: string; to?: string }): Promise<ToolResult> {
-  const supabase = await createClient();
+  const supabase = await database(context);
   const tz = context.workspace.timezone;
   const from = args.from ?? `${todayInZone(tz).slice(0, 7)}-01`;
   const to = args.to ?? todayInZone(tz);
@@ -101,7 +113,7 @@ async function transactions(
   context: ToolContext,
   args: { kind?: "income" | "expense" | "transfer" | "all"; search?: string; limit?: number },
 ): Promise<ToolResult> {
-  const supabase = await createClient();
+  const supabase = await database(context);
   let query = supabase
     .from("v_transactions")
     .select("id, kind, status, occurred_on, description, amount_minor, currency, category_name, contact_name")
@@ -142,7 +154,7 @@ async function record(
     account?: string;
   },
 ): Promise<ToolResult> {
-  const { accounts, categories, contacts } = await loadReferenceData(context.workspace.id);
+  const { accounts, categories, contacts } = await loadReferenceData(context);
   const currency = context.workspace.currency;
 
   let amountMinor: bigint;
@@ -175,23 +187,39 @@ async function record(
   const contact = matchContact(contacts, args.contact);
 
   try {
-    const created = await recordTransaction(
-      context.workspace.id,
-      currency,
-      {
-        kind: args.kind,
-        amount: args.amount,
-        description: args.description.slice(0, 500),
-        occurredOn: args.occurred_on ?? todayInZone(context.workspace.timezone),
-        categoryId: category.id,
-        accountId: account.id,
-        contactId: contact?.id ?? null,
-        paymentMethod,
-        reference: null,
-        clientGeneratedId: `ai-${context.conversationId}-${Date.now()}`,
-      },
-      { channel: "ai" },
-    );
+    const occurredOn = args.occurred_on ?? todayInZone(context.workspace.timezone);
+    const clientGeneratedId = `ai-${context.conversationId}-${Date.now()}`;
+    const created = context.serviceRole
+      ? await recordChannelTransaction({
+          workspaceId: context.workspace.id,
+          actorId: context.userId,
+          channel: "ai",
+          kind: args.kind,
+          amountMinor,
+          description: args.description.slice(0, 500),
+          occurredOn,
+          categoryId: category.id,
+          accountId: account.id,
+          paymentMethod: paymentMethod === "cheque" || paymentMethod === "card" ? "other" : paymentMethod,
+          clientGeneratedId,
+        })
+      : await recordTransaction(
+          context.workspace.id,
+          currency,
+          {
+            kind: args.kind,
+            amount: args.amount,
+            description: args.description.slice(0, 500),
+            occurredOn,
+            categoryId: category.id,
+            accountId: account.id,
+            contactId: contact?.id ?? null,
+            paymentMethod,
+            reference: null,
+            clientGeneratedId,
+          },
+          { channel: "ai" },
+        );
 
     return {
       ok: true,
@@ -204,7 +232,7 @@ async function record(
         category: category.name,
         account: account.name,
         contact: contact?.name ?? null,
-        date: args.occurred_on ?? todayInZone(context.workspace.timezone),
+        date: occurredOn,
       },
     };
   } catch (error) {
@@ -219,7 +247,7 @@ async function record(
 }
 
 async function contactsTool(context: ToolContext, args: { limit?: number }): Promise<ToolResult> {
-  const supabase = await createClient();
+  const supabase = await database(context);
   const { data, error } = await supabase
     .from("contacts")
     .select("name, kind, phone, email")
@@ -341,5 +369,216 @@ export async function executeTool(
       return contactsTool(context, args as { limit?: number });
     default:
       return { ok: false, error: `Unknown tool: ${name}` };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Interactive bookkeeping: read tools stay read-only; write intents become
+// reviewable drafts. The model never gets a SQL or unrestricted database tool.
+// ---------------------------------------------------------------------------
+
+export type InteractiveToolContext = ToolContext & {
+  requestId: string;
+  locale: string;
+  reference: AiReferenceData;
+  draft: AiCommandDraft | null;
+  clarification: Clarification | null;
+};
+
+const nullableString = (description: string) => ({
+  type: ["string", "null"] as const,
+  description,
+});
+
+const PROPOSAL_TOOL_DEFINITIONS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "propose_transactions",
+      description:
+        "Prepare one or more income, expense or transfer entries for review. Never call this with a missing or guessed amount, date, category or contact.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {
+          transactions: {
+            type: "array",
+            minItems: 1,
+            maxItems: 10,
+            items: {
+              type: "object",
+              properties: {
+                kind: { type: "string", enum: ["income", "expense", "transfer"] },
+                amount: { type: "string", description: "Major units, digits and optional decimal point." },
+                description: { type: "string", description: "Short description of what the money was for." },
+                category: nullableString("Exact category name from the supplied list, or null."),
+                payment_method: {
+                  type: ["string", "null"],
+                  enum: ["cash", "mobile_money", "bank_transfer", "card", "cheque", "other", null],
+                },
+                occurred_on: nullableString("YYYY-MM-DD, or null for today."),
+                contact: nullableString("Customer or supplier name, or null."),
+                account: nullableString("Cash, mobile money or bank account name, or null."),
+                counter_account: nullableString("Destination account for a transfer, or null."),
+              },
+              required: [
+                "kind",
+                "amount",
+                "description",
+                "category",
+                "payment_method",
+                "occurred_on",
+                "contact",
+                "account",
+                "counter_account",
+              ],
+              additionalProperties: false,
+            },
+          },
+        },
+        required: ["transactions"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "propose_debt",
+      description:
+        "Prepare a new receivable or payable for review. Use only when the contact, direction and amount are clear.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {
+          direction: { type: "string", enum: ["receivable", "payable"] },
+          contact: { type: "string", description: "Customer or supplier name as spoken by the user." },
+          description: { type: "string", description: "What the debt is for." },
+          amount: { type: "string", description: "Major units, digits only." },
+          opened_on: nullableString("YYYY-MM-DD, or null for today."),
+          due_on: nullableString("YYYY-MM-DD, or null."),
+          notes: nullableString("Optional note."),
+        },
+        required: ["direction", "contact", "description", "amount", "opened_on", "due_on", "notes"],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "propose_debt_payment",
+      description:
+        "Prepare a repayment against one existing open debt for review. Use only when the contact and direction are clear.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {
+          direction: { type: "string", enum: ["receivable", "payable"] },
+          contact: { type: "string", description: "Customer or supplier name." },
+          amount: { type: "string", description: "Major units, digits only." },
+          paid_on: nullableString("YYYY-MM-DD, or null for today."),
+          account: nullableString("Cash, mobile money or bank account name, or null."),
+          payment_method: {
+            type: ["string", "null"],
+            enum: ["cash", "mobile_money", "bank_transfer", "card", "cheque", "other", null],
+          },
+          debt_description: nullableString("Words from the debt description to disambiguate, or null."),
+        },
+        required: ["direction", "contact", "amount", "paid_on", "account", "payment_method", "debt_description"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
+export const INTERACTIVE_TOOL_DEFINITIONS = [
+  ...TOOL_DEFINITIONS.filter((tool) =>
+    ["get_overview", "list_transactions", "list_contacts"].includes(tool.function.name),
+  ),
+  ...PROPOSAL_TOOL_DEFINITIONS,
+];
+
+function setProposal(
+  context: InteractiveToolContext,
+  build: BuildResult,
+): ToolResult {
+  if (!build.ok) {
+    context.clarification = build.clarification;
+    return { ok: false, error: "More information is needed before this can be drafted." };
+  }
+  if (context.draft) {
+    return { ok: false, error: "A draft already exists for this message." };
+  }
+  context.draft = build.draft;
+  return {
+    ok: true,
+    data: {
+      prepared: build.draft.preview.actions.length,
+      actions: build.draft.preview.actions.map((action) => {
+        if (action.type === "transaction") {
+          return {
+            type: action.type,
+            kind: action.kind,
+            amount_minor: action.amountMinor,
+            currency: action.currency,
+            category: action.categoryName,
+            date: action.occurredOn,
+            account: action.accountName,
+          };
+        }
+        if (action.type === "debt") {
+          return {
+            type: action.type,
+            direction: action.direction,
+            contact: action.contactName,
+            amount_minor: action.amountMinor,
+            currency: action.currency,
+          };
+        }
+        return {
+          type: action.type,
+          contact: action.contactName,
+          amount_minor: action.amountMinor,
+          currency: action.currency,
+        };
+      }),
+      next_step: "Reply to the user asking them to review and confirm. Do not say it is recorded.",
+    },
+  };
+}
+
+export async function executeInteractiveTool(
+  name: string,
+  args: Record<string, unknown>,
+  context: InteractiveToolContext,
+): Promise<ToolResult> {
+  switch (name) {
+    case "propose_transactions": {
+      const parsed = aiTransactionsProposalSchema.safeParse(args);
+      if (!parsed.success) {
+        context.clarification = { code: "unsupported", subject: "transaction" };
+        return { ok: false, error: "The transaction details are incomplete." };
+      }
+      return setProposal(context, buildTransactionsDraft(parsed.data.transactions, context.reference));
+    }
+    case "propose_debt": {
+      const parsed = aiDebtProposalSchema.safeParse(args);
+      if (!parsed.success) {
+        context.clarification = { code: "unsupported", subject: "debt" };
+        return { ok: false, error: "The debt details are incomplete." };
+      }
+      return setProposal(context, buildDebtDraft(parsed.data, context.reference));
+    }
+    case "propose_debt_payment": {
+      const parsed = aiDebtPaymentProposalSchema.safeParse(args);
+      if (!parsed.success) {
+        context.clarification = { code: "unsupported", subject: "repayment" };
+        return { ok: false, error: "The repayment details are incomplete." };
+      }
+      return setProposal(context, buildDebtPaymentDraft(parsed.data, context.reference));
+    }
+    default:
+      return executeTool(name, args, context);
   }
 }

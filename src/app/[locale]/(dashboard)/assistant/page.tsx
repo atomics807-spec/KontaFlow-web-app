@@ -10,6 +10,7 @@ import { getDictionary } from "@/lib/i18n/server";
 import { isAiConfigured } from "@/lib/ai/client";
 import { monthBounds } from "@/lib/dates";
 import { planFor } from "@/lib/plans";
+import { getAiSettings, getLatestActionableCommand } from "@/services/ai-commands";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const dict = await getDictionary(resolveLocale((await params).locale));
@@ -32,12 +33,16 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     .maybeSingle();
 
   const { start: monthStart } = monthBounds(new Date(), context.workspace.timezone);
-  const { count: aiUsed } = await supabase
-    .from("usage_events")
-    .select("id", { count: "exact", head: true })
-    .eq("workspace_id", context.workspace.id)
-    .eq("kind", "ai_message")
-    .gte("created_at", `${monthStart}T00:00:00Z`);
+  const [{ count: aiUsed }, aiSettings, actionableCommand] = await Promise.all([
+    supabase
+      .from("usage_events")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", context.workspace.id)
+      .eq("kind", "ai_message")
+      .gte("created_at", `${monthStart}T00:00:00Z`),
+    getAiSettings(context.workspace.id),
+    getLatestActionableCommand(context.workspace.id, context.user.id),
+  ]);
 
   let messages: ChatMessage[] = [];
   if (conversation?.id) {
@@ -75,7 +80,12 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
         <AssistantChat
           conversationId={conversation?.id ?? null}
           initialMessages={messages}
+          initialCommand={actionableCommand}
           configured={isAiConfigured()}
+          autoPostEnabled={aiSettings.autoPost}
+          autoPostMaxMinor={aiSettings.autoPostMaxMinor}
+          currency={context.workspace.currency}
+          canManageAiSettings={context.can("workspace:update")}
         />
       </Card>
     </div>

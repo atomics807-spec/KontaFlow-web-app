@@ -2,35 +2,79 @@ import "server-only";
 
 import type OpenAI from "openai";
 import { getAiClient, getAiModel } from "./client";
-import { TOOL_DEFINITIONS, executeTool, type ToolContext } from "./tools";
-import { buildSystemPrompt } from "./prompt";
+import {
+  INTERACTIVE_TOOL_DEFINITIONS,
+  TOOL_DEFINITIONS,
+  executeInteractiveTool,
+  executeTool,
+  type InteractiveToolContext,
+  type ToolContext,
+} from "./tools";
+import { buildInteractivePrompt, buildSystemPrompt } from "./prompt";
+import { loadAiReference } from "./reference";
+import type { AiCommandView, Clarification } from "./types";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createAiCommand, confirmAiCommand, setAiCommandReply } from "@/services/ai-commands";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { planFor } from "@/lib/plans";
 import { todayInZone } from "@/lib/dates";
 import { getDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n/interpolate";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import type { Locale } from "@/lib/i18n/config";
 import type { WorkspaceRow } from "@/types/database";
+
+export type AssistantMode = "interactive" | "direct";
 
 export type AssistantReply = {
   conversationId: string;
   reply: string;
   toolsUsed: string[];
+  command: AiCommandView | null;
+  clarification: boolean;
 };
 
 type HistoryRow = { role: string; content: string };
+
+function clarificationMessage(dict: Dictionary, clarification: Clarification): string {
+  const subject = clarification.subject.trim() || dict.assistant.thisEntry;
+  switch (clarification.code) {
+    case "amount":
+      return interpolate(dict.assistant.clarifyAmount, { subject });
+    case "description":
+      return interpolate(dict.assistant.clarifyDescription, { subject });
+    case "category":
+      return interpolate(dict.assistant.clarifyCategory, { subject });
+    case "date":
+      return interpolate(dict.assistant.clarifyDate, { subject });
+    case "account":
+      return interpolate(dict.assistant.clarifyAccount, { subject });
+    case "contact":
+      return interpolate(dict.assistant.clarifyContact, { subject });
+    case "debt":
+      return interpolate(dict.assistant.clarifyDebt, { subject });
+    case "debt_amount":
+      return interpolate(dict.assistant.clarifyDebtAmount, { subject });
+    default:
+      return dict.assistant.clarifyGeneric;
+  }
+}
 
 export async function runAssistant(params: {
   workspace: WorkspaceRow;
   userId: string;
   locale: Locale;
   message: string;
+  requestId: string;
   conversationId?: string | null;
+  mode?: AssistantMode;
   /** Webhook channels have no user session; they run on the service role. */
   serviceRole?: boolean;
 }): Promise<AssistantReply> {
+  const mode = params.mode ?? "interactive";
+  const startedAt = Date.now();
   const dict = await getDictionary(params.locale);
   const openai = getAiClient();
   if (!openai) {
@@ -70,13 +114,17 @@ export async function runAssistant(params: {
     dict.assistant.startFailed,
   );
 
-  const { error: insertError } = await supabase.from("ai_messages").insert({
-    conversation_id: conversationId,
-    workspace_id: workspace.id,
-    role: "user",
-    content: params.message.slice(0, 4000),
-  });
-  if (insertError) throw new AppError("internal_error", dict.assistant.saveFailed);
+  const { data: userMessage, error: insertError } = await supabase
+    .from("ai_messages")
+    .insert({
+      conversation_id: conversationId,
+      workspace_id: workspace.id,
+      role: "user",
+      content: params.message.slice(0, 4000),
+    })
+    .select("id")
+    .single();
+  if (insertError || !userMessage) throw new AppError("internal_error", dict.assistant.saveFailed);
 
   const { data: historyRows } = await supabase
     .from("ai_messages")
@@ -87,24 +135,45 @@ export async function runAssistant(params: {
     .limit(12);
 
   const history = ((historyRows ?? []) as HistoryRow[]).reverse();
+  const reference = mode === "interactive" ? await loadAiReference(workspace) : null;
+
+  const systemPrompt =
+    mode === "interactive" && reference
+      ? buildInteractivePrompt({ reference, locale })
+      : buildSystemPrompt({
+          workspace,
+          locale,
+          today: todayInZone(workspace.timezone),
+          plan: workspace.plan,
+        });
 
   const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    {
-      role: "system",
-      content: buildSystemPrompt({
-        workspace,
-        locale,
-        today: todayInZone(workspace.timezone),
-        plan: workspace.plan,
-      }),
-    },
+    { role: "system", content: systemPrompt },
     ...history.map((row) => ({
       role: row.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: row.content,
     })),
   ];
 
-  const context: ToolContext = { workspace, userId, conversationId };
+  const baseContext: ToolContext = {
+    workspace,
+    userId,
+    conversationId,
+    serviceRole: Boolean(params.serviceRole),
+  };
+  const interactiveContext: InteractiveToolContext | null =
+    reference
+      ? {
+          ...baseContext,
+          requestId: params.requestId,
+          locale,
+          reference,
+          draft: null,
+          clarification: null,
+        }
+      : null;
+
+  const tools = mode === "interactive" ? INTERACTIVE_TOOL_DEFINITIONS : TOOL_DEFINITIONS;
   const toolsUsed: string[] = [];
   let reply = "";
   let model = getAiModel();
@@ -116,10 +185,10 @@ export async function runAssistant(params: {
       const completion = await openai.chat.completions.create({
         model,
         messages,
-        tools: TOOL_DEFINITIONS,
+        tools,
         tool_choice: "auto",
-        temperature: 0.2,
-        max_completion_tokens: 700,
+        temperature: mode === "interactive" ? 0.1 : 0.2,
+        max_completion_tokens: mode === "interactive" ? 1200 : 700,
       });
 
       const choice = completion.choices[0]?.message;
@@ -145,7 +214,10 @@ export async function runAssistant(params: {
             args = {};
           }
 
-          const result = await executeTool(call.function.name, args, context);
+          const result =
+            mode === "interactive" && interactiveContext
+              ? await executeInteractiveTool(call.function.name, args, interactiveContext)
+              : await executeTool(call.function.name, args, baseContext);
           toolsUsed.push(call.function.name);
 
           await supabase.from("ai_messages").insert({
@@ -175,7 +247,46 @@ export async function runAssistant(params: {
     throw new AppError("integration_unavailable", dict.assistant.temporarilyUnavailable);
   }
 
-  if (!reply) reply = dict.assistant.fallback;
+  if (interactiveContext?.clarification && !interactiveContext.draft) {
+    reply = clarificationMessage(dict, interactiveContext.clarification);
+  }
+  if (!reply) {
+    reply = interactiveContext?.draft
+      ? dict.assistant.preparedFallback
+      : dict.assistant.fallback;
+  }
+
+  let command: AiCommandView | null = null;
+  if (interactiveContext?.draft) {
+    try {
+      command = await createAiCommand({
+        workspaceId: workspace.id,
+        userId,
+        conversationId,
+        messageId: userMessage.id,
+        requestId: params.requestId,
+        commandText: params.message,
+        reply,
+        locale,
+        draft: interactiveContext.draft,
+      });
+
+      if (reference?.settings.autoPost && interactiveContext.draft.preview.autoPostEligible) {
+        try {
+          command = await confirmAiCommand(command.id, true);
+          reply = `${reply}\n\n${dict.assistant.autoPosted}\n${dict.assistant.undoHint}`;
+          await setAiCommandReply(command.id, reply).catch((error) => {
+            logger.warn("ai.command_reply_update_failed", { error });
+          });
+        } catch (error) {
+          logger.warn("ai.auto_post_failed", { error });
+        }
+      }
+    } catch (error) {
+      logger.error("ai.command_persist_failed", { error });
+      throw new AppError("internal_error", dict.assistant.saveFailed);
+    }
+  }
 
   const { error: assistantError } = await supabase.from("ai_messages").insert({
     conversation_id: conversationId,
@@ -193,7 +304,32 @@ export async function runAssistant(params: {
     .update({ updated_at: new Date().toISOString() })
     .eq("id", conversationId);
 
-  return { conversationId, reply, toolsUsed };
+  await supabase
+    .from("ai_interactions")
+    .insert({
+      workspace_id: workspace.id,
+      user_id: userId,
+      conversation_id: conversationId,
+      channel: mode === "interactive" ? "web" : params.serviceRole ? "whatsapp" : "web",
+      model,
+      prompt_preview: params.message.slice(0, 500),
+      prompt_tokens: promptTokens,
+      completion_tokens: completionTokens,
+      latency_ms: Date.now() - startedAt,
+      tool_calls: toolsUsed as never,
+      status: "ok",
+    })
+    .then(({ error }) => {
+      if (error) logger.warn("ai.interaction_log_failed", { code: error.code });
+    });
+
+  return {
+    conversationId,
+    reply,
+    toolsUsed,
+    command,
+    clarification: Boolean(interactiveContext?.clarification && !interactiveContext.draft),
+  };
 }
 
 async function ensureConversation(

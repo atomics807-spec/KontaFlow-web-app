@@ -7,7 +7,10 @@ All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 
 | Route | Method | Auth | Purpose |
 | --- | --- | --- | --- |
-| `/api/ai/chat` | POST | Supabase session | Assistant turn; body `{ message, conversationId? }`; returns `{ reply, conversationId }` |
+| `/api/ai/chat` | POST | Supabase session | Assistant turn; body `{ message, conversationId?, requestId, locale }`; returns `{ reply, conversationId, toolsUsed, command, clarification }` |
+| `/api/ai/commands/[id]/confirm` | POST | Supabase session | Posts a pending draft; always records a manual confirmation |
+| `/api/ai/commands/[id]/dismiss` | POST | Supabase session | Discards a pending draft; creator only |
+| `/api/ai/commands/[id]/undo` | POST | Supabase session | Reverses a confirmed transaction draft within 24 hours |
 | `/api/sync` | POST | Supabase session | Flush offline outbox entries (idempotent per `clientGeneratedId`) |
 | `/api/reports/export` | GET | Supabase session | Localized CSV export for a period (`from`, `to`, `locale`) |
 | `/api/reports/export/pdf` | GET | Supabase session | Localized PDF report for a period (`from`, `to`, `locale`) |
@@ -58,6 +61,10 @@ Called through the Supabase client; all are `SECURITY DEFINER` with
 | `accept_invitation(token)` | authenticated | Email must match the invite |
 | `record_channel_transaction(workspace, actor, channel, payload)` | `service_role` only | Webhook/cron writes; re-verifies actor membership |
 | `consume_channel_quota(workspace, actor, kind, limit)` | `service_role` only | Channel AI usage |
+| `confirm_ai_command(id, auto_posted)` | authenticated | Validates draft ownership and posts through existing RPCs; idempotent |
+| `dismiss_ai_command(id)` | authenticated | Creator-only discard; idempotent |
+| `undo_ai_command(id, reason)` | authenticated | Creator-only reversal of a confirmed transaction draft; 24-hour window |
+| `set_ai_command_reply(id, reply)` | authenticated | Creator-only final reply update used after auto-post |
 | `get_workspace_summary_as_service(workspace, from, to)` | `service_role` only | Digest job |
 
 ## Offline payload
