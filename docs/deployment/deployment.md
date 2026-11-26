@@ -24,6 +24,7 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public client config |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only; required by USSD, WhatsApp, cron |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Invitations and daily digest |
+| `CONTACT_INBOX_EMAIL` | Destination for public contact form notifications (defaults to `hello@kontaflow.com`) |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Assistant; omit to disable cleanly |
 | `WHATSAPP_*` | Phone number id, access token, verify token, app secret |
 | `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN` | Africa's Talking callback |
