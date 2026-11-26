@@ -53,6 +53,13 @@ export const wes: Dictionary = {
     of: "of",
     required: "You must put am",
     select: "Pick",
+    dismiss: "Close am",
+  },
+  theme: {
+    label: "How e look",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
   },
   nav: {
     overview: "Overview",
@@ -174,6 +181,7 @@ export const wes: Dictionary = {
     saveAndNew: "Save, then add another",
     deleteConfirm: "Delete this transaction? You no go fit bring am back.",
     voidConfirm: "Cancel this transaction? E go still dey for audit.",
+    voidNote: "Why you de void this entry? E go still dey inside audit trail.",
     voided: "E don cancel",
     posted: "E don post",
     filterAll: "All type",
@@ -181,6 +189,7 @@ export const wes: Dictionary = {
     empty: "No transaction match",
     emptyHint: "Try another filter, or record new transaction.",
     createSuccess: "Transaction don enter.",
+    createSuccessHint: "Your ledger and balance dem don update.",
     createError: "E no work. Transaction no enter.",
     thisMonthTotal: "This month",
     cash: "Cash",
@@ -326,6 +335,7 @@ export const wes: Dictionary = {
   },
   marketing: {
     navFeatures: "Product",
+    navProduct: "Overview",
     navChannels: "Channels",
     navPricing: "Price",
     navSecurity: "Security",
@@ -339,6 +349,22 @@ export const wes: Dictionary = {
     heroCtaPrimary: "Start free",
     heroCtaSecondary: "See how e dey work",
     heroNote: "No card needed · XAF, XOF and more · English, French, Pidgin",
+    heroImageAlt: "KontaFlow dashboard wey de show cash flow, AI insight and channel badge dem",
+    showcaseTitle: "We design am for how African business dem de work",
+    showcaseSubtitle:
+      "One phone for one hand, the book for the other, plus the small small detail your accountant go ask for.",
+    showcase1Title: "Bookkeeping wey no go lie",
+    showcase1Desc:
+      "Double-entry records, balance wey dem check, and audit trail wey no de disappear. Money dey stored as whole units, so franc no de lost for rounding.",
+    showcase2Title: "Reports wey you fit give bank",
+    showcase2Desc:
+      "Month cash flow, top expense category, and CSV export in FCFA — all from the same ledger wey your transactions de enter.",
+    showcase3Title: "Assistant wey sabi your numbers",
+    showcase3Desc:
+      "Ask for English, French or Pidgin. The assistant de read your live figures only through tools wey permission de control, then e go explain wetin change.",
+    showcase4Title: "E de work for the phone wey you get",
+    showcase4Desc:
+      "Record sale on USSD or WhatsApp, or work offline inside the app. Everything go reconcile the moment network come back.",
     trustedBy: "Dem build am for how business dey really work here",
     stat1Value: "3 sec",
     stat1Label: "to record one sale for USSD",

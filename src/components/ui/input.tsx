@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const base =
-  "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[0.95rem] text-ink shadow-[inset_0_1px_2px_rgba(8,20,15,0.03)] transition placeholder:text-muted/60 focus:border-jade-500 focus:outline-none focus:ring-4 focus:ring-jade-500/15 disabled:bg-sand-200 disabled:text-muted";
+  "w-full rounded-xl border border-line bg-panel px-3.5 py-2.5 text-[0.95rem] text-ink shadow-[inset_0_1px_2px_rgba(8,20,15,0.03)] transition placeholder:text-muted/70 focus:border-accent-strong focus:outline-none focus:ring-4 focus:ring-accent-strong/20 disabled:bg-page-soft disabled:text-muted";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(base, "h-11", className)} {...props} />;
@@ -18,7 +18,7 @@ export function Select({ className, ...props }: ComponentProps<"select">) {
       className={cn(base, "h-11 appearance-none bg-[length:1rem] bg-[right_0.9rem_center] bg-no-repeat pr-10", className)}
       style={{
         backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355675f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
+          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23708079' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
       }}
       {...props}
     />
@@ -54,7 +54,7 @@ export function Field({
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? (
-        <p className="mt-1.5 text-xs font-medium text-clay" role="alert">
+        <p className="mt-1.5 text-xs font-medium text-danger" role="alert">
           {error}
         </p>
       ) : hint ? (

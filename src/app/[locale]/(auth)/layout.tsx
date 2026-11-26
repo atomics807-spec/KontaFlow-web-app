@@ -52,11 +52,11 @@ export default async function AuthLayout({
         </div>
       </aside>
 
-      <main id="main" className="flex flex-col bg-sand">
+      <main id="main" className="flex flex-col bg-page">
         <div className="flex items-center justify-between px-5 pt-6 sm:px-8">
           <Link
             href={`/${locale}`}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-forest"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition hover:text-heading"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {dict.common.backHome}

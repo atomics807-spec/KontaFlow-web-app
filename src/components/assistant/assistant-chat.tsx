@@ -106,11 +106,11 @@ export function AssistantChat({
     <div className="flex h-[calc(100dvh-13rem)] min-h-[26rem] flex-col">
       <div className="flex-1 space-y-4 overflow-y-auto pb-4" aria-live="polite" aria-relevant="additions">
         {messages.length === 0 ? (
-          <div className="rounded-2xl border border-line bg-white p-5">
+          <div className="rounded-2xl border border-line bg-panel p-5">
             <span className="grid h-10 w-10 place-items-center rounded-xl bg-forest text-mango-400">
               <Sparkles className="h-5 w-5" aria-hidden />
             </span>
-            <p className="mt-3 text-sm font-bold text-forest">{dict.assistant.empty}</p>
+            <p className="mt-3 text-sm font-bold text-heading">{dict.assistant.empty}</p>
             <p className="mt-1 text-sm text-muted">{dict.assistant.emptyHint}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {suggestions.map((suggestion) => (
@@ -118,7 +118,7 @@ export function AssistantChat({
                   key={suggestion}
                   type="button"
                   onClick={() => void send(suggestion)}
-                  className="rounded-full border border-line bg-sand px-3 py-1.5 text-left text-xs font-medium text-forest transition hover:border-jade-300 hover:bg-jade-50"
+                  className="rounded-full border border-line bg-page px-3 py-1.5 text-left text-xs font-medium text-heading transition hover:border-accent-line hover:bg-accent-soft"
                 >
                   {suggestion}
                 </button>
@@ -131,7 +131,7 @@ export function AssistantChat({
               <div
                 className={cn(
                   "max-w-[85%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                  message.role === "user" ? "bg-forest text-white" : "border border-line bg-white text-forest",
+                  message.role === "user" ? "bg-forest text-white" : "border border-line bg-panel text-heading",
                 )}
               >
                 {message.content}

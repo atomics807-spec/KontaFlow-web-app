@@ -7,11 +7,11 @@ const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: "bg-sand-200 text-muted",
-        jade: "bg-jade-50 text-jade-700",
-        mango: "bg-mango-100 text-mango-600",
-        clay: "bg-clay-soft text-clay",
-        forest: "bg-forest/8 text-forest",
+        neutral: "bg-page-soft text-muted",
+        jade: "bg-accent-soft text-accent",
+        mango: "bg-warn-soft text-warn",
+        clay: "bg-danger-soft text-danger",
+        forest: "bg-brand-soft text-heading",
         outline: "border border-line text-muted",
       },
     },

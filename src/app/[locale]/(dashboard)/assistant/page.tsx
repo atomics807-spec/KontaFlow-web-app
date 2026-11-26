@@ -51,8 +51,8 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
     <div className="space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-forest">
-            <Bot className="h-6 w-6 text-jade-600" aria-hidden />
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-heading">
+            <Bot className="h-6 w-6 text-accent-strong" aria-hidden />
             {dict.assistant.title}
           </h1>
           <p className="mt-1 text-sm text-muted">{dict.assistant.subtitle}</p>

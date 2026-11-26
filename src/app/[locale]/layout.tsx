@@ -3,6 +3,10 @@ import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import { I18nProvider } from "@/components/layout/i18n-provider";
 import { ServiceWorkerRegistrar } from "@/components/layout/sw-registrar";
+import { ThemeProvider } from "@/components/layout/theme-provider";
+import { MotionProvider } from "@/components/motion/motion-provider";
+import { ToastProvider } from "@/components/ui/toast";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { LOCALES, LOCALE_META, isLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { getPublicEnv } from "@/lib/env";
@@ -82,7 +86,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#f8f5ee" },
     { media: "(prefers-color-scheme: dark)", color: "#0a3327" },
   ],
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
 
 export default async function LocaleLayout({
@@ -109,18 +113,32 @@ export default async function LocaleLayout({
   }
 
   return (
-    <html lang={meta.htmlLang} dir={meta.dir} className={`${jakarta.variable} ${jetbrains.variable}`}>
-      <body className="min-h-dvh bg-sand text-ink antialiased">
+    <html
+      lang={meta.htmlLang}
+      dir={meta.dir}
+      suppressHydrationWarning
+      className={`${jakarta.variable} ${jetbrains.variable}`}
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-dvh bg-page text-ink antialiased">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-forest focus:px-4 focus:py-2 focus:text-white"
         >
           {dict.common.continue}
         </a>
-        <I18nProvider locale={locale} dict={dict}>
-          {children}
-          <ServiceWorkerRegistrar />
-        </I18nProvider>
+        <ThemeProvider>
+          <I18nProvider locale={locale} dict={dict}>
+            <MotionProvider>
+              <ToastProvider>
+                {children}
+                <ServiceWorkerRegistrar />
+              </ToastProvider>
+            </MotionProvider>
+          </I18nProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

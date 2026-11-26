@@ -36,14 +36,14 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
     <div className="space-y-5">
       <header className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.settings.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.settings.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.settings.subtitle}</p>
         </div>
         <Badge tone="outline">{dict.plans[workspace.plan]}</Badge>
       </header>
 
       <Card className="p-5 sm:p-6">
-        <h2 className="text-base font-bold text-forest">{dict.settings.businessProfile}</h2>
+        <h2 className="text-base font-bold text-heading">{dict.settings.businessProfile}</h2>
         <div className="mt-4">
           <WorkspaceSettingsForm
             name={workspace.name}
@@ -59,7 +59,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-bold text-forest">{dict.settings.channels}</h2>
+            <h2 className="text-sm font-bold text-heading">{dict.settings.channels}</h2>
             <p className="mt-0.5 text-xs text-muted">{dict.settings.channelsSubtitle}</p>
           </div>
           <Badge tone="jade">{dict.dashboard.channels}</Badge>
@@ -74,12 +74,12 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
             {identities.map((identity) => (
               <li key={identity.id} className="flex items-center gap-3 py-2.5">
                 {identity.channel === "whatsapp" ? (
-                  <MessageCircle className="h-4 w-4 text-jade-600" aria-hidden />
+                  <MessageCircle className="h-4 w-4 text-accent-strong" aria-hidden />
                 ) : (
-                  <Smartphone className="h-4 w-4 text-jade-600" aria-hidden />
+                  <Smartphone className="h-4 w-4 text-accent-strong" aria-hidden />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-forest">{identity.address}</p>
+                  <p className="truncate text-sm font-semibold text-heading">{identity.address}</p>
                   <p className="text-[0.7rem] text-muted">
                     {identity.channel === "whatsapp" ? dict.transactions.channelWhatsapp : dict.transactions.channelUssd}
                     {identity.verified_at ? ` · ${formatDateTime(identity.verified_at, intlLocale(locale), workspace.timezone)}` : ""}
@@ -89,7 +89,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
                   <form action={unlinkChannelAction}>
                     <input type="hidden" name="locale" value={locale} />
                     <input type="hidden" name="channelId" value={identity.id} />
-                    <Button type="submit" variant="ghost" size="sm" className="text-xs text-clay">
+                    <Button type="submit" variant="ghost" size="sm" className="text-xs text-danger">
                       {dict.settings.removeMember}
                     </Button>
                   </form>
@@ -103,9 +103,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       {canAudit ? (
         <Card className="p-5 sm:p-6">
           <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-jade-600" aria-hidden />
+            <History className="h-4 w-4 text-accent-strong" aria-hidden />
             <div>
-              <h2 className="text-sm font-bold text-forest">{dict.settings.audit}</h2>
+              <h2 className="text-sm font-bold text-heading">{dict.settings.audit}</h2>
               <p className="text-xs text-muted">{dict.settings.auditSubtitle}</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
               {audit.map((entry) => (
                 <li key={entry.id} className="flex items-start justify-between gap-3 py-2.5">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-forest">
+                    <p className="truncate text-sm font-medium text-heading">
                       {entry.action} · {entry.entity}
                     </p>
                     <p className="text-[0.7rem] text-muted">
@@ -135,13 +135,13 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       ) : null}
 
       <Card className="p-5">
-        <h2 className="text-sm font-bold text-forest">{dict.settings.billing}</h2>
+        <h2 className="text-sm font-bold text-heading">{dict.settings.billing}</h2>
         <p className="mt-1 text-xs text-muted">
           {dict.nav.billing} · {dict.plans[workspace.plan]}
         </p>
         <Link
           href={`/${locale}/billing`}
-          className="mt-3 inline-flex text-sm font-semibold text-jade-700 hover:underline"
+          className="mt-3 inline-flex text-sm font-semibold text-accent hover:underline"
         >
           {dict.settings.currentPlan} →
         </Link>

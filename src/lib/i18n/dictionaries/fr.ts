@@ -53,6 +53,13 @@ export const fr: Dictionary = {
     of: "sur",
     required: "Obligatoire",
     select: "Choisir",
+    dismiss: "Fermer",
+  },
+  theme: {
+    label: "Apparence",
+    light: "Clair",
+    dark: "Sombre",
+    system: "Système",
   },
   nav: {
     overview: "Vue d'ensemble",
@@ -175,6 +182,7 @@ export const fr: Dictionary = {
     saveAndNew: "Enregistrer et ajouter",
     deleteConfirm: "Supprimer cette transaction ? Action irréversible.",
     voidConfirm: "Annuler cette transaction ? Elle reste dans la piste d'audit.",
+    voidNote: "Pourquoi annuler cette écriture ? Elle reste dans la piste d’audit.",
     voided: "Annulée",
     posted: "Validée",
     filterAll: "Tous les types",
@@ -182,6 +190,7 @@ export const fr: Dictionary = {
     empty: "Aucune transaction ne correspond",
     emptyHint: "Essayez un autre filtre ou enregistrez une transaction.",
     createSuccess: "Transaction enregistrée.",
+    createSuccessHint: "Votre grand livre et vos soldes sont à jour.",
     createError: "Impossible d'enregistrer la transaction.",
     thisMonthTotal: "Ce mois-ci",
     cash: "Espèces",
@@ -327,6 +336,7 @@ export const fr: Dictionary = {
   },
   marketing: {
     navFeatures: "Produit",
+    navProduct: "Aperçu",
     navChannels: "Canaux",
     navPricing: "Tarifs",
     navSecurity: "Sécurité",
@@ -340,6 +350,22 @@ export const fr: Dictionary = {
     heroCtaPrimary: "Commencer gratuitement",
     heroCtaSecondary: "Voir comment ça marche",
     heroNote: "Sans carte bancaire · XAF, XOF et plus · Français, anglais, pidgin",
+    heroImageAlt: "Tableau de bord KontaFlow avec trésorerie, analyses IA et canaux",
+    showcaseTitle: "Pensé pour la réalité des entreprises africaines",
+    showcaseSubtitle:
+      "Un téléphone dans une main, le cahier de comptes dans l’autre, et le niveau de détail que votre comptable attend.",
+    showcase1Title: "Une comptabilité qui reste juste",
+    showcase1Desc:
+      "Écritures en partie double, soldes vérifiés et piste d’audit permanente. Les montants sont stockés en unités entières : aucun franc perdu par arrondi.",
+    showcase2Title: "Des rapports présentables à votre banque",
+    showcase2Desc:
+      "Trésorerie mensuelle, principales catégories de dépenses et exports CSV en FCFA, générés depuis le grand livre où arrivent vos transactions.",
+    showcase3Title: "Un assistant qui connaît vos chiffres",
+    showcase3Desc:
+      "Posez vos questions en français, anglais ou pidgin. L’assistant lit vos données réelles uniquement via des outils contrôlés par permissions, puis explique ce qui a changé.",
+    showcase4Title: "Fonctionne sur le téléphone que vous avez",
+    showcase4Desc:
+      "Enregistrez une vente par USSD ou WhatsApp, ou travaillez hors ligne dans l’application. Tout se réconcilie dès le retour du réseau.",
     trustedBy: "Conçu pour la réalité du terrain",
     stat1Value: "3 s",
     stat1Label: "pour enregistrer une vente par USSD",

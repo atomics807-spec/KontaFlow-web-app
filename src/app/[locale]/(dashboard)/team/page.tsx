@@ -38,7 +38,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.settings.members}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.settings.members}</h1>
           <p className="mt-1 text-sm text-muted">{dict.settings.membersSubtitle}</p>
         </div>
         {canInvite ? <InviteMemberForm /> : null}
@@ -60,7 +60,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <Avatar name={member.full_name || member.email} />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-forest">
+                    <p className="truncate text-sm font-bold text-heading">
                       {member.full_name || member.email.split("@")[0]}
                       {member.user_id === context.user.id ? (
                         <span className="ml-1.5 text-[0.65rem] font-semibold text-muted">({dict.common.profile})</span>
@@ -82,7 +82,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
                         id={`role-${member.id}`}
                         name="role"
                         defaultValue={member.role}
-                        className="h-8 rounded-lg border border-line bg-white px-2 text-xs font-semibold text-forest"
+                        className="h-8 rounded-lg border border-line bg-panel px-2 text-xs font-semibold text-heading"
                       >
                         {(Object.keys(ROLE_RANK) as WorkspaceRole[])
                           .filter((role) => role !== "owner" && ROLE_RANK[role] <= ROLE_RANK[context.role])
@@ -110,7 +110,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
                     <form action={removeMemberAction}>
                       <input type="hidden" name="locale" value={locale} />
                       <input type="hidden" name="memberId" value={member.id} />
-                      <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-xs text-clay">
+                      <Button type="submit" variant="ghost" size="sm" className="h-8 px-2 text-xs text-danger">
                         {dict.settings.removeMember}
                       </Button>
                     </form>
@@ -124,7 +124,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
 
       {invitations.length > 0 ? (
         <section aria-labelledby="pending-invites" className="space-y-2">
-          <h2 id="pending-invites" className="text-sm font-bold text-forest">
+          <h2 id="pending-invites" className="text-sm font-bold text-heading">
             {dict.settings.pendingInvites}
           </h2>
           <Card className="overflow-hidden">
@@ -132,7 +132,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
               {invitations.map((invitation) => (
                 <li key={invitation.id} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-forest">{invitation.email}</p>
+                    <p className="truncate text-sm font-semibold text-heading">{invitation.email}</p>
                     <p className="text-xs text-muted">
                       {dict.roles[invitation.role as WorkspaceRole]} ·{" "}
                       {formatDate(invitation.expires_at, intlLocale(locale))}
@@ -142,7 +142,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
                     <form action={revokeInvitationAction}>
                       <input type="hidden" name="locale" value={locale} />
                       <input type="hidden" name="invitationId" value={invitation.id} />
-                      <Button type="submit" variant="ghost" size="sm" className="text-xs text-clay">
+                      <Button type="submit" variant="ghost" size="sm" className="text-xs text-danger">
                         {dict.settings.removeMember}
                       </Button>
                     </form>

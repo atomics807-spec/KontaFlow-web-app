@@ -53,7 +53,7 @@ export function Logo({
     <span className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
       <LogoMark className="h-9 w-9 shrink-0" />
       <span className={`text-[1.15rem] font-extrabold tracking-tight ${wordmarkClassName ?? ""}`}>
-        Konta<span className="text-jade-600">Flow</span>
+        Konta<span className="text-accent-strong">Flow</span>
       </span>
     </span>
   );

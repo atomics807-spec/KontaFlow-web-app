@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 420" width="560" height="420" role="img" aria-label="Phone showing bookkeeping app, USSD keypad and WhatsApp message">
+  <defs>
+    <linearGradient id="mBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#11503F"/><stop offset="1" stop-color="#0A3327"/>
+    </linearGradient>
+    <linearGradient id="mCard" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#35B189"/><stop offset="1" stop-color="#0B7A5A"/>
+    </linearGradient>
+  </defs>
+  <rect width="560" height="420" rx="32" fill="url(#mBg)"/>
+  <circle cx="500" cy="60" r="120" fill="#16A97E" opacity=".16"/>
+  <circle cx="60" cy="380" r="100" fill="#F2B64B" opacity=".1"/>
+  <g stroke="#74C9AA" stroke-opacity=".35" fill="none" stroke-width="2">
+    <path d="M420 250a74 74 0 0 1 0-46" />
+    <path d="M436 262a100 100 0 0 1 0-70" stroke-opacity=".22"/>
+  </g>
+  <g transform="translate(196 40)">
+    <rect x="0" y="0" width="176" height="336" rx="30" fill="#0A3327" stroke="#2F4D3F" stroke-width="6"/>
+    <rect x="12" y="14" width="152" height="308" rx="22" fill="#FFFDF8"/>
+    <rect x="62" y="22" width="52" height="8" rx="4" fill="#0A3327" fill-opacity=".2"/>
+    <g transform="translate(28 48)">
+      <rect x="0" y="0" width="120" height="66" rx="14" fill="url(#mCard)"/>
+      <rect x="14" y="14" width="38" height="7" rx="3.5" fill="#fff" fill-opacity=".6"/>
+      <rect x="14" y="28" width="76" height="14" rx="4" fill="#fff"/>
+      <rect x="14" y="48" width="34" height="6" rx="3" fill="#fff" fill-opacity=".5"/>
+      <circle cx="100" cy="48" r="12" fill="#fff" fill-opacity=".16"/>
+      <path d="M95 48h10m-5-5v10" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(28 132)">
+      <rect x="0" y="0" width="120" height="6" rx="3" fill="#DCD5C6"/>
+    </g>
+    <g transform="translate(28 150)">
+      <rect x="0" y="0" width="120" height="44" rx="10" fill="#F8F5EE"/>
+      <circle cx="20" cy="22" r="9" fill="#EAF7F1"/>
+      <path d="M16 22l3 3 6-7" stroke="#0B7A5A" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="38" y="14" width="52" height="6" rx="3" fill="#0A3327" fill-opacity=".5"/>
+      <rect x="38" y="25" width="34" height="5" rx="2.5" fill="#DCD5C6"/>
+      <rect x="96" y="18" width="16" height="8" rx="4" fill="#16A97E" fill-opacity=".25"/>
+    </g>
+    <g transform="translate(28 202)">
+      <rect x="0" y="0" width="120" height="44" rx="10" fill="#F8F5EE"/>
+      <circle cx="20" cy="22" r="9" fill="#FDF0D5"/>
+      <rect x="38" y="14" width="46" height="6" rx="3" fill="#0A3327" fill-opacity=".5"/>
+      <rect x="38" y="25" width="28" height="5" rx="2.5" fill="#DCD5C6"/>
+      <rect x="96" y="18" width="16" height="8" rx="4" fill="#F2B64B" fill-opacity=".45"/>
+    </g>
+    <g transform="translate(28 262)">
+      <g fill="#EDE7DA">
+        <rect x="0" y="0" width="32" height="24" rx="7"/><rect x="40" y="0" width="32" height="24" rx="7"/><rect x="80" y="0" width="32" height="24" rx="7"/>
+        <rect x="0" y="32" width="32" height="24" rx="7"/><rect x="40" y="32" width="32" height="24" rx="7"/><rect x="80" y="32" width="32" height="24" rx="7"/>
+      </g>
+      <rect x="0" y="64" width="112" height="30" rx="15" fill="#0A3327"/>
+      <rect x="26" y="74" width="60" height="9" rx="4.5" fill="#74C9AA"/>
+    </g>
+  </g>
+  <g transform="translate(56 74)">
+    <rect x="0" y="0" width="132" height="108" rx="20" fill="#FFFDF8" stroke="#E7E1D3"/>
+    <rect x="16" y="16" width="44" height="8" rx="4" fill="#CFC8B8"/>
+    <rect x="16" y="34" width="100" height="8" rx="4" fill="#0A3327" fill-opacity=".55"/>
+    <rect x="16" y="50" width="78" height="8" rx="4" fill="#0A3327" fill-opacity=".35"/>
+    <rect x="16" y="74" width="66" height="18" rx="9" fill="#EAF7F1"/>
+    <path d="M28 83l4 4 7-8" stroke="#0B7A5A" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g transform="translate(400 236)">
+    <rect x="0" y="0" width="118" height="64" rx="18" fill="#25D366"/>
+    <path d="M30 22c-8 0-13 6-13 13 0 2 1 5 2 6l-2 8 8-2c2 1 3 1 5 1 7 0 13-6 13-13s-6-13-13-13zm0 4c5 0 9 4 9 9s-4 9-9 9c-2 0-3 0-4-1l-4 1 1-4c-1-1-2-3-2-5 0-5 4-9 9-9z" fill="#fff"/>
+    <rect x="52" y="22" width="48" height="7" rx="3.5" fill="#fff" fill-opacity=".85"/>
+    <rect x="52" y="36" width="34" height="6" rx="3" fill="#fff" fill-opacity=".5"/>
+  </g>
+  <g transform="translate(406 330)">
+    <rect x="0" y="0" width="112" height="38" rx="19" fill="#0A3327" stroke="#74C9AA" stroke-opacity=".35"/>
+    <circle cx="20" cy="19" r="6" fill="#F2B64B"/>
+    <rect x="34" y="12" width="58" height="6" rx="3" fill="#fff" fill-opacity=".75"/>
+    <rect x="34" y="23" width="38" height="5" rx="2.5" fill="#fff" fill-opacity=".35"/>
+  </g>
+  <g fill="#74C9AA" opacity=".5">
+    <path d="M96 260l3 9 9 3-9 3-3 9-3-9-9-3 9-3z"/>
+  </g>
+</svg>

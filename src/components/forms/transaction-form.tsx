@@ -3,10 +3,12 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, Save, WifiOff } from "lucide-react";
+import { AlertTriangle, Loader2, Save, WifiOff } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
+import { SuccessCheck } from "@/components/motion/success-check";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { parseMoneyToMinor } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
@@ -37,6 +39,7 @@ export function TransactionForm({
   contacts: ContactOption[];
 }) {
   const { locale, dict } = useI18n();
+  const { toast } = useToast();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -134,6 +137,7 @@ export function TransactionForm({
 
     if (result.remaining === 0 && result.synced > 0) {
       setMessage({ tone: "success", text: dict.transactions.createSuccess });
+      toast({ title: dict.transactions.createSuccess, description: dict.transactions.createSuccessHint, tone: "success" });
       form.reset();
       setAmount("");
       setCategoryId("");
@@ -143,10 +147,13 @@ export function TransactionForm({
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       setMessage({ tone: "warning", text: dict.transactions.offlineQueued });
+      toast({ title: dict.transactions.offlineQueued, tone: "info" });
       return;
     }
 
-    setMessage({ tone: "error", text: result.errors[0] ?? dict.transactions.createError });
+    const errorMessage = result.errors[0] ?? dict.transactions.createError;
+    setMessage({ tone: "error", text: errorMessage });
+    toast({ title: dict.errors.generic, description: errorMessage, tone: "error" });
   }
 
   return (
@@ -155,7 +162,7 @@ export function TransactionForm({
         <Alert tone={message.tone === "success" ? "success" : message.tone === "warning" ? "warning" : "error"}>
           <span className="flex items-start gap-2">
             {message.tone === "success" ? (
-              <CheckCircle2 className="mt-0.5 h-4 w-4" aria-hidden />
+              <SuccessCheck className="mt-0.5 h-4 w-4 text-accent-strong" />
             ) : message.tone === "warning" ? (
               <WifiOff className="mt-0.5 h-4 w-4" aria-hidden />
             ) : (
@@ -175,7 +182,7 @@ export function TransactionForm({
 
       <fieldset>
         <legend className="sr-only">{dict.transactions.type}</legend>
-        <div className="grid grid-cols-3 gap-1 rounded-full bg-sand-200 p-1">
+        <div className="grid grid-cols-3 gap-1 rounded-full bg-page-soft p-1">
           {kinds.map((option) => (
             <button
               key={option}
@@ -189,9 +196,9 @@ export function TransactionForm({
                 "rounded-full px-3 py-2 text-sm font-semibold transition",
                 kind === option
                   ? option === "expense"
-                    ? "bg-white text-clay shadow-sm"
-                    : "bg-white text-jade-700 shadow-sm"
-                  : "text-muted hover:text-forest",
+                    ? "bg-panel text-danger shadow-sm"
+                    : "bg-panel text-accent shadow-sm"
+                  : "text-muted hover:text-heading",
               )}
             >
               {kindLabel(option)}
@@ -223,7 +230,7 @@ export function TransactionForm({
               key={value}
               type="button"
               onClick={() => setAmount(value)}
-              className="rounded-full border border-line bg-white px-2.5 py-1 text-xs font-semibold text-muted transition hover:border-jade-300 hover:text-forest"
+              className="rounded-full border border-line bg-panel px-2.5 py-1 text-xs font-semibold text-muted transition hover:border-accent-line hover:text-heading"
             >
               {new Intl.NumberFormat("fr-CM").format(Number(value))}
             </button>
@@ -264,8 +271,8 @@ export function TransactionForm({
                   className={cn(
                     "inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition",
                     selected
-                      ? "border-jade-600 bg-jade-50 text-jade-700"
-                      : "border-line bg-white text-muted hover:border-jade-300 hover:text-forest",
+                      ? "border-jade-600 bg-accent-soft text-accent"
+                      : "border-line bg-panel text-muted hover:border-accent-line hover:text-heading",
                   )}
                 >
                   <span

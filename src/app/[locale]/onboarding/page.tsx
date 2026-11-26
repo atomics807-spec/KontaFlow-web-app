@@ -23,7 +23,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
   if (context) redirect(`/${locale}/dashboard`);
 
   return (
-    <div className="min-h-dvh bg-sand">
+    <div className="min-h-dvh bg-page">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 grid-lines opacity-60 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,black,transparent)]"

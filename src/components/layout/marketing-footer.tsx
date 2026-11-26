@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./logo";
 import { useI18n } from "./i18n-provider";
 
@@ -35,7 +36,7 @@ export function MarketingFooter() {
   ];
 
   return (
-    <footer className="border-t border-line bg-sand-200/60">
+    <footer className="border-t border-line bg-page-soft/60">
       <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_repeat(3,1fr)] lg:px-8">
         <div>
           <Logo />
@@ -44,11 +45,11 @@ export function MarketingFooter() {
         </div>
         {columns.map((column) => (
           <div key={column.title}>
-            <p className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-forest">{column.title}</p>
+            <p className="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-heading">{column.title}</p>
             <ul className="mt-3 space-y-2">
               {column.links.map((link) => (
                 <li key={link.label}>
-                  <Link href={link.href} className="text-sm text-muted transition hover:text-forest">
+                  <Link href={link.href} className="text-sm text-muted transition hover:text-heading">
                     {link.label}
                   </Link>
                 </li>
@@ -62,10 +63,13 @@ export function MarketingFooter() {
           <p>
             © {year} KontaFlow. {dict.marketing.rights}
           </p>
-          <p className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-jade-500 pulse-dot" aria-hidden />
-            {dict.common.tagline}
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-jade-500 pulse-dot" aria-hidden />
+              {dict.common.tagline}
+            </p>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
     </footer>

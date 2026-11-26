@@ -64,7 +64,7 @@ export default async function TransactionsPage({
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.transactions.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.transactions.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.transactions.subtitle}</p>
         </div>
         {context.can("transactions:create") ? (
@@ -80,7 +80,7 @@ export default async function TransactionsPage({
           <Link key={value} href={kindHref(value)} aria-current={kind === value ? "page" : undefined}>
             <Badge
               tone={kind === value ? "jade" : "outline"}
-              className="px-3 py-1.5 text-xs transition hover:border-jade-300"
+              className="px-3 py-1.5 text-xs transition hover:border-accent-line"
             >
               {kindLabel(value)}
             </Badge>

@@ -1,7 +1,13 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Raw palette. Brand greens stay fixed so dark surfaces keep their identity;
+   everything that must adapt between light and dark goes through the semantic
+   tokens below.
+--------------------------------------------------------------------------- */
 @theme {
-  --color-ink: #08140f;
   --color-forest: #0a3327;
   --color-forest-700: #0d4033;
   --color-forest-600: #11503f;
@@ -23,14 +29,119 @@
   --color-sand: #f8f5ee;
   --color-sand-200: #f0ebdf;
   --color-sand-300: #e5dfd1;
-  --color-line: #e5dfd1;
 
-  --color-muted: #55675f;
   --color-clay: #b4453a;
   --color-clay-soft: #f8e7e4;
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+
+  --radius-card: 1.25rem;
+  --radius-control: 0.75rem;
+
+  --shadow-soft: 0 1px 2px rgba(8, 20, 15, 0.04), 0 10px 30px -24px rgba(8, 20, 15, 0.35);
+  --shadow-lift: 0 2px 4px rgba(8, 20, 15, 0.05), 0 24px 60px -36px rgba(8, 60, 45, 0.55);
+  --shadow-pop: 0 30px 80px -32px rgba(8, 60, 45, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   Semantic tokens. These are the colours components should reference.
+--------------------------------------------------------------------------- */
+@theme inline {
+  --color-page: var(--kf-page);
+  --color-page-soft: var(--kf-page-soft);
+  --color-panel: var(--kf-panel);
+  --color-panel-muted: var(--kf-panel-muted);
+  --color-line: var(--kf-line);
+  --color-line-strong: var(--kf-line-strong);
+  --color-ink: var(--kf-ink);
+  --color-heading: var(--kf-heading);
+  --color-muted: var(--kf-muted);
+
+  --color-accent: var(--kf-accent);
+  --color-accent-strong: var(--kf-accent-strong);
+  --color-accent-soft: var(--kf-accent-soft);
+  --color-accent-line: var(--kf-accent-line);
+
+  --color-danger: var(--kf-danger);
+  --color-danger-soft: var(--kf-danger-soft);
+  --color-warn: var(--kf-warn);
+  --color-warn-soft: var(--kf-warn-soft);
+  --color-brand-soft: var(--kf-brand-soft);
+}
+
+:root {
+  color-scheme: light;
+
+  --kf-page: #f8f5ee;
+  --kf-page-soft: #f0ebdf;
+  --kf-panel: #ffffff;
+  --kf-panel-muted: #fbf9f4;
+  --kf-line: #e5dfd1;
+  --kf-line-strong: #d6cebd;
+
+  --kf-ink: #08140f;
+  --kf-heading: #0a3327;
+  --kf-muted: #55675f;
+
+  --kf-accent: #075e46;
+  --kf-accent-strong: #0b7a5a;
+  --kf-accent-soft: #eaf7f1;
+  --kf-accent-line: #cdeade;
+
+  --kf-danger: #b4453a;
+  --kf-danger-soft: #f8e7e4;
+  --kf-warn: #a86410;
+  --kf-warn-soft: #fdf0d5;
+  --kf-brand-soft: rgba(10, 51, 39, 0.07);
+
+  --kf-overlay: rgba(8, 20, 15, 0.45);
+
+  --chart-grid: #e5dfd1;
+  --chart-axis: #55675f;
+  --chart-income: #0b7a5a;
+  --chart-income-fill: #16a97e;
+  --chart-expense: #d2942a;
+  --chart-expense-fill: #f2b64b;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #e5dfd1;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --kf-page: #071310;
+  --kf-page-soft: #0a1a15;
+  --kf-panel: #0f2019;
+  --kf-panel-muted: #13261e;
+  --kf-line: #22392f;
+  --kf-line-strong: #2f4d3f;
+
+  --kf-ink: #e8f1eb;
+  --kf-heading: #f3faf6;
+  --kf-muted: #9db3a7;
+
+  --kf-accent: #7fd6b5;
+  --kf-accent-strong: #a6dcc7;
+  --kf-accent-soft: #143229;
+  --kf-accent-line: #23503f;
+
+  --kf-danger: #ff9d90;
+  --kf-danger-soft: #3a1d19;
+  --kf-warn: #f6c465;
+  --kf-warn-soft: #33270f;
+  --kf-brand-soft: rgba(127, 214, 181, 0.12);
+
+  --kf-overlay: rgba(0, 0, 0, 0.65);
+
+  --chart-grid: #22392f;
+  --chart-axis: #9db3a7;
+  --chart-income: #74c9aa;
+  --chart-income-fill: #35b189;
+  --chart-expense: #f6c465;
+  --chart-expense-fill: #f2b64b;
+  --chart-tooltip-bg: #13261e;
+  --chart-tooltip-border: #22392f;
 }
 
 @layer base {
@@ -39,7 +150,7 @@
   }
 
   body {
-    background-color: var(--color-sand);
+    background-color: var(--color-page);
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-feature-settings: "ss01" on, "cv11" on;
@@ -47,12 +158,12 @@
   }
 
   ::selection {
-    background: var(--color-jade-200);
-    color: var(--color-forest);
+    background: var(--color-accent-line);
+    color: var(--color-heading);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-jade-600);
+    outline: 2px solid var(--color-accent-strong);
     outline-offset: 2px;
   }
 
@@ -66,19 +177,26 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" on;
   }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 }
 
 @layer components {
   .surface {
-    background: #fff;
+    background: var(--color-panel);
     border: 1px solid var(--color-line);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-soft);
   }
 
   .surface-muted {
-    background: color-mix(in oklab, var(--color-sand) 70%, white);
+    background: var(--color-panel-muted);
     border: 1px solid var(--color-line);
-    border-radius: 1.25rem;
+    border-radius: var(--radius-card);
   }
 
   .kpi-value {
@@ -86,12 +204,41 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.03em;
   }
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.65rem;
+    background: var(--color-panel-muted);
+    border: 1px solid var(--color-line);
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, var(--kf-brand-soft), transparent);
+    animation: kf-shimmer 1.6s ease-in-out infinite;
+  }
+
+  dialog {
+    border: none;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+  }
+
+  dialog::backdrop {
+    background: var(--kf-overlay);
+    backdrop-filter: blur(4px);
+  }
 }
 
 @utility grid-lines {
   background-image:
-    linear-gradient(to right, rgba(8, 20, 15, 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(8, 20, 15, 0.045) 1px, transparent 1px);
+    linear-gradient(to right, var(--kf-brand-soft) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--kf-brand-soft) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
@@ -106,8 +253,30 @@
   }
 }
 
-@utility animate-rise {
-  animation: kf-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+@keyframes kf-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes kf-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes kf-drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 @keyframes kf-pulse-dot {
@@ -122,8 +291,21 @@
   }
 }
 
+@utility animate-rise {
+  animation: kf-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @utility pulse-dot {
   animation: kf-pulse-dot 2.4s ease-in-out infinite;
+}
+
+dialog[open] {
+  animation: kf-dialog-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+dialog[data-side="left"][open],
+dialog[data-side="right"][open] {
+  animation: kf-drawer-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -134,5 +316,9 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    animation: none;
   }
 }

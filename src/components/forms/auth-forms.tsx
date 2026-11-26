@@ -29,7 +29,7 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.auth.signInTitle}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.signInTitle}</h1>
       <p className="mt-2 text-sm text-muted">{dict.auth.signInSubtitle}</p>
 
       <form action={action} className="mt-7 space-y-4" noValidate>
@@ -65,7 +65,7 @@ export function LoginForm({ next }: { next: string }) {
         <div className="flex items-center justify-between">
           <Link
             href={`/${locale}/forgot-password`}
-            className="text-sm font-semibold text-jade-700 hover:underline"
+            className="text-sm font-semibold text-accent hover:underline"
           >
             {dict.auth.forgotPassword}
           </Link>
@@ -78,7 +78,7 @@ export function LoginForm({ next }: { next: string }) {
 
       <p className="mt-6 text-center text-sm text-muted">
         {dict.auth.noAccount}{" "}
-        <Link href={`/${locale}/signup`} className="font-semibold text-jade-700 hover:underline">
+        <Link href={`/${locale}/signup`} className="font-semibold text-accent hover:underline">
           {dict.auth.createOne}
         </Link>
       </p>
@@ -92,7 +92,7 @@ export function SignupForm({ next }: { next: string }) {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.auth.signUpTitle}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.signUpTitle}</h1>
       <p className="mt-2 text-sm text-muted">{dict.auth.signUpSubtitle}</p>
 
       <form action={action} className="mt-7 space-y-4" noValidate>
@@ -151,7 +151,7 @@ export function SignupForm({ next }: { next: string }) {
 
       <p className="mt-6 text-center text-sm text-muted">
         {dict.auth.haveAccount}{" "}
-        <Link href={`/${locale}/login`} className="font-semibold text-jade-700 hover:underline">
+        <Link href={`/${locale}/login`} className="font-semibold text-accent hover:underline">
           {dict.auth.signIn}
         </Link>
       </p>
@@ -165,7 +165,7 @@ export function ForgotForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.auth.resetPassword}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.resetPassword}</h1>
       <p className="mt-2 text-sm text-muted">{dict.auth.forgotSubtitle}</p>
 
       <form action={action} className="mt-7 space-y-4" noValidate>
@@ -189,7 +189,7 @@ export function ForgotForm() {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted">
-        <Link href={`/${locale}/login`} className="font-semibold text-jade-700 hover:underline">
+        <Link href={`/${locale}/login`} className="font-semibold text-accent hover:underline">
           {dict.auth.backToSignIn}
         </Link>
       </p>
@@ -204,7 +204,7 @@ export function ResetForm() {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.auth.newPassword}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.newPassword}</h1>
       <p className="mt-2 text-sm text-muted">{fill(dict.auth.resetSubtitle, { email: "your account" })}</p>
 
       <form action={action} className="mt-7 space-y-4" noValidate>
@@ -233,7 +233,7 @@ export function ResetForm() {
 
       {done ? (
         <p className="mt-6 text-center text-sm">
-          <Link href={`/${locale}/dashboard`} className="font-semibold text-jade-700 hover:underline">
+          <Link href={`/${locale}/dashboard`} className="font-semibold text-accent hover:underline">
             {dict.nav.overview}
           </Link>
         </p>

@@ -45,8 +45,8 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-forest">
-          <CreditCard className="h-6 w-6 text-jade-600" aria-hidden />
+        <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-heading">
+          <CreditCard className="h-6 w-6 text-accent-strong" aria-hidden />
           {dict.nav.billing}
         </h1>
         <p className="mt-1 text-sm text-muted">{dict.settings.currentPlan}</p>
@@ -58,26 +58,26 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
             <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted">
               {dict.settings.currentPlan}
             </p>
-            <p className="mt-1 text-2xl font-extrabold text-forest">{dict.plans[workspace.plan]}</p>
+            <p className="mt-1 text-2xl font-extrabold text-heading">{dict.plans[workspace.plan]}</p>
             <p className="mt-1 text-sm text-muted">{dict.plans[workspace.plan === "scale" ? "scaleDesc" : workspace.plan === "growth" ? "growthDesc" : "starterDesc"]}</p>
           </div>
           <Badge tone="jade">{subscription?.status ?? "trialing"}</Badge>
         </div>
 
         <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
-          <div className="rounded-xl bg-sand px-4 py-3">
+          <div className="rounded-xl bg-page px-4 py-3">
             <dt className="text-[0.7rem] uppercase tracking-[0.08em] text-muted">{dict.settings.usage}</dt>
-            <dd className="kpi-value mt-1 font-semibold text-forest">
+            <dd className="kpi-value mt-1 font-semibold text-heading">
               {aiUsed ?? 0} / {plan.aiMessagesPerMonth}
             </dd>
           </div>
-          <div className="rounded-xl bg-sand px-4 py-3">
+          <div className="rounded-xl bg-page px-4 py-3">
             <dt className="text-[0.7rem] uppercase tracking-[0.08em] text-muted">{dict.settings.members}</dt>
-            <dd className="kpi-value mt-1 font-semibold text-forest">{plan.seats}</dd>
+            <dd className="kpi-value mt-1 font-semibold text-heading">{plan.seats}</dd>
           </div>
-          <div className="rounded-xl bg-sand px-4 py-3">
+          <div className="rounded-xl bg-page px-4 py-3">
             <dt className="text-[0.7rem] uppercase tracking-[0.08em] text-muted">{dict.plans.current}</dt>
-            <dd className="kpi-value mt-1 font-semibold text-forest">
+            <dd className="kpi-value mt-1 font-semibold text-heading">
               {plan.priceMinor === 0 ? dict.common.free : formatMoney(BigInt(plan.priceMinor), "XAF", moneyLocale(locale, "XAF"))}
             </dd>
           </div>
@@ -97,13 +97,13 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
           return (
             <Card key={planId} className={cn("flex flex-col p-5", current && "border-jade-400 ring-2 ring-jade-200")}>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-extrabold text-forest">{dict.plans[planId]}</p>
+                <p className="text-sm font-extrabold text-heading">{dict.plans[planId]}</p>
                 {current ? <Badge tone="jade">{dict.plans.current}</Badge> : null}
               </div>
               <p className="mt-1 text-xs text-muted">
                 {dict.plans[planId === "scale" ? "scaleDesc" : planId === "growth" ? "growthDesc" : "starterDesc"]}
               </p>
-              <p className="kpi-value mt-4 text-xl font-semibold text-forest">
+              <p className="kpi-value mt-4 text-xl font-semibold text-heading">
                 {definition.priceMinor === 0
                   ? dict.common.free
                   : formatMoney(BigInt(definition.priceMinor), "XAF", moneyLocale(locale, "XAF"))}
@@ -113,11 +113,11 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
               </p>
               <ul className="mt-4 space-y-2 text-xs text-muted">
                 <li className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-jade-600" aria-hidden />
+                  <Check className="h-3.5 w-3.5 text-accent-strong" aria-hidden />
                   {definition.aiMessagesPerMonth} {dict.settings.usage.toLowerCase()}
                 </li>
                 <li className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-jade-600" aria-hidden />
+                  <Check className="h-3.5 w-3.5 text-accent-strong" aria-hidden />
                   {definition.seats} {dict.settings.members.toLowerCase()}
                 </li>
                 <li className="flex items-center gap-1.5">
@@ -144,14 +144,14 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
 
       <Card className="overflow-hidden">
         <div className="px-4 py-4 sm:px-5">
-          <h2 className="text-sm font-bold text-forest">{dict.settings.billing}</h2>
+          <h2 className="text-sm font-bold text-heading">{dict.settings.billing}</h2>
         </div>
         {payments.length === 0 ? (
           <p className="px-4 pb-4 text-sm text-muted sm:px-5">{dict.common.noData}</p>
         ) : (
           <table className="w-full text-sm">
             <caption className="sr-only">{dict.nav.billing}</caption>
-            <thead className="bg-sand text-left text-[0.65rem] uppercase tracking-[0.08em] text-muted">
+            <thead className="bg-page text-left text-[0.65rem] uppercase tracking-[0.08em] text-muted">
               <tr>
                 <th scope="col" className="px-4 py-2 font-semibold sm:px-5">
                   {dict.common.date}
@@ -175,7 +175,7 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
                       {payment.status}
                     </Badge>
                   </td>
-                  <td className="kpi-value px-4 py-2.5 text-right text-xs text-forest sm:px-5">
+                  <td className="kpi-value px-4 py-2.5 text-right text-xs text-heading sm:px-5">
                     {formatMoney(BigInt(payment.amount_minor), payment.currency, moneyLocale(locale, payment.currency))}
                   </td>
                 </tr>

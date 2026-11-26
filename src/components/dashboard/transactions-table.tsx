@@ -51,23 +51,23 @@ export function TransactionsTable({
             const amount = BigInt(item.amountMinor);
 
             return (
-              <tr key={item.id} className="hover:bg-sand/50">
+              <tr key={item.id} className="hover:bg-page/50">
                 <Td className="whitespace-nowrap text-xs text-muted">{formatDate(item.occurredOn, intlLocale(locale))}</Td>
                 <Td>
                   <div className="flex items-center gap-2.5">
                     <span
                       className={
                         item.kind === "income"
-                          ? "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-jade-50 text-jade-700"
+                          ? "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent"
                           : item.kind === "expense"
-                            ? "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-mango-100 text-mango-600"
-                            : "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sand-200 text-muted"
+                            ? "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-warn-soft text-warn"
+                            : "grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-page-soft text-muted"
                       }
                     >
                       <Icon className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className={item.status === "voided" ? "truncate text-sm text-muted line-through" : "truncate text-sm font-semibold text-forest"}>
+                      <p className={item.status === "voided" ? "truncate text-sm text-muted line-through" : "truncate text-sm font-semibold text-heading"}>
                         {item.description}
                       </p>
                       <p className="truncate text-xs text-muted">
@@ -104,9 +104,9 @@ export function TransactionsTable({
                       item.status === "voided"
                         ? "kpi-value text-sm text-muted line-through"
                         : item.kind === "income"
-                          ? "kpi-value text-sm font-semibold text-jade-700"
+                          ? "kpi-value text-sm font-semibold text-accent"
                           : item.kind === "expense"
-                            ? "kpi-value text-sm font-semibold text-clay"
+                            ? "kpi-value text-sm font-semibold text-danger"
                             : "kpi-value text-sm font-semibold text-muted"
                     }
                   >

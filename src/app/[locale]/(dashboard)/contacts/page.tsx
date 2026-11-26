@@ -37,7 +37,7 @@ export default async function ContactsPage({
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.contacts.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.contacts.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.contacts.subtitle}</p>
         </div>
         {canWrite ? <NewContactForm /> : null}
@@ -68,7 +68,7 @@ export default async function ContactsPage({
             <li key={contact.id} className="surface p-4">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-forest">{contact.name}</p>
+                  <p className="truncate text-sm font-bold text-heading">{contact.name}</p>
                   <p className="mt-0.5 truncate text-xs text-muted">
                     {contact.phone ?? contact.email ?? dict.common.none}
                   </p>
@@ -93,7 +93,7 @@ export default async function ContactsPage({
                   href={contact.phone ? `tel:${contact.phone}` : contact.email ? `mailto:${contact.email}` : "#"}
                   className={
                     contact.phone || contact.email
-                      ? "text-xs font-semibold text-jade-700 hover:underline"
+                      ? "text-xs font-semibold text-accent hover:underline"
                       : "pointer-events-none text-xs text-muted"
                   }
                 >

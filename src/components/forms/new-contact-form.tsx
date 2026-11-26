@@ -33,11 +33,11 @@ export function NewContactForm() {
   return (
     <form key={`${formKey}-${state.status}`} action={action} className="surface w-full p-5 sm:max-w-md" noValidate>
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-forest">{dict.contacts.new}</h2>
+        <h2 className="text-sm font-bold text-heading">{dict.contacts.new}</h2>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="text-xs font-semibold text-muted hover:text-forest"
+          className="text-xs font-semibold text-muted hover:text-heading"
         >
           {dict.common.cancel}
         </button>

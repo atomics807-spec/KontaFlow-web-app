@@ -67,7 +67,7 @@ export function SyncStatus() {
 
   if (online && pending === 0 && !syncing) {
     return (
-      <span className="hidden items-center gap-1.5 rounded-full bg-jade-50 px-2.5 py-1 text-[0.7rem] font-semibold text-jade-700 sm:inline-flex">
+      <span className="hidden items-center gap-1.5 rounded-full bg-accent-soft px-2.5 py-1 text-[0.7rem] font-semibold text-accent sm:inline-flex">
         <span className="h-1.5 w-1.5 rounded-full bg-jade-500" aria-hidden />
         {dict.common.online}
       </span>
@@ -78,8 +78,8 @@ export function SyncStatus() {
     <span
       className={
         online
-          ? "inline-flex items-center gap-1.5 rounded-full bg-mango-100 px-2.5 py-1 text-[0.7rem] font-semibold text-mango-600"
-          : "inline-flex items-center gap-1.5 rounded-full bg-clay-soft px-2.5 py-1 text-[0.7rem] font-semibold text-clay"
+          ? "inline-flex items-center gap-1.5 rounded-full bg-warn-soft px-2.5 py-1 text-[0.7rem] font-semibold text-warn"
+          : "inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2.5 py-1 text-[0.7rem] font-semibold text-danger"
       }
       role="status"
       aria-live="polite"

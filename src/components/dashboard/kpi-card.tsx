@@ -35,9 +35,9 @@ export function KpiCard({
           <span
             className={cn(
               "grid h-8 w-8 place-items-center rounded-lg",
-              tone === "jade" && "bg-jade-50 text-jade-700",
-              tone === "mango" && "bg-mango-100 text-mango-600",
-              tone === "neutral" && "bg-sand-200 text-muted",
+              tone === "jade" && "bg-accent-soft text-accent",
+              tone === "mango" && "bg-warn-soft text-warn",
+              tone === "neutral" && "bg-page-soft text-muted",
             )}
           >
             <Icon className="h-4 w-4" aria-hidden />
@@ -45,16 +45,16 @@ export function KpiCard({
         ) : null}
       </div>
 
-      <p className="kpi-value mt-3 text-[1.55rem] font-semibold leading-tight text-forest">{value}</p>
+      <p className="kpi-value mt-3 text-[1.55rem] font-semibold leading-tight text-heading">{value}</p>
 
       <div className="mt-2 flex min-h-5 items-center gap-2">
         {hasDelta ? (
           <span
             className={cn(
               "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[0.7rem] font-bold",
-              good && "bg-jade-50 text-jade-700",
-              bad && "bg-clay-soft text-clay",
-              !good && !bad && "bg-sand-200 text-muted",
+              good && "bg-accent-soft text-accent",
+              bad && "bg-danger-soft text-danger",
+              !good && !bad && "bg-page-soft text-muted",
             )}
           >
             {up ? (

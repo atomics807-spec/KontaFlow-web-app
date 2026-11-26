@@ -4,19 +4,19 @@ import { cn } from "@/lib/utils";
 
 const TONES = {
   info: {
-    className: "border-jade-200 bg-jade-50 text-jade-700",
+    className: "border-accent-line bg-accent-soft text-accent",
     Icon: Info,
   },
   error: {
-    className: "border-clay/25 bg-clay-soft text-clay",
+    className: "border-danger/25 bg-danger-soft text-danger",
     Icon: AlertTriangle,
   },
   success: {
-    className: "border-jade-200 bg-jade-50 text-jade-700",
+    className: "border-accent-line bg-accent-soft text-accent",
     Icon: CheckCircle2,
   },
   warning: {
-    className: "border-mango-400/40 bg-mango-100 text-mango-600",
+    className: "border-warn/35 bg-warn-soft text-warn",
     Icon: AlertTriangle,
   },
 } as const;

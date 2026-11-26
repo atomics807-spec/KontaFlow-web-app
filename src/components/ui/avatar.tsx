@@ -11,9 +11,9 @@ export function Avatar({
   tone?: "jade" | "forest" | "mango";
 }) {
   const tones = {
-    jade: "bg-jade-100 text-jade-700",
+    jade: "bg-jade-100 text-accent",
     forest: "bg-forest text-white",
-    mango: "bg-mango-100 text-mango-600",
+    mango: "bg-warn-soft text-warn",
   } as const;
 
   return (

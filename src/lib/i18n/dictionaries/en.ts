@@ -51,6 +51,13 @@ export const en = {
     of: "of",
     required: "Required",
     select: "Select",
+    dismiss: "Dismiss",
+  },
+  theme: {
+    label: "Appearance",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
   },
   nav: {
     overview: "Overview",
@@ -172,6 +179,7 @@ export const en = {
     saveAndNew: "Save and add another",
     deleteConfirm: "Delete this transaction? This cannot be undone.",
     voidConfirm: "Void this transaction? It stays in the audit trail.",
+    voidNote: "Why are you voiding this entry? It stays in the audit trail.",
     voided: "Voided",
     posted: "Posted",
     filterAll: "All types",
@@ -179,6 +187,7 @@ export const en = {
     empty: "No transactions match yet",
     emptyHint: "Try a different filter, or record a new transaction.",
     createSuccess: "Transaction recorded.",
+    createSuccessHint: "Your ledger and balances are up to date.",
     createError: "Could not record the transaction.",
     thisMonthTotal: "This month",
     cash: "Cash",
@@ -324,6 +333,7 @@ export const en = {
   },
   marketing: {
     navFeatures: "Product",
+    navProduct: "Overview",
     navChannels: "Channels",
     navPricing: "Pricing",
     navSecurity: "Security",
@@ -337,6 +347,22 @@ export const en = {
     heroCtaPrimary: "Start free",
     heroCtaSecondary: "See how it works",
     heroNote: "No card required · XAF, XOF and more · English, French, Pidgin",
+    heroImageAlt: "KontaFlow dashboard showing cash flow, AI insights and channel badges",
+    showcaseTitle: "Built for how African businesses actually work",
+    showcaseSubtitle:
+      "Designed for a phone in one hand and the ledger in the other, with the detail your accountant will ask for.",
+    showcase1Title: "Bookkeeping that keeps itself honest",
+    showcase1Desc:
+      "Double-entry records, verified balances and a permanent audit trail. Amounts are stored in whole minor units, so a franc is never lost to rounding.",
+    showcase2Title: "Reports you can hand to a bank",
+    showcase2Desc:
+      "Monthly cash flow, top expense categories and CSV exports in FCFA, generated from the same ledger your transactions land in.",
+    showcase3Title: "An assistant that knows your numbers",
+    showcase3Desc:
+      "Ask in English, French or Pidgin. The assistant reads your live figures only through permission-checked tools, then explains what changed.",
+    showcase4Title: "Works on the phone you already own",
+    showcase4Desc:
+      "Record a sale over USSD or WhatsApp, or keep working offline in the PWA. Everything reconciles the moment the network returns.",
     trustedBy: "Built for the way business really works here",
     stat1Value: "3 sec",
     stat1Label: "to record a sale on USSD",

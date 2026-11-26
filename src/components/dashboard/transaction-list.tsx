@@ -82,10 +82,10 @@ export function TransactionList({
             <span
               className={cn(
                 "grid h-9 w-9 shrink-0 place-items-center rounded-xl",
-                item.kind === "income" && "bg-jade-50 text-jade-700",
-                item.kind === "expense" && "bg-mango-100 text-mango-600",
-                item.kind === "transfer" && "bg-sand-200 text-muted",
-                item.status === "voided" && "bg-sand-200 text-muted/60",
+                item.kind === "income" && "bg-accent-soft text-accent",
+                item.kind === "expense" && "bg-warn-soft text-warn",
+                item.kind === "transfer" && "bg-page-soft text-muted",
+                item.status === "voided" && "bg-page-soft text-muted/60",
               )}
             >
               <Icon className="h-4 w-4" aria-hidden />
@@ -94,7 +94,7 @@ export function TransactionList({
             <div className="min-w-0 flex-1">
               <p
                 className={cn(
-                  "truncate text-sm font-semibold text-forest",
+                  "truncate text-sm font-semibold text-heading",
                   item.status === "voided" && "text-muted line-through",
                 )}
               >
@@ -111,8 +111,8 @@ export function TransactionList({
               <p
                 className={cn(
                   "kpi-value text-sm font-semibold",
-                  item.kind === "income" && "text-jade-700",
-                  item.kind === "expense" && "text-clay",
+                  item.kind === "income" && "text-accent",
+                  item.kind === "expense" && "text-danger",
                   item.kind === "transfer" && "text-muted",
                   item.status === "voided" && "text-muted/60 line-through",
                 )}
@@ -157,10 +157,10 @@ export function TransactionListCard({
   return (
     <section className="surface overflow-hidden" aria-labelledby="recent-transactions">
       <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-5">
-        <h2 id="recent-transactions" className="text-base font-bold text-forest">
+        <h2 id="recent-transactions" className="text-base font-bold text-heading">
           {title}
         </h2>
-        <Link href={viewAllHref} className="text-xs font-semibold text-jade-700 hover:underline">
+        <Link href={viewAllHref} className="text-xs font-semibold text-accent hover:underline">
           {dict.common.viewAll}
         </Link>
       </div>

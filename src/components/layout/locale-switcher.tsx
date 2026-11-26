@@ -31,7 +31,7 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
         value={locale}
         disabled={pending}
         onChange={(event) => change(event.target.value)}
-        className="-ml-1 cursor-pointer appearance-none rounded-full bg-transparent py-1 pl-1 pr-5 font-semibold text-inherit hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/40"
+        className="-ml-1 cursor-pointer appearance-none rounded-full bg-transparent py-1 pl-1 pr-5 font-semibold text-inherit hover:text-heading focus:outline-none focus-visible:ring-2 focus-visible:ring-jade-500/40"
         aria-label={useI18n().dict.common.language}
       >
         {LOCALES.map((code) => (

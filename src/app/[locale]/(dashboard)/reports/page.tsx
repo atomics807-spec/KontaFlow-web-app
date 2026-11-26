@@ -96,7 +96,7 @@ export default async function ReportsPage({
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-forest">{dict.reports.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.reports.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.reports.subtitle}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -119,7 +119,7 @@ export default async function ReportsPage({
             className={
               preset === option
                 ? "rounded-full bg-forest px-3.5 py-1.5 text-xs font-bold text-white"
-                : "rounded-full border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-muted hover:border-jade-300 hover:text-forest"
+                : "rounded-full border border-line bg-panel px-3.5 py-1.5 text-xs font-semibold text-muted hover:border-accent-line hover:text-heading"
             }
           >
             {option === "month"
@@ -145,9 +145,9 @@ export default async function ReportsPage({
         <>
           <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label={dict.reports.profitAndLoss}>
             {[
-              { label: dict.reports.revenue, value: revenue, tone: "text-jade-700" },
-              { label: dict.reports.expenses, value: expenses, tone: "text-clay" },
-              { label: dict.reports.netProfit, value: net, tone: "text-forest" },
+              { label: dict.reports.revenue, value: revenue, tone: "text-accent" },
+              { label: dict.reports.expenses, value: expenses, tone: "text-danger" },
+              { label: dict.reports.netProfit, value: net, tone: "text-heading" },
             ].map((row) => (
               <Card key={row.label} className="p-5">
                 <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted">{row.label}</p>
@@ -156,7 +156,7 @@ export default async function ReportsPage({
             ))}
             <Card className="p-5">
               <p className="text-[0.7rem] font-semibold uppercase tracking-[0.1em] text-muted">{dict.reports.margin}</p>
-              <p className="kpi-value mt-2 text-xl font-semibold text-forest">
+              <p className="kpi-value mt-2 text-xl font-semibold text-heading">
                 {margin === null ? "—" : `${margin}%`}
               </p>
               <p className="mt-1 text-xs text-muted">
@@ -168,7 +168,7 @@ export default async function ReportsPage({
           <Card className="p-5 sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <h2 className="text-base font-bold text-forest">{dict.reports.profitAndLoss}</h2>
+                <h2 className="text-base font-bold text-heading">{dict.reports.profitAndLoss}</h2>
                 <p className="mt-0.5 text-sm text-muted">{dict.reports.byCategory}</p>
               </div>
               <Badge tone="jade">{dict.reports.profitAndLoss}</Badge>
@@ -186,7 +186,7 @@ export default async function ReportsPage({
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="p-5 sm:p-6">
-              <h2 className="text-base font-bold text-forest">{dict.reports.byCategory}</h2>
+              <h2 className="text-base font-bold text-heading">{dict.reports.byCategory}</h2>
               {report.byCategory.length === 0 ? (
                 <p className="mt-4 text-sm text-muted">{dict.reports.noData}</p>
               ) : (
@@ -198,13 +198,13 @@ export default async function ReportsPage({
                     return (
                       <li key={`${row.kind}-${row.name}`}>
                         <div className="flex items-baseline justify-between gap-3">
-                          <p className="truncate text-sm font-medium text-forest">
+                          <p className="truncate text-sm font-medium text-heading">
                             {row.translations?.[locale] ?? row.name}
                           </p>
-                          <p className="kpi-value shrink-0 text-sm text-forest">{money(total)}</p>
+                          <p className="kpi-value shrink-0 text-sm text-heading">{money(total)}</p>
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand-200">
+                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-page-soft">
                             <div
                               className="h-full rounded-full"
                               style={{ width: `${Math.max(percent, 2)}%`, backgroundColor: row.color || "#0B7A5A" }}
@@ -220,7 +220,7 @@ export default async function ReportsPage({
             </Card>
 
             <Card className="p-5 sm:p-6">
-              <h2 className="text-base font-bold text-forest">{dict.reports.topCustomer}</h2>
+              <h2 className="text-base font-bold text-heading">{dict.reports.topCustomer}</h2>
               {report.topCustomers.length === 0 ? (
                 <p className="mt-4 text-sm text-muted">{dict.reports.noData}</p>
               ) : (
@@ -228,8 +228,8 @@ export default async function ReportsPage({
                   {report.topCustomers.map((customer, index) => (
                     <li key={customer.name} className="flex items-center gap-3 py-2.5">
                       <span className="kpi-value w-5 text-xs text-muted">{index + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-forest">{customer.name}</span>
-                      <span className="kpi-value text-sm text-forest">{money(customer.total)}</span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-heading">{customer.name}</span>
+                      <span className="kpi-value text-sm text-heading">{money(customer.total)}</span>
                     </li>
                   ))}
                 </ul>

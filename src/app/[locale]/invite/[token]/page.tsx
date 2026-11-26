@@ -30,7 +30,7 @@ export default async function AcceptInvitationPage({
   }
 
   return (
-    <main id="main" className="grid min-h-dvh place-items-center bg-sand px-5 py-10">
+    <main id="main" className="grid min-h-dvh place-items-center bg-page px-5 py-10">
       <div className="w-full max-w-md">
         <div className="mb-6 flex justify-center">
           <Logo />
@@ -38,10 +38,10 @@ export default async function AcceptInvitationPage({
         <Card className="p-6 text-center sm:p-8">
           {error ? (
             <>
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-clay-soft text-clay">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-danger-soft text-danger">
                 <TriangleAlert className="h-6 w-6" aria-hidden />
               </span>
-              <h1 className="mt-4 text-xl font-extrabold text-forest">{dict.settings.acceptInviteError}</h1>
+              <h1 className="mt-4 text-xl font-extrabold text-heading">{dict.settings.acceptInviteError}</h1>
               <p className="mt-2 text-sm text-muted">{dict.settings.acceptInviteError}</p>
               <Link
                 href={`/${locale}/dashboard`}
@@ -52,10 +52,10 @@ export default async function AcceptInvitationPage({
             </>
           ) : (
             <>
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-jade-50 text-jade-700">
+              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent">
                 <UserPlus className="h-6 w-6" aria-hidden />
               </span>
-              <h1 className="mt-4 text-xl font-extrabold text-forest">{dict.settings.acceptInviteTitle}</h1>
+              <h1 className="mt-4 text-xl font-extrabold text-heading">{dict.settings.acceptInviteTitle}</h1>
               <p className="mt-2 text-sm text-muted">
                 {user.email} · {dict.settings.acceptInviteSubtitle}
               </p>

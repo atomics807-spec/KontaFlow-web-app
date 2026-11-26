@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ArrowLeftRight,
   ChevronDown,
@@ -15,14 +15,17 @@ import {
   Sparkles,
   UserCog,
   Users,
-  X,
 } from "lucide-react";
 import { LogoMark } from "@/components/layout/logo";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { SyncStatus } from "@/components/layout/sync-status";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { SignOutButton } from "@/components/forms/sign-out-button";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
+import { PageTransition } from "@/components/motion/page-transition";
 import { Avatar } from "@/components/ui/avatar";
+import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
@@ -44,13 +47,6 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [pending] = useTransition();
-
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
 
   const active = workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0];
 
@@ -86,7 +82,7 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
         className="w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 pr-9 text-sm font-semibold text-white outline-none transition hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-mango-400/60"
       >
         {workspaces.map((workspace) => (
-          <option key={workspace.id} value={workspace.id} className="text-forest">
+          <option key={workspace.id} value={workspace.id} className="text-heading">
             {workspace.name}
           </option>
         ))}
@@ -124,14 +120,6 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
             </span>
           </span>
         </Link>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="grid h-9 w-9 place-items-center rounded-full text-jade-100 hover:bg-white/10 lg:hidden"
-          aria-label={dict.common.close}
-        >
-          <X className="h-4 w-4" />
-        </button>
       </div>
 
       <div className="mt-5">{workspaceSwitcher}</div>
@@ -185,39 +173,36 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
         </div>
         <div className="mt-3 flex items-center justify-between rounded-xl bg-white/5 px-3 py-2">
           <LocaleSwitcher compact />
-          <span className="text-[0.65rem] text-jade-200/50">Africa/Douala</span>
+          <ThemeToggle tone="dark" />
         </div>
+        <p className="mt-2 px-1 text-[0.65rem] text-jade-200/50">Africa/Douala</p>
       </div>
     </>
   );
 
   return (
-    <div className="min-h-dvh bg-sand">
+    <div className="min-h-dvh bg-page">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[17.5rem] flex-col overflow-y-auto bg-forest px-3 py-5 lg:flex">
         {sidebarContent}
       </aside>
 
-      {open ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
-            aria-label={dict.common.close}
-          />
-          <aside className="absolute inset-y-0 left-0 flex w-[19rem] max-w-[86vw] flex-col overflow-y-auto bg-forest px-3 py-5 shadow-2xl">
-            {sidebarContent}
-          </aside>
-        </div>
-      ) : null}
+      <Drawer
+        open={open}
+        onClose={() => setOpen(false)}
+        side="left"
+        title={dict.nav.main}
+        closeLabel={dict.common.close}
+      >
+        <div className="flex flex-1 flex-col px-3 pb-5">{sidebarContent}</div>
+      </Drawer>
 
       <div className="lg:pl-[17.5rem]">
-        <header className="sticky top-0 z-20 border-b border-line/80 bg-sand/85 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-line/80 bg-page/85 backdrop-blur-md">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="grid h-10 w-10 place-items-center rounded-full border border-line bg-white text-forest lg:hidden"
+              className="grid h-10 w-10 place-items-center rounded-full border border-line bg-panel text-heading lg:hidden"
               aria-label={dict.nav.openMenu}
               aria-expanded={open}
             >
@@ -228,13 +213,15 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
             </Link>
 
             <div className="hidden min-w-0 items-center gap-2 lg:flex">
-              <span className="truncate text-sm font-bold text-forest">{active?.name}</span>
+              <span className="truncate text-sm font-bold text-heading">{active?.name}</span>
               <span className="text-xs text-muted">·</span>
               <span className="text-xs text-muted">{dict.dashboard.thisMonthLabel}</span>
             </div>
 
             <div className="ml-auto flex items-center gap-2">
               <SyncStatus />
+              <ThemeToggle className="hidden sm:inline-flex" />
+              <UserMenu name={user.name} email={user.email} />
               {canRecord ? (
                 <Link
                   href={`/${locale}/transactions/new`}
@@ -249,7 +236,7 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
         </header>
 
         <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>

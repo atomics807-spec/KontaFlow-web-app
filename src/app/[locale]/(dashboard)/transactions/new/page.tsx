@@ -40,10 +40,10 @@ export default async function NewTransactionPage({
   return (
     <div className="space-y-5">
       <header>
-        <Link href={`/${locale}/transactions`} className="text-xs font-semibold text-muted hover:text-forest">
+        <Link href={`/${locale}/transactions`} className="text-xs font-semibold text-muted hover:text-heading">
           ← {dict.transactions.title}
         </Link>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-forest">{dict.transactions.new}</h1>
+        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-heading">{dict.transactions.new}</h1>
         <p className="mt-1 text-sm text-muted">{context.workspace.name}</p>
       </header>
 
@@ -79,29 +79,29 @@ export default async function NewTransactionPage({
 
           <aside className="space-y-4">
             <Card className="p-5">
-              <h2 className="text-sm font-bold text-forest">{dict.dashboard.channels}</h2>
+              <h2 className="text-sm font-bold text-heading">{dict.dashboard.channels}</h2>
               <p className="mt-1 text-xs text-muted">{dict.dashboard.channelsSubtitle}</p>
               <ul className="mt-4 space-y-3 text-sm text-muted">
                 <li className="flex items-start gap-2.5">
-                  <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-jade-600" aria-hidden />
+                  <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
                   {dict.marketing.channelUssdDesc}
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-jade-600" aria-hidden />
+                  <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
                   {dict.marketing.channelWhatsappDesc}
                 </li>
                 <li className="flex items-start gap-2.5">
-                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-jade-600" aria-hidden />
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
                   {dict.marketing.channelAiDesc}
                 </li>
               </ul>
             </Card>
 
-            <Card className="border-jade-200 bg-jade-50/60 p-5">
+            <Card className="border-accent-line bg-jade-50/60 p-5">
               <div className="flex items-start gap-2.5">
-                <CloudOff className="mt-0.5 h-4 w-4 shrink-0 text-jade-700" aria-hidden />
+                <CloudOff className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
                 <div>
-                  <p className="text-sm font-bold text-jade-700">{dict.pwa.offlineNotice}</p>
+                  <p className="text-sm font-bold text-accent">{dict.pwa.offlineNotice}</p>
                   <p className="mt-1 text-xs leading-relaxed text-jade-700/80">{dict.pwa.installHint}</p>
                 </div>
               </div>

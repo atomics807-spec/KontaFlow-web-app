@@ -52,3 +52,26 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   workspace changes happen in Server Actions or Route Handlers.
 * Reports return `{ start, end }` from `monthBounds` but services expect
   `{ from, to }`; map explicitly.
+
+## Design system (Phase 2)
+
+* Tokens live in `src/app/globals.css`: raw brand palette in `@theme`, semantic
+  colours in `@theme inline` backed by `:root` / `.dark` variables. Use
+  `page`, `panel`, `panel-muted`, `line`, `heading`, `muted`, `accent*`,
+  `danger*`, `warn*` — do not reintroduce `bg-white`, `bg-sand`, `text-forest`
+  or raw jade/mango text on adaptive surfaces.
+* Never redeclare `--color-ink`, `--color-line` or `--color-muted` in the plain
+  `@theme` block; the literal overrides the runtime variable and dark mode
+  loses its contrast (this happened and was fixed).
+* Theme: cookie `kontaflow_theme` (`light|dark|system`), pre-paint script in
+  `src/app/[locale]/layout.tsx`, `ThemeProvider` + `useTheme`,
+  `ThemeToggle` (three-state, tooltips). `colorScheme: "light dark"` in viewport.
+* Motion: `MotionProvider` wraps the app with `reducedMotion="user"`. Use
+  `PageTransition`, `Reveal`, `SuccessCheck`; charts must gate Recharts
+  animation with `useReducedMotion()`.
+* UI kit in `src/components/ui`: dialog/confirm-dialog (native `<dialog>`),
+  drawer, dropdown, toast, tooltip, skeleton, table, empty-state. Reuse these
+  before writing bespoke markup.
+* Marketing art is original SVG under `public/illustrations/`; load with
+  `next/image` plus `unoptimized` (hand-authored SVGs, served statically).
+* Design documentation: `docs/design/design-system.md`.

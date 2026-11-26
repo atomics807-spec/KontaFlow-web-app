@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -17,7 +18,9 @@ import {
   WifiOff,
 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { Reveal } from "@/components/motion/reveal";
 import { useI18n } from "@/components/layout/i18n-provider";
+import { cn } from "@/lib/utils";
 
 function SectionHeading({
   eyebrow,
@@ -30,8 +33,8 @@ function SectionHeading({
 }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-jade-700">{eyebrow}</p>
-      <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-forest sm:text-4xl">{title}</h2>
+      <p className="text-[0.7rem] font-bold uppercase tracking-[0.16em] text-accent">{eyebrow}</p>
+      <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-heading sm:text-4xl">{title}</h2>
       {description ? <p className="mt-4 text-balance text-base leading-relaxed text-muted">{description}</p> : null}
     </div>
   );
@@ -61,17 +64,17 @@ export function ChannelsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={{ duration: 0.5, delay: index * 0.06 }}
-              className="group relative overflow-hidden rounded-2xl border border-line bg-white p-5 transition hover:-translate-y-0.5 hover:border-jade-300 hover:shadow-[0_20px_50px_-30px_rgba(8,60,45,0.5)]"
+              className="group relative overflow-hidden rounded-2xl border border-line bg-panel p-5 transition hover:-translate-y-0.5 hover:border-accent-line hover:shadow-[0_20px_50px_-30px_rgba(8,60,45,0.5)]"
             >
               <div className="flex items-center justify-between">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-jade-50 text-jade-700">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-accent-soft text-accent">
                   <channel.icon className="h-5 w-5" aria-hidden />
                 </span>
                 <span className="rounded-full border border-line px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-muted">
                   {channel.tag}
                 </span>
               </div>
-              <h3 className="mt-4 text-base font-bold text-forest">{channel.title}</h3>
+              <h3 className="mt-4 text-base font-bold text-heading">{channel.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{channel.description}</p>
             </motion.article>
           ))}
@@ -95,7 +98,7 @@ export function FeaturesSection() {
   ];
 
   return (
-    <section id="features" className="scroll-mt-24 border-y border-line bg-white py-20">
+    <section id="features" className="scroll-mt-24 border-y border-line bg-panel py-20">
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading eyebrow={m.navFeatures} title={m.featuresTitle} description={m.featuresSubtitle} />
         <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
@@ -106,10 +109,10 @@ export function FeaturesSection() {
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: "-40px" }}
               transition={{ duration: 0.45, delay: (index % 3) * 0.05 }}
-              className="bg-white p-6 transition hover:bg-sand/60"
+              className="bg-panel p-6 transition hover:bg-page/60"
             >
-              <feature.icon className="h-5 w-5 text-jade-600" aria-hidden />
-              <h3 className="mt-4 text-base font-bold text-forest">{feature.title}</h3>
+              <feature.icon className="h-5 w-5 text-accent-strong" aria-hidden />
+              <h3 className="mt-4 text-base font-bold text-heading">{feature.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{feature.description}</p>
             </motion.div>
           ))}
@@ -134,11 +137,11 @@ export function HowSection() {
         <SectionHeading eyebrow="01 — 03" title={m.howTitle} description={m.howSubtitle} />
         <ol className="mt-12 grid gap-5 md:grid-cols-3">
           {steps.map((step, index) => (
-            <li key={step.title} className="relative rounded-2xl border border-line bg-white p-6">
+            <li key={step.title} className="relative rounded-2xl border border-line bg-panel p-6">
               <span className="kpi-value absolute -top-4 left-6 rounded-full bg-forest px-3 py-1 text-xs font-semibold text-white">
                 0{index + 1}
               </span>
-              <h3 className="mt-3 text-base font-bold text-forest">{step.title}</h3>
+              <h3 className="mt-3 text-base font-bold text-heading">{step.title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">{step.description}</p>
             </li>
           ))}
@@ -230,8 +233,8 @@ export function PricingSection() {
               key={plan.key}
               className={
                 plan.popular
-                  ? "relative rounded-2xl border-2 border-jade-600 bg-white p-6 shadow-[0_30px_70px_-40px_rgba(8,60,45,0.55)]"
-                  : "relative rounded-2xl border border-line bg-white p-6"
+                  ? "relative rounded-2xl border-2 border-jade-600 bg-panel p-6 shadow-[0_30px_70px_-40px_rgba(8,60,45,0.55)]"
+                  : "relative rounded-2xl border border-line bg-panel p-6"
               }
             >
               {plan.popular ? (
@@ -239,10 +242,10 @@ export function PricingSection() {
                   {m.pricingMostPopular}
                 </span>
               ) : null}
-              <h3 className="text-lg font-bold text-forest">{plan.name}</h3>
+              <h3 className="text-lg font-bold text-heading">{plan.name}</h3>
               <p className="mt-1 text-sm text-muted">{plan.description}</p>
               <p className="mt-5 flex items-baseline gap-1.5">
-                <span className="kpi-value text-3xl font-semibold text-forest">{plan.price}</span>
+                <span className="kpi-value text-3xl font-semibold text-heading">{plan.price}</span>
                 <span className="text-sm font-medium text-muted">FCFA{dict.common.perMonth}</span>
               </p>
               <Link
@@ -257,11 +260,88 @@ export function PricingSection() {
               <ul className="mt-6 space-y-2.5">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm text-muted">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-jade-600" aria-hidden />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
                     {feature}
                   </li>
                 ))}
               </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const SHOWCASE = [
+  { key: 1, image: "/illustrations/bookkeeping.svg", width: 560, height: 420 },
+  { key: 2, image: "/illustrations/reports.svg", width: 560, height: 420 },
+  { key: 3, image: "/illustrations/ai-insights.svg", width: 560, height: 420 },
+  { key: 4, image: "/illustrations/mobile-access.svg", width: 560, height: 420 },
+] as const;
+
+export function ShowcaseSection() {
+  const { dict } = useI18n();
+  const m = dict.marketing;
+  const items = SHOWCASE.map((item) => {
+    const suffix = item.key as 1 | 2 | 3 | 4;
+    return {
+      ...item,
+      title: m[`showcase${suffix}Title` as keyof typeof m] as string,
+      description: m[`showcase${suffix}Desc` as keyof typeof m] as string,
+    };
+  });
+
+  return (
+    <section id="product" className="scroll-mt-24 py-20 sm:py-24">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHeading eyebrow={m.navFeatures} title={m.showcaseTitle} description={m.showcaseSubtitle} />
+
+        <div className="mt-14 space-y-16 sm:space-y-24">
+          {items.map((item, index) => (
+            <div
+              key={item.key}
+              className={cn(
+                "grid items-center gap-8 lg:grid-cols-2 lg:gap-16",
+                index % 2 === 1 && "lg:[&>*:first-child]:order-2",
+              )}
+            >
+              <Reveal>
+                <div className="relative">
+                  <div
+                    aria-hidden
+                    className={cn(
+                      "pointer-events-none absolute -inset-5 rounded-[2.6rem] blur-2xl",
+                      index % 2 === 0
+                        ? "bg-[radial-gradient(circle_at_30%_20%,rgba(22,169,126,0.22),transparent_65%)]"
+                        : "bg-[radial-gradient(circle_at_70%_30%,rgba(242,182,75,0.18),transparent_65%)]",
+                    )}
+                  />
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    width={item.width}
+                    height={item.height}
+                    unoptimized
+                    loading={index === 0 ? "eager" : "lazy"}
+                    className="relative h-auto w-full drop-shadow-[0_24px_50px_rgba(8,60,45,0.22)]"
+                  />
+                </div>
+              </Reveal>
+
+              <Reveal delay={0.08}>
+                <p className="kpi-value text-xs font-semibold uppercase tracking-[0.2em] text-accent">
+                  0{index + 1}
+                </p>
+                <h3 className="mt-3 text-balance text-2xl font-extrabold tracking-tight text-heading sm:text-3xl">
+                  {item.title}
+                </h3>
+                <p className="mt-3 max-w-lg text-base leading-relaxed text-muted">{item.description}</p>
+                <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-muted">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent-strong" aria-hidden />
+                  {dict.common.tagline}
+                </p>
+              </Reveal>
             </div>
           ))}
         </div>

@@ -29,12 +29,12 @@ export function OnboardingForm({ email }: { email: string }) {
 
   return (
     <div className="w-full max-w-xl">
-      <span className="inline-flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-muted">
-        <Building2 className="h-3.5 w-3.5 text-jade-600" aria-hidden />
+      <span className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5 text-xs font-semibold text-muted">
+        <Building2 className="h-3.5 w-3.5 text-accent-strong" aria-hidden />
         {email}
       </span>
 
-      <h1 className="mt-5 text-balance text-3xl font-extrabold tracking-tight text-forest sm:text-4xl">
+      <h1 className="mt-5 text-balance text-3xl font-extrabold tracking-tight text-heading sm:text-4xl">
         {dict.onboarding.title}
       </h1>
       <p className="mt-3 text-balance text-sm leading-relaxed text-muted sm:text-base">

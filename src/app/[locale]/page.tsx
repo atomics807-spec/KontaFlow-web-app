@@ -9,6 +9,7 @@ import {
   HowSection,
   PricingSection,
   SecuritySection,
+  ShowcaseSection,
 } from "@/components/marketing/sections";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
@@ -54,6 +55,7 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
         <Hero />
         <ChannelsSection />
         <FeaturesSection />
+        <ShowcaseSection />
         <HowSection />
         <SecuritySection />
         <PricingSection />

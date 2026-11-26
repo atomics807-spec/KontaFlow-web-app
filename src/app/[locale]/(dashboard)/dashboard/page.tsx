@@ -43,7 +43,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
   const header = (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-forest sm:text-[1.7rem]">
+        <h1 className="text-2xl font-extrabold tracking-tight text-heading sm:text-[1.7rem]">
           {dict.dashboard.greeting}
           {firstName ? `, ${firstName}` : ""}
         </h1>
@@ -66,9 +66,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         {header}
         <Card className="p-6">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-clay" aria-hidden />
+            <AlertTriangle className="mt-0.5 h-5 w-5 text-danger" aria-hidden />
             <div>
-              <p className="font-bold text-forest">{dict.errors.generic}</p>
+              <p className="font-bold text-heading">{dict.errors.generic}</p>
               <p className="mt-1 text-sm text-muted">{dict.errors.network}</p>
               <Link href={`/${locale}/dashboard`} className={buttonVariants({ variant: "secondary", size: "sm", className: "mt-4" })}>
                 {dict.common.retry}
@@ -157,7 +157,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
               aria-hidden
               className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(22,169,126,0.14),transparent_60%)]"
             />
-            <p className="relative text-lg font-extrabold text-forest">{dict.dashboard.noTransactions}</p>
+            <p className="relative text-lg font-extrabold text-heading">{dict.dashboard.noTransactions}</p>
             <p className="relative mx-auto mt-2 max-w-md text-sm text-muted">{dict.dashboard.noTransactionsHint}</p>
             <div className="relative mt-6 flex flex-col justify-center gap-2 sm:flex-row">
               <Link href={`/${locale}/transactions/new?kind=income`} className={buttonVariants({ size: "md" })}>
@@ -180,7 +180,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
         <section className="surface p-5 sm:p-6" aria-labelledby="cashflow-title">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
             <div>
-              <h2 id="cashflow-title" className="text-base font-bold text-forest">
+              <h2 id="cashflow-title" className="text-base font-bold text-heading">
                 {dict.dashboard.cashflow}
               </h2>
               <p className="mt-0.5 text-sm text-muted">{dict.dashboard.cashflowSubtitle}</p>
@@ -251,7 +251,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
       <div className="grid gap-4 lg:grid-cols-[1fr_1.55fr]">
         <section className="surface p-5 sm:p-6" aria-labelledby="categories-title">
           <div className="flex items-center justify-between">
-            <h2 id="categories-title" className="text-base font-bold text-forest">
+            <h2 id="categories-title" className="text-base font-bold text-heading">
               {dict.dashboard.topCategories}
             </h2>
             <Badge tone="outline">{dict.dashboard.thisMonthLabel}</Badge>
@@ -267,12 +267,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
                 return (
                   <li key={category.name}>
                     <div className="flex items-baseline justify-between gap-3">
-                      <p className="truncate text-sm font-semibold text-forest">
+                      <p className="truncate text-sm font-semibold text-heading">
                         {category.translations?.[locale] ?? category.name}
                       </p>
-                      <p className="kpi-value shrink-0 text-sm text-forest">{moneyFormat(total)}</p>
+                      <p className="kpi-value shrink-0 text-sm text-heading">{moneyFormat(total)}</p>
                     </div>
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-sand-200">
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-page-soft">
                       <div
                         className="h-full rounded-full"
                         style={{ width: `${Math.max(percent, 2)}%`, backgroundColor: category.color || "#0B7A5A" }}
@@ -321,9 +321,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ loca
           <Link
             key={action.label}
             href={action.href}
-            className="group flex items-center gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 text-sm font-semibold text-forest transition hover:border-jade-300 hover:bg-jade-50"
+            className="group flex items-center gap-3 rounded-2xl border border-line bg-panel px-4 py-3.5 text-sm font-semibold text-heading transition hover:border-accent-line hover:bg-accent-soft"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-sand-200 text-jade-700 transition group-hover:bg-white">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-page-soft text-accent transition group-hover:bg-panel">
               <action.icon className="h-4 w-4" aria-hidden />
             </span>
             {action.label}

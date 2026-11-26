@@ -3,17 +3,17 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 disabled:pointer-events-none disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-jade-600 active:scale-[0.985]",
+  "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 ease-out disabled:pointer-events-none disabled:opacity-55 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-strong active:scale-[0.985]",
   {
     variants: {
       variant: {
         primary: "bg-jade-600 text-white shadow-[0_10px_24px_-12px_rgba(11,122,90,0.8)] hover:bg-jade-700",
-        secondary: "bg-white text-forest border border-line hover:border-jade-300 hover:bg-jade-50",
-        ghost: "text-forest hover:bg-forest/5",
+        secondary: "border border-line bg-panel text-heading shadow-[0_1px_0_rgba(8,20,15,0.02)] hover:border-accent-line hover:bg-accent-soft",
+        ghost: "text-heading hover:bg-brand-soft",
         dark: "bg-forest text-white hover:bg-forest-700",
         danger: "bg-clay text-white hover:bg-clay/90",
-        mango: "bg-mango-500 text-forest hover:bg-mango-400",
-        link: "text-jade-700 underline-offset-4 hover:underline px-0",
+        mango: "bg-mango-500 text-heading hover:bg-mango-400",
+        link: "px-0 text-accent underline-offset-4 hover:underline",
       },
       size: {
         sm: "h-9 px-4 text-sm",
