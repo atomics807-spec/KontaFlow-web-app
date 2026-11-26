@@ -122,7 +122,7 @@ function reference(overrides: Partial<AiReferenceData> = {}): AiReferenceData {
     accounts,
     contacts,
     debts: [debt("debt-1", "contact-john", "Thursday stock", 10000, 3000)],
-    settings: { autoPost: false, autoPostMaxMinor: 5000n },
+    settings: { autoPost: false, autoPostMaxMinor: 5000n, insightsEnabled: true, analysisWindowDays: 180, advisorFocus: "balanced", advisorNote: null },
     ...overrides,
   };
 }
@@ -162,8 +162,8 @@ describe("AI transaction interpretation", () => {
       counter_account: null,
     };
     const withoutAccount = buildTransactionsDraft([{ ...base, account: null }], reference());
-    const withAccount = buildTransactionsDraft([{ ...base, account: "Cash" }], reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n } }));
-    const overLimit = buildTransactionsDraft([{ ...base, amount: "6000", account: "Cash" }], reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n } }));
+    const withAccount = buildTransactionsDraft([{ ...base, account: "Cash" }], reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n, insightsEnabled: true, analysisWindowDays: 180, advisorFocus: "balanced", advisorNote: null } }));
+    const overLimit = buildTransactionsDraft([{ ...base, amount: "6000", account: "Cash" }], reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n, insightsEnabled: true, analysisWindowDays: 180, advisorFocus: "balanced", advisorNote: null } }));
 
     expect(withoutAccount.ok && withoutAccount.draft.preview.autoPostEligible).toBe(false);
     expect(withAccount.ok && withAccount.draft.preview.autoPostEligible).toBe(true);
@@ -220,7 +220,7 @@ describe("AI transaction interpretation", () => {
   it("does not auto-post an Other expenses catch-all", () => {
     const result = buildTransactionsDraft(
       [{ kind: "expense", amount: "500", description: "Misc", category: "Other expenses", payment_method: null, occurred_on: null, contact: null, account: "Cash", counter_account: null }],
-      reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n } }),
+      reference({ settings: { autoPost: true, autoPostMaxMinor: 5000n, insightsEnabled: true, analysisWindowDays: 180, advisorFocus: "balanced", advisorNote: null } }),
     );
     expect(result.ok && result.draft.preview.autoPostEligible).toBe(false);
   });

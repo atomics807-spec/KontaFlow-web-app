@@ -3,6 +3,8 @@
  * clients. Regenerate with `supabase gen types typescript --local` after
  * schema changes and keep the RPC signatures in sync.
  */
+import type { AdvisorFocus, BusinessIntelligence } from "./ai-advisor";
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type WorkspaceRole = "owner" | "admin" | "accountant" | "manager" | "staff";
@@ -316,6 +318,17 @@ export type BusinessSettingsRow = {
   ai_auto_post: boolean;
   ai_auto_post_max_minor: number;
   metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AiWorkspacePreferencesRow = {
+  workspace_id: string;
+  insights_enabled: boolean;
+  analysis_window_days: number;
+  history_retention_days: number;
+  advisor_focus: AdvisorFocus;
+  advisor_note: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -723,6 +736,7 @@ export type Database = {
       ai_commands: TableDefinition<AiCommandRow>;
       ai_interactions: TableDefinition<AiInteractionRow>;
       business_settings: TableDefinition<BusinessSettingsRow>;
+      ai_workspace_preferences: TableDefinition<AiWorkspacePreferencesRow>;
       audit_logs: TableDefinition<AuditLogRow>;
       subscriptions: TableDefinition<SubscriptionRow>;
       payment_transactions: TableDefinition<PaymentTransactionRow>;
@@ -869,6 +883,41 @@ export type Database = {
       get_report: {
         Args: { p_workspace_id: string; p_from: string; p_to: string };
         Returns: ReportResult;
+      };
+      get_business_intelligence: {
+        Args: { p_workspace_id: string; p_from: string; p_to: string };
+        Returns: BusinessIntelligence;
+      };
+      update_ai_preferences: {
+        Args: {
+          p_workspace_id: string;
+          p_insights_enabled: boolean;
+          p_analysis_window_days: number;
+          p_history_retention_days: number;
+          p_advisor_focus: AdvisorFocus;
+          p_advisor_note: string | null;
+        };
+        Returns: {
+          workspace_id: string;
+          insights_enabled: boolean;
+          analysis_window_days: number;
+          history_retention_days: number;
+          advisor_focus: AdvisorFocus;
+          advisor_note: string | null;
+        };
+      };
+      purge_ai_history: {
+        Args: {
+          p_workspace_id: string;
+          p_older_than_days?: number | null;
+          p_delete_all?: boolean;
+        };
+        Returns: {
+          older_than_days: number;
+          messages: number;
+          interactions: number;
+          conversations: number;
+        };
       };
       consume_quota: {
         Args: { p_workspace_id: string; p_kind: UsageKind; p_limit?: number };

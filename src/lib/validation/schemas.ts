@@ -234,3 +234,11 @@ export const invoiceSchema = z
       ctx.addIssue({ code: "custom", path: ["dueOn"], message: "The due date must be on or after the issue date." });
     }
   });
+
+export const aiAdvisorPreferencesSchema = z.object({
+  insightsEnabled: z.boolean(),
+  analysisWindowDays: z.coerce.number().int().min(30).max(730),
+  historyRetentionDays: z.coerce.number().int().min(7).max(730),
+  advisorFocus: z.enum(["balanced", "cash_flow", "costs", "growth", "collections"]),
+  advisorNote: z.string().trim().max(500).optional().or(z.literal("")),
+});

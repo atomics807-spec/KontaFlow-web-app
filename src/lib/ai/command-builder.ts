@@ -8,6 +8,7 @@ import type {
   PaymentMethod,
   WorkspaceRow,
 } from "@/types/database";
+import type { AdvisorFocus } from "@/types/ai-advisor";
 import type {
   AiCommandAction,
   AiCommandDraft,
@@ -20,6 +21,10 @@ import type {
 export type AiSettings = {
   autoPost: boolean;
   autoPostMaxMinor: bigint;
+  insightsEnabled: boolean;
+  analysisWindowDays: number;
+  advisorFocus: AdvisorFocus;
+  advisorNote: string | null;
 };
 
 export type AiReferenceData = {

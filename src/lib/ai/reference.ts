@@ -3,12 +3,13 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { assertNoError } from "@/lib/supabase/errors";
 import { todayInZone } from "@/lib/dates";
+import type { AdvisorFocus } from "@/types/ai-advisor";
 import type { AccountRow, CategoryRow, ContactRow, DebtRow, WorkspaceRow } from "@/types/database";
 import type { AiReferenceData } from "./command-builder";
 
 export async function loadAiReference(workspace: WorkspaceRow): Promise<AiReferenceData> {
   const supabase = await createClient();
-  const [categories, accounts, contacts, debts, settings] = await Promise.all([
+  const [categories, accounts, contacts, debts, settings, preferences] = await Promise.all([
     supabase
       .from("categories")
       .select("*")
@@ -41,6 +42,11 @@ export async function loadAiReference(workspace: WorkspaceRow): Promise<AiRefere
       .select("ai_auto_post, ai_auto_post_max_minor")
       .eq("workspace_id", workspace.id)
       .maybeSingle(),
+    supabase
+      .from("ai_workspace_preferences")
+      .select("*")
+      .eq("workspace_id", workspace.id)
+      .maybeSingle(),
   ]);
 
   if (categories.error) throw assertNoError(categories.error, "Could not load categories.");
@@ -48,6 +54,7 @@ export async function loadAiReference(workspace: WorkspaceRow): Promise<AiRefere
   if (contacts.error) throw assertNoError(contacts.error, "Could not load contacts.");
   if (debts.error) throw assertNoError(debts.error, "Could not load debts.");
   if (settings.error) throw assertNoError(settings.error, "Could not load AI settings.");
+  if (preferences.error) throw assertNoError(preferences.error, "Could not load AI preferences.");
 
   return {
     workspace,
@@ -59,6 +66,10 @@ export async function loadAiReference(workspace: WorkspaceRow): Promise<AiRefere
     settings: {
       autoPost: Boolean(settings.data?.ai_auto_post),
       autoPostMaxMinor: BigInt(String(settings.data?.ai_auto_post_max_minor ?? 5000)),
+      insightsEnabled: Boolean(preferences.data?.insights_enabled ?? true),
+      analysisWindowDays: Number(preferences.data?.analysis_window_days ?? 180),
+      advisorFocus: (preferences.data?.advisor_focus ?? "balanced") as AdvisorFocus,
+      advisorNote: (preferences.data?.advisor_note as string | null | undefined) ?? null,
     },
   };
 }

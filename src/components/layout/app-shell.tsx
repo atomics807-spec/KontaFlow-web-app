@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   ArrowLeftRight,
+  BrainCircuit,
   ChevronDown,
   Coins,
   CreditCard,
@@ -60,6 +61,7 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
     { href: `/${locale}/accounts`, label: dict.nav.accounts, icon: Coins },
     { href: `/${locale}/contacts`, label: dict.nav.contacts, icon: Users },
     { href: `/${locale}/assistant`, label: dict.nav.assistant, icon: Sparkles },
+    { href: `/${locale}/insights`, label: dict.nav.insights, icon: BrainCircuit },
     { href: `/${locale}/reports`, label: dict.nav.reports, icon: FileBarChart2 },
   ];
 

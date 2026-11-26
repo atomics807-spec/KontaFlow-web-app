@@ -11,7 +11,6 @@ import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
-import { getCurrency } from "@/lib/currency";
 import { formatDate, monthBounds, todayInZone } from "@/lib/dates";
 import type { ReportResult } from "@/types/database";
 
@@ -88,8 +87,8 @@ export default async function ReportsPage({
 
   const series = (report?.dailySeries ?? []).map((point) => ({
     date: point.date,
-    income: Number(BigInt(point.income)) / 10 ** getCurrency(currency).decimals,
-    expense: Number(BigInt(point.expense)) / 10 ** getCurrency(currency).decimals,
+    income: Number(BigInt(point.income)),
+    expense: Number(BigInt(point.expense)),
   }));
 
   return (

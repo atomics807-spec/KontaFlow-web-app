@@ -1863,6 +1863,210 @@ async function main(): Promise<void> {
     );
     ok("staff cannot post AI-created debts", staffDebtConfirm?.code === "42501", staffDebtConfirm);
 
+    console.log("\nPhase 9 · AI preferences and business intelligence");
+    eq(
+      "AI preferences auto-provision for a new workspace",
+      await scalar(client, `select count(*) from ai_workspace_preferences where workspace_id = $1`, [idA]),
+      "1",
+    );
+    eq(
+      "AI preferences default to insights on and 180 days",
+      await scalar(
+        client,
+        `select insights_enabled::text || ':' || analysis_window_days from ai_workspace_preferences where workspace_id = $1`,
+        [idA],
+      ),
+      "true:180",
+    );
+    eq(
+      "workspace member can read AI preferences",
+      await asBob(`select count(*) from ai_workspace_preferences where workspace_id = $1`, [idA]),
+      "1",
+    );
+    eq(
+      "outsider cannot read AI preferences",
+      await asRole(client, "authenticated", charlie, (c) =>
+        scalar(c, `select count(*) from ai_workspace_preferences where workspace_id = $1`, [idA]),
+      ),
+      "0",
+    );
+
+    const nonOwnerPreferences = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `select public.update_ai_preferences($1, true, 180, 90, 'balanced', null)`,
+      [idA],
+    );
+    ok("accountant cannot change AI preferences", nonOwnerPreferences?.code === "42501", nonOwnerPreferences);
+
+    const updatedPreferences = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.update_ai_preferences($1, false, 90, 90, 'costs', 'We sell building materials and buy stock weekly.') as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("owner can disable insights", updatedPreferences.insights_enabled, false);
+    eq("owner focus is stored", updatedPreferences.advisor_focus, "costs");
+    eq("analysis window is stored", updatedPreferences.analysis_window_days, 90);
+    eq(
+      "preference change is audited",
+      await scalar(client, `select count(*) from audit_logs where workspace_id = $1 and action = 'ai.preferences_updated'`, [idA]),
+      "1",
+    );
+
+    const disabledIntelligence = await expectError(
+      client,
+      "authenticated",
+      alice,
+      `select public.get_business_intelligence($1, current_date - 30, current_date)`,
+      [idA],
+    );
+    ok("disabled insights block the analytics RPC", disabledIntelligence?.code === "42501", disabledIntelligence);
+
+    await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.update_ai_preferences($1, true, 180, 90, 'balanced', null) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+
+    const aIntelligence = await asRole(client, "authenticated", alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.get_business_intelligence($1, current_date - 30, current_date) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    const aReport = await asRole(client, "authenticated", alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.get_report($1, current_date - 30, current_date) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    const aTotals = aIntelligence.totals as Record<string, string>;
+    const aCoverage = aIntelligence.coverage as Record<string, unknown>;
+    eq("intelligence income matches the report", aTotals.incomeMinor, aReport.revenueMinor);
+    eq("intelligence expense matches the report", aTotals.expenseMinor, aReport.expenseMinor);
+    ok("intelligence counts posted transactions", Number(aCoverage.transactionCount) > 0, aCoverage);
+    ok("intelligence returns daily series", Array.isArray(aIntelligence.dailySeries));
+    ok("intelligence returns monthly series", Array.isArray(aIntelligence.monthlySeries));
+    ok("intelligence returns cash flow", Boolean(aIntelligence.cashFlow));
+
+    const crossTenantIntelligence = await expectError(
+      client,
+      "authenticated",
+      charlie,
+      `select public.get_business_intelligence($1, current_date - 30, current_date)`,
+      [idA],
+    );
+    ok("outsider cannot read another tenant's intelligence", crossTenantIntelligence?.code === "42501", crossTenantIntelligence);
+
+    const bIntelligence = await asRole(client, "authenticated", charlie, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.get_business_intelligence($1, current_date - 30, current_date) as data`,
+        [idB],
+      );
+      return result.rows[0]!.data;
+    });
+    const bTotals = bIntelligence.totals as Record<string, string>;
+    eq("staff can read own workspace intelligence", bTotals.incomeMinor, "7000");
+    eq("staff intelligence includes own expenses", bTotals.expenseMinor, "3000");
+
+    await commitAs(client, alice, async (c) => {
+      await c.query(
+        `select public.update_ai_preferences($1, true, 180, 7, 'balanced', null)`,
+        [idA],
+      );
+    });
+
+    const oldConversation = await client.query<{ id: string }>(
+      `insert into ai_conversations (workspace_id, user_id, title, created_at, updated_at)
+       values ($1, $2, 'Old advisor chat', now() - interval '30 days', now() - interval '30 days') returning id`,
+      [idA, ALICE],
+    );
+    await client.query(
+      `insert into ai_messages (conversation_id, workspace_id, role, content, created_at)
+       values ($1, $2, 'user', 'Old recorded question', now() - interval '30 days')`,
+      [oldConversation.rows[0]!.id, idA],
+    );
+
+    eq(
+      "retention hides old conversations from the owner",
+      await asAlice(`select count(*) from ai_conversations where workspace_id = $1`, [idA]),
+      "0",
+    );
+    eq(
+      "retention hides old messages from the owner",
+      await asAlice(`select count(*) from ai_messages where workspace_id = $1`, [idA]),
+      "0",
+    );
+
+    const nonOwnerPurge = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `select public.purge_ai_history($1, 7)`,
+      [idA],
+    );
+    ok("accountant cannot purge AI history", nonOwnerPurge?.code === "42501", nonOwnerPurge);
+
+    const purge = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.purge_ai_history($1, 7) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("purge reports removed messages", purge.messages, 1);
+    eq(
+      "purged conversation is gone",
+      await scalar(client, `select count(*) from ai_conversations where workspace_id = $1`, [idA]),
+      "0",
+    );
+    eq(
+      "purge is audited",
+      await scalar(client, `select count(*) from audit_logs where workspace_id = $1 and action = 'ai.history_purged'`, [idA]),
+      "1",
+    );
+
+    const recentConversation = await client.query<{ id: string }>(
+      `insert into ai_conversations (workspace_id, user_id, title) values ($1, $2, 'Recent advisor chat') returning id`,
+      [idA, ALICE],
+    );
+    await client.query(
+      `insert into ai_messages (conversation_id, workspace_id, role, content)
+       values ($1, $2, 'user', 'Recent recorded question')`,
+      [recentConversation.rows[0]!.id, idA],
+    );
+    eq(
+      "recent conversation is visible",
+      await asAlice(`select count(*) from ai_conversations where workspace_id = $1`, [idA]),
+      "1",
+    );
+
+    const purgeAll = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.purge_ai_history($1, null, true) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("delete-all purge removes the recent message", purgeAll.messages, 1);
+    eq(
+      "delete-all purge removes the recent conversation",
+      await scalar(client, `select count(*) from ai_conversations where workspace_id = $1`, [idA]),
+      "0",
+    );
+    eq(
+      "delete-all purge is audited separately",
+      await scalar(client, `select count(*) from audit_logs where workspace_id = $1 and action = 'ai.history_purged'`, [idA]),
+      "2",
+    );
+
     console.log("\nPhase 3 · tenant lifecycle");
     const workspaceC = await commitAs(client, dora, async (c) => {
       const result = await c.query<{ data: { id: string } }>(

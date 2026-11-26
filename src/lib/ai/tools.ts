@@ -6,8 +6,11 @@ import { recordChannelTransaction } from "@/lib/channels";
 import { formatMoney, parseMoneyToMinor } from "@/lib/money";
 import { todayInZone } from "@/lib/dates";
 import { recordTransaction } from "@/services/transactions";
+import { analysisBounds, getBusinessIntelligence } from "@/services/business-intelligence";
 import type { AccountRow, CategoryRow, ContactRow, WorkspaceRow } from "@/types/database";
+import type { AiWorkspacePreferences, BusinessIntelligence } from "@/types/ai-advisor";
 import { aiDebtPaymentProposalSchema, aiDebtProposalSchema, aiTransactionsProposalSchema } from "./schemas";
+import { buildAdvisorBrief } from "./advisor";
 import { buildDebtDraft, buildDebtPaymentDraft, buildTransactionsDraft, type AiReferenceData, type BuildResult } from "./command-builder";
 import type { AiCommandDraft, Clarification } from "./types";
 
@@ -258,6 +261,104 @@ async function contactsTool(context: ToolContext, args: { limit?: number }): Pro
   return { ok: true, data: data ?? [] };
 }
 
+async function businessIntelligence(
+  context: InteractiveToolContext,
+  args: { from?: string | null; to?: string | null },
+): Promise<ToolResult> {
+  const preferences: AiWorkspacePreferences = {
+    workspaceId: context.workspace.id,
+    insightsEnabled: context.reference.settings.insightsEnabled,
+    analysisWindowDays: context.reference.settings.analysisWindowDays,
+    historyRetentionDays: 90,
+    advisorFocus: context.reference.settings.advisorFocus,
+    advisorNote: context.reference.settings.advisorNote,
+  };
+  if (!preferences.insightsEnabled) {
+    return {
+      ok: false,
+      error: "Business intelligence is disabled by the workspace owner. Do not analyse or advise on financial trends.",
+    };
+  }
+
+  let from = args.from ?? null;
+  let to = args.to ?? null;
+  if (!from || !to) {
+    const bounds = analysisBounds(context.reference.today, preferences.analysisWindowDays);
+    from = from ?? bounds.from;
+    to = to ?? bounds.to;
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    return { ok: false, error: "Dates must use YYYY-MM-DD." };
+  }
+
+  let intelligence: BusinessIntelligence;
+  try {
+    intelligence = await getBusinessIntelligence(context.workspace.id, from, to);
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error && typeof error === "object" && "publicMessage" in error
+          ? String((error as { publicMessage: string }).publicMessage)
+          : "Could not read business intelligence.",
+    };
+  }
+
+  const brief = buildAdvisorBrief(intelligence, preferences.advisorFocus);
+  const currency = context.workspace.currency;
+  const formatEvidence = (evidence: { key: string; amountMinor: string; date?: string }) =>
+    `${evidence.key}: ${money(evidence.amountMinor, currency)}${evidence.date ? ` (${evidence.date})` : ""}`;
+
+  return {
+    ok: true,
+    data: {
+      period: brief.period,
+      previousPeriod: brief.previousPeriod,
+      coverage: brief.coverage,
+      focus: brief.focus,
+      totals: {
+        income: money(intelligence.totals.incomeMinor, currency),
+        expenses: money(intelligence.totals.expenseMinor, currency),
+        netRecordedResult: money(intelligence.totals.netResultMinor, currency),
+        previousIncome: money(intelligence.totals.previousIncomeMinor, currency),
+        previousExpenses: money(intelligence.totals.previousExpenseMinor, currency),
+      },
+      profitability: {
+        grossResultAvailable: intelligence.profitability.grossResultAvailable,
+        grossResult: intelligence.profitability.grossResultMinor
+          ? money(intelligence.profitability.grossResultMinor, currency)
+          : null,
+        stockCostsRecorded: money(intelligence.profitability.costOfGoodsMinor, currency),
+        note: "Net recorded result is income minus expenses, not an audited profit figure.",
+      },
+      cash: {
+        cashOnHand: money(intelligence.cashFlow.cashBalanceMinor, currency),
+        netMovement: money(intelligence.cashFlow.netMovementMinor, currency),
+      },
+      debts: {
+        owedToBusiness: money(intelligence.debts.receivableMinor, currency),
+        overdueFromCustomers: money(intelligence.debts.overdueReceivableMinor, currency),
+        owedToSuppliers: money(intelligence.debts.payableMinor, currency),
+        overdueToSuppliers: money(intelligence.debts.overduePayableMinor, currency),
+      },
+      facts: brief.facts.map((item) => ({
+        code: item.code,
+        params: item.params,
+        evidence: item.evidence.map(formatEvidence),
+        period: item.period ?? brief.period,
+      })),
+      suggestions: brief.suggestions.map((item) => ({
+        code: item.code,
+        params: item.params,
+        evidence: item.evidence.map(formatEvidence),
+        period: item.period ?? brief.period,
+      })),
+      instruction:
+        "Use facts as recorded. Present suggestions as options. Include the period and figures behind important claims.",
+    },
+  };
+}
+
 export const TOOL_DEFINITIONS = [
   {
     type: "function" as const,
@@ -492,10 +593,32 @@ const PROPOSAL_TOOL_DEFINITIONS = [
   },
 ];
 
+const ANALYSIS_TOOL_DEFINITIONS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "analyze_business",
+      description:
+        "Read-only, tenant-scoped analysis of recorded income, expenses, cash flow, categories, weekly changes, debts, budgets, recurring costs and revenue concentration. Always call this before giving financial advice, trend, cash-flow, debt or profitability answers. Use null dates for the owner's configured analysis window.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {
+          from: nullableString("YYYY-MM-DD start date, or null for the configured window."),
+          to: nullableString("YYYY-MM-DD end date, or null for today."),
+        },
+        required: ["from", "to"],
+        additionalProperties: false,
+      },
+    },
+  },
+];
+
 export const INTERACTIVE_TOOL_DEFINITIONS = [
   ...TOOL_DEFINITIONS.filter((tool) =>
     ["get_overview", "list_transactions", "list_contacts"].includes(tool.function.name),
   ),
+  ...ANALYSIS_TOOL_DEFINITIONS,
   ...PROPOSAL_TOOL_DEFINITIONS,
 ];
 
@@ -554,6 +677,8 @@ export async function executeInteractiveTool(
   context: InteractiveToolContext,
 ): Promise<ToolResult> {
   switch (name) {
+    case "analyze_business":
+      return businessIntelligence(context, args as { from?: string | null; to?: string | null });
     case "propose_transactions": {
       const parsed = aiTransactionsProposalSchema.safeParse(args);
       if (!parsed.success) {

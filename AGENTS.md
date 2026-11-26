@@ -244,6 +244,28 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
 * Transaction PDF rendering lives in `src/services/transactions-pdf.ts`; keep
   Helvetica-safe text sanitization because pdf-lib standard fonts are WinAnsi.
 
+## AI business advisor
+
+* Phase 9 stores per-workspace advisor settings in `ai_workspace_preferences`
+  (auto-provisioned, owner-write). `get_business_intelligence(uuid, date, date)`
+  is the only analytics read path: `security definer`, enforces
+  `app.is_workspace_member`, refuses when insights are disabled, and caps the
+  window at 730 days.
+* `src/services/business-intelligence.ts` parses the RPC JSON; do not do
+  cross-workspace joins in TypeScript. `src/lib/ai/advisor.ts` derives facts and
+  suggestions with integer minor units. Weekly category comparisons must require
+  a positive previous amount before claiming an increase.
+* `/insights` honours preferences and supports `?window=30|90|180|365|730`.
+  Disabled intelligence renders the owner notice instead of calling the RPC.
+* Migration 0033 enforces `history_retention_days`: `ai_conversations`,
+  `ai_messages` and `ai_interactions` select policies hide rows older than the
+  window, and old conversations cannot be updated back into view. The settings
+  delete button calls `purge_ai_history(..., p_delete_all => true)` so it really
+  removes every stored AI conversation while keeping `ai_commands` audit rows.
+* Recharts series values are integer minor units. Do not pre-divide by currency
+  decimals in pages; the chart formatters expect minor units and scale them
+  themselves. `CashflowChart` formats `YYYY-MM` ticks with the active locale.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

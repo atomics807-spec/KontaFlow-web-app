@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { formatMoneyCompact, moneyLocale } from "@/lib/money";
 import { useChartPalette } from "@/components/charts/use-chart-palette";
 
+/** Amounts are integer minor units so tooltips and axes share the ledger's money model. */
 export function DailyChart({
   data,
   currency,
@@ -14,6 +15,7 @@ export function DailyChart({
   incomeLabel,
   expenseLabel,
   emptyLabel,
+  xTick = "day",
 }: {
   data: { date: string; income: number; expense: number }[];
   currency: string;
@@ -23,11 +25,13 @@ export function DailyChart({
   incomeLabel: string;
   expenseLabel: string;
   emptyLabel: string;
+  xTick?: "day" | "date";
 }) {
   const palette = useChartPalette();
   const reduceMotion = useReducedMotion();
   const money = (value: number) =>
     formatMoneyCompact(BigInt(Math.round(value)), currency, moneyLocale(locale, currency));
+  const dateLabel = new Intl.DateTimeFormat(locale, { month: "short", day: "2-digit", timeZone: "UTC" });
 
   if (data.length === 0) {
     return (
@@ -50,19 +54,21 @@ export function DailyChart({
             <CartesianGrid stroke={palette.grid} strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="date"
-              tickFormatter={(value: string) => value.slice(8)}
+              tickFormatter={(value: string) =>
+                xTick === "date" ? dateLabel.format(new Date(`${value}T12:00:00Z`)) : value.slice(8)
+              }
               tickLine={false}
               axisLine={false}
               tick={{ fill: palette.axis, fontSize: 11 }}
               dy={6}
               interval="preserveStartEnd"
-              minTickGap={12}
+              minTickGap={xTick === "date" ? 24 : 12}
             />
             <YAxis
               tickFormatter={(value: number) => money(value)}
               tickLine={false}
               axisLine={false}
-              width={70}
+              width={86}
               tick={{ fill: palette.axis, fontSize: 11 }}
             />
             <Tooltip

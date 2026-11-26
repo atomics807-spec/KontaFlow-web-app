@@ -6,12 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkChannelForm, WorkspaceSettingsForm } from "@/components/forms/workspace-settings-form";
 import { AiSettingsForm } from "@/components/forms/ai-settings-form";
+import { AiAdvisorSettingsForm } from "@/components/forms/ai-advisor-settings-form";
 import { getAiSettings } from "@/services/ai-commands";
+import { getAiPreferences } from "@/services/ai-preferences";
 import { listAuditLogs, listChannelIdentities } from "@/services/workspaces";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
-import { formatDateTime } from "@/lib/dates";
+import { formatDateTime, addDays, formatDate, todayInZone } from "@/lib/dates";
 import { unlinkChannelAction } from "./actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -29,12 +31,27 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const canIntegrate = context.can("integrations:manage");
   const canAudit = context.can("audit:read");
   const canExport = context.can("reports:export");
+  const isOwner = context.role === "owner";
 
-  const [identities, audit, aiSettings] = await Promise.all([
+  const [identities, audit, aiSettings, aiPreferences] = await Promise.all([
     canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
     canAudit ? listAuditLogs(workspace.id, 25) : Promise.resolve([]),
     getAiSettings(workspace.id),
+    getAiPreferences(workspace.id),
   ]);
+
+  const analysisToDate = todayInZone(workspace.timezone);
+  const analysisFromDate = addDays(analysisToDate, -(aiPreferences.analysisWindowDays - 1));
+  const analysisFrom = formatDate(analysisFromDate, intlLocale(locale), workspace.timezone, {
+    day: "2-digit",
+    month: "short",
+    year: undefined,
+  });
+  const analysisTo = formatDate(analysisToDate, intlLocale(locale), workspace.timezone, {
+    day: "2-digit",
+    month: "short",
+    year: undefined,
+  });
 
   return (
     <div className="space-y-5">
@@ -112,6 +129,27 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
               maxMinor={aiSettings.autoPostMaxMinor}
               currency={workspace.currency}
               disabled={!canEdit}
+            />
+          </div>
+        </Card>
+      ) : null}
+
+      {canEdit ? (
+        <Card id="ai-advisor" className="p-5 sm:p-6">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
+            <div>
+              <h2 className="text-sm font-bold text-heading">{dict.settings.aiAdvisorTitle}</h2>
+              <p className="mt-0.5 text-xs text-muted">{dict.settings.aiAdvisorSubtitle}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <AiAdvisorSettingsForm
+              preferences={aiPreferences}
+              analysisFrom={analysisFrom}
+              analysisTo={analysisTo}
+              disabled={!isOwner}
+              isOwner={isOwner}
             />
           </div>
         </Card>

@@ -110,13 +110,10 @@ export default async function DashboardPage({
   const cash = toMinorUnits(summary.cashBalanceMinor);
   const prevIncome = toMinorUnits(summary.previousIncomeMinor);
   const prevExpense = toMinorUnits(summary.previousExpenseMinor);
-  const decimals = getCurrency(currency).decimals;
-  const factor = 10 ** decimals;
-
   const series = summary.monthlySeries.map((point) => ({
     month: point.month.slice(5),
-    income: Number(BigInt(point.income)) / factor,
-    expense: Number(BigInt(point.expense)) / factor,
+    income: Number(BigInt(point.income)),
+    expense: Number(BigInt(point.expense)),
   }));
 
   const hasActivity = income > 0n || expense > 0n || cash !== 0n;

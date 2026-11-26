@@ -7,8 +7,9 @@ import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { linkChannel, unlinkChannel, updateWorkspace } from "@/services/workspaces";
 import { updateAiSettings } from "@/services/ai-commands";
+import { purgeAiHistory, updateAiPreferences } from "@/services/ai-preferences";
 import { parseMoneyToMinor } from "@/lib/money";
-import { workspaceSchema } from "@/lib/validation/schemas";
+import { aiAdvisorPreferencesSchema, workspaceSchema } from "@/lib/validation/schemas";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
 import { persistLocalePreference } from "@/app/[locale]/locale-actions";
@@ -77,6 +78,63 @@ export async function updateAiSettingsAction(_prev: FormState, formData: FormDat
   revalidatePath(`/${locale}/settings`);
   revalidatePath(`/${locale}/assistant`);
   return formSuccess(dict.settings.aiAutoPostSaved);
+}
+
+export async function updateAiAdvisorSettingsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await getWorkspaceContext();
+  if (!context) return formError(dict.errors.unauthorized);
+  if (context.role !== "owner") return formError(dict.errors.forbidden);
+
+  const parsed = aiAdvisorPreferencesSchema.safeParse({
+    insightsEnabled: formData.get("insightsEnabled") === "on",
+    analysisWindowDays: formData.get("analysisWindowDays"),
+    historyRetentionDays: formData.get("historyRetentionDays"),
+    advisorFocus: formData.get("advisorFocus"),
+    advisorNote: formData.get("advisorNote") ?? "",
+  });
+  if (!parsed.success) return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
+
+  try {
+    await updateAiPreferences({
+      workspaceId: context.workspace.id,
+      insightsEnabled: parsed.data.insightsEnabled,
+      analysisWindowDays: parsed.data.analysisWindowDays,
+      historyRetentionDays: parsed.data.historyRetentionDays,
+      advisorFocus: parsed.data.advisorFocus,
+      advisorNote: parsed.data.advisorNote || null,
+    });
+  } catch (error) {
+    return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
+  }
+
+  revalidatePath(`/${locale}/settings`);
+  revalidatePath(`/${locale}/insights`);
+  revalidatePath(`/${locale}/assistant`);
+  return formSuccess(dict.settings.aiAdvisorSaved);
+}
+
+export async function purgeAiHistoryAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await getWorkspaceContext();
+  if (!context) return formError(dict.errors.unauthorized);
+  if (context.role !== "owner") return formError(dict.errors.forbidden);
+
+  try {
+    const result = await purgeAiHistory(context.workspace.id, { deleteAll: true });
+    revalidatePath(`/${locale}/settings`);
+    revalidatePath(`/${locale}/assistant`);
+    return formSuccess(
+      dict.settings.aiHistoryPurged.replace(
+        "{count}",
+        String(result.messages + result.interactions + result.conversations),
+      ),
+    );
+  } catch (error) {
+    return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
+  }
 }
 
 export async function linkChannelAction(_prev: FormState, formData: FormData): Promise<FormState> {

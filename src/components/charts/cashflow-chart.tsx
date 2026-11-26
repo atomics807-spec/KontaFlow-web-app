@@ -5,6 +5,7 @@ import { Area, AreaChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, X
 import { formatMoneyCompact, moneyLocale } from "@/lib/money";
 import { useChartPalette } from "@/components/charts/use-chart-palette";
 
+/** Amounts are integer minor units so tooltips and axes share the ledger's money model. */
 export type CashflowPoint = { month: string; income: number; expense: number };
 
 export function CashflowChart({
@@ -38,6 +39,7 @@ export function CashflowChart({
 
   const moneyFormat = (minor: number) =>
     formatMoneyCompact(BigInt(Math.round(minor)), currency, moneyLocale(locale, currency));
+  const shortMonth = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
 
   return (
     <motion.figure
@@ -62,6 +64,9 @@ export function CashflowChart({
             <CartesianGrid stroke={palette.grid} strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="month"
+              tickFormatter={(value: string) =>
+                /^\d{4}-\d{2}$/.test(value) ? shortMonth.format(new Date(`${value}-01T12:00:00Z`)) : value
+              }
               tickLine={false}
               axisLine={false}
               tick={{ fill: palette.axis, fontSize: 11 }}
@@ -71,7 +76,7 @@ export function CashflowChart({
               tickFormatter={(value: number) => moneyFormat(value)}
               tickLine={false}
               axisLine={false}
-              width={70}
+              width={86}
               tick={{ fill: palette.axis, fontSize: 11 }}
             />
             <Tooltip
