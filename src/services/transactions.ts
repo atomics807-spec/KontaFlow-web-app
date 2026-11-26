@@ -12,6 +12,7 @@ export type TransactionFilters = {
   from?: string;
   to?: string;
   limit?: number;
+  offset?: number;
 };
 
 export async function listTransactions(
@@ -24,8 +25,11 @@ export async function listTransactions(
     .select("*")
     .eq("workspace_id", workspaceId)
     .order("occurred_on", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(filters.limit ?? 50);
+    .order("created_at", { ascending: false });
+
+  const limit = filters.limit ?? 50;
+  const offset = filters.offset ?? 0;
+  query = query.range(offset, offset + limit - 1);
 
   if (filters.kind && filters.kind !== "all") query = query.eq("kind", filters.kind);
   if (filters.from) query = query.gte("occurred_on", filters.from);

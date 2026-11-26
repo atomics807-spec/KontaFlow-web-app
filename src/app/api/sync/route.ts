@@ -6,6 +6,8 @@ import { transactionSchema } from "@/lib/validation/schemas";
 import { can } from "@/lib/permissions";
 import { isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { parseMoneyToMinor } from "@/lib/money";
+import { hasIdempotencyConflict } from "@/lib/offline/conflict";
 import type { WorkspaceRole } from "@/types/database";
 
 const itemSchema = z.object({
@@ -37,7 +39,8 @@ const bodySchema = z.object({ items: z.array(itemSchema).min(1).max(100) });
 
 type Result = {
   clientGeneratedId: string;
-  status: "synced" | "duplicate" | "failed";
+  status: "synced" | "duplicate" | "failed" | "conflict";
+  code?: string;
   error?: string;
   transactionId?: string;
 };
@@ -72,7 +75,12 @@ export async function POST(request: Request) {
   for (const item of parsed.data.items) {
     const role = roles.get(item.workspaceId);
     if (!role || !can(role, "transactions:create")) {
-      results.push({ clientGeneratedId: item.clientGeneratedId, status: "failed", error: "forbidden" });
+      results.push({
+        clientGeneratedId: item.clientGeneratedId,
+        status: "failed",
+        code: "forbidden",
+        error: "You no longer have permission to record transactions in this business.",
+      });
       continue;
     }
 
@@ -94,6 +102,7 @@ export async function POST(request: Request) {
       results.push({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
+        code: "validation_failed",
         error: validated.error.issues[0]?.message ?? "invalid_payload",
       });
       continue;
@@ -104,6 +113,44 @@ export async function POST(request: Request) {
         channel: "sync",
         attachment: item.attachment ?? null,
       });
+
+      if (created.duplicate) {
+        const { data: existing, error: existingError } = await supabase
+          .from("transactions")
+          .select("kind, amount_minor, description, occurred_on")
+          .eq("id", created.id)
+          .maybeSingle();
+
+        if (existingError || !existing) {
+          results.push({
+            clientGeneratedId: item.clientGeneratedId,
+            status: "failed",
+            code: "server_error",
+            error: "Could not verify the existing entry.",
+          });
+          continue;
+        }
+
+        if (
+          hasIdempotencyConflict(existing, {
+            kind: validated.data.kind,
+            amountMinor: parseMoneyToMinor(validated.data.amount, item.currency).toString(),
+            description: validated.data.description,
+            occurredOn: validated.data.occurredOn,
+          })
+        ) {
+          results.push({
+            clientGeneratedId: item.clientGeneratedId,
+            status: "conflict",
+            code: "duplicate_conflict",
+            error:
+              "This device ID already belongs to a different transaction. Review the entry instead of overwriting it.",
+            transactionId: created.id,
+          });
+          continue;
+        }
+      }
+
       results.push({
         clientGeneratedId: item.clientGeneratedId,
         status: created.duplicate ? "duplicate" : "synced",
@@ -112,7 +159,12 @@ export async function POST(request: Request) {
     } catch (error) {
       const message = isAppError(error) ? error.publicMessage : "Could not sync this entry.";
       if (!isAppError(error)) logger.error("sync.item_failed", { error });
-      results.push({ clientGeneratedId: item.clientGeneratedId, status: "failed", error: message });
+      results.push({
+        clientGeneratedId: item.clientGeneratedId,
+        status: "failed",
+        code: isAppError(error) ? error.code : "server_error",
+        error: message,
+      });
     }
   }
 

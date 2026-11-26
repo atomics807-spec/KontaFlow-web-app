@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import { ExternalLink } from "lucide-react";
 import { PageHero } from "@/components/marketing/site";
 import { getSiteContent } from "@/lib/content";
@@ -45,7 +45,7 @@ export default async function PhotoCreditsPage({ params }: { params: Promise<{ l
           {credits.items.map((credit) => (
             <figure key={credit.file} className="overflow-hidden rounded-2xl border border-line bg-panel">
               <div className="relative aspect-[16/10]">
-                <Image
+                <AdaptiveImage
                   src={`/images/marketing/${credit.file}`}
                   alt={credit.title}
                   fill

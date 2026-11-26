@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       requestId: parsed.data.requestId,
       conversationId: parsed.data.conversationId ?? null,
       mode: "interactive",
+      autoPost: !parsed.data.requireConfirmation,
     });
     return NextResponse.json(result, { headers: { "cache-control": "no-store" } });
   } catch (error) {

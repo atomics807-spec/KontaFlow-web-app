@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
@@ -79,7 +79,7 @@ export function Hero() {
             className="pointer-events-none absolute -inset-6 rounded-[3rem] bg-[radial-gradient(circle_at_70%_20%,rgba(22,169,126,0.22),transparent_65%)] blur-2xl"
           />
           <div className="relative overflow-hidden rounded-[1.9rem] border border-line/80 bg-panel/70 p-2 shadow-pop backdrop-blur">
-            <Image
+            <AdaptiveImage
               src="/illustrations/hero-app.svg"
               alt={m.heroImageAlt}
               width={1200}

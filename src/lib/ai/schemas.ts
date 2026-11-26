@@ -43,6 +43,8 @@ export const aiRequestSchema = z.object({
   conversationId: z.uuid().nullable().optional(),
   requestId: z.string().trim().min(8).max(120),
   locale: z.string().optional(),
+  /** Offline-queued commands must never auto-post; the person confirms the preview. */
+  requireConfirmation: z.boolean().optional(),
 });
 
 export const aiCommandIdSchema = z.uuid();

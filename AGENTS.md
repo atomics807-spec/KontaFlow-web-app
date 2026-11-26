@@ -297,3 +297,25 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Offline-first / PWA
+
+* IndexedDB (`src/lib/offline/db.ts`, Dexie) holds the outbox, cached options,
+  AI queue and the last bootstrap. Every row carries `userId` and
+  `workspaceId`; purge other users on sign-in and purge everything on sign-out.
+* `syncOutbox` is single-flight per user/workspace and uses the client UUID as
+  the idempotency key. The server (`/api/sync`) re-checks membership and
+  `transactions:create`, validates with the shared Zod schema and calls
+  `record_transaction`. Never trust a client-supplied workspace id alone.
+* Treat a UUID mismatch as a conflict, not a duplicate: `hasIdempotencyConflict`
+  protects against overwriting a different transaction.
+* Backoff constants live in `src/lib/offline/policy.ts`; do not inline retry
+  delays in components. Recover stale `syncing` rows before each batch.
+* `public/sw.js` must keep `/api/*`, `/auth/*` and authenticated documents out
+  of runtime caches. Bump `VERSION` on every behaviour change; the app prompts
+  before activating a waiting worker.
+* `/en|fr|pcm/offline` and `/offline.html` are the navigation fallbacks.
+* `DataSaverProvider` follows `saveData`/`prefers-reduced-data` and offers a
+  manual toggle in the app shell. Keep low-data behavior in presentational
+  components, not in financial calculations.
+* See `docs/architecture/offline-first.md` for the full contract.

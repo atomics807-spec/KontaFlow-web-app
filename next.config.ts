@@ -27,6 +27,8 @@ const securityHeaders = [
       `connect-src 'self' https://*.supabase.co wss://*.supabase.co ${supabaseOrigin} ${supabaseSocket}`.trim(),
       "frame-ancestors 'none'",
       "object-src 'none'",
+      "worker-src 'self'",
+      "manifest-src 'self'",
       "base-uri 'self'",
       "form-action 'self'",
     ].join("; "),
@@ -36,6 +38,15 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  compress: true,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    qualities: [40, 55, 75, 90],
+    minimumCacheTTL: 86_400,
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts", "motion"],
+  },
   turbopack: {
     rules: {
       "*.css": {
@@ -53,7 +64,20 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [{ key: "Cache-Control", value: "public, max-age=3600" }],
+      },
+    ];
   },
 };
 

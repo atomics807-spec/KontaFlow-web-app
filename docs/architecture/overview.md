@@ -72,6 +72,15 @@ Dictionary modules are typed against the English shape, so a missing key is a
 compile error, and `tests/i18n.test.ts` asserts runtime parity across all three.
 Bundled dictionaries are the offline-safe source of truth. Tolgee can override any key at runtime through `src/lib/i18n/tolgee.ts`; when it is unreachable the app silently keeps the bundled copy. The client provider lives in `src/components/layout/i18n-provider.tsx`, and `npm run i18n:pull` checks the remote project against the bundled key set.
 
+## Offline-first
+
+The PWA is offline-first for recording, not for authoritative balances. Pending
+entries live in IndexedDB with a client UUID and sync through `POST /api/sync`,
+which re-checks membership, validates the payload and calls
+`record_transaction`. The service worker caches only the app shell and offline
+pages; authenticated API responses and tenant documents are never cached. See
+[offline-first.md](offline-first.md) for the queue, conflict and purge rules.
+
 ## Deployment-independent integrations
 
 Every provider sits behind a thin adapter so Vercel and Cloudflare deployments
@@ -98,9 +107,10 @@ src/app/[locale]/(dashboard)   dashboard, transactions, contacts, reports,
                                assistant, team, settings, billing
 src/app/[locale]/onboarding    first-run workspace creation
 src/app/[locale]/invite/[token] invitation acceptance
-src/app/api/{ai,sync,reports,ussd,whatsapp,cron}
-src/components/{ui,layout,forms,dashboard,charts,assistant}
-src/lib/{supabase,ai,i18n,validation,permissions,...}
+src/app/api/{ai,sync,offline,reports,ussd,whatsapp,cron}
+src/components/{ui,layout,forms,dashboard,charts,assistant,pwa,offline}
+src/lib/{supabase,ai,i18n,validation,permissions,offline,...}
+public/sw.js                   app-shell cache, navigation fallback, update flow
 src/services                  server-only data access
 supabase/migrations           ordered SQL schema + policies + RPCs
 tests                          unit tests (vitest)

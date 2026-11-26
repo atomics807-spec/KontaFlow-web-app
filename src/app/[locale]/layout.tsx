@@ -2,9 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import { I18nProvider } from "@/components/layout/i18n-provider";
-import { ServiceWorkerRegistrar } from "@/components/layout/sw-registrar";
 import { ThemeProvider } from "@/components/layout/theme-provider";
 import { MotionProvider } from "@/components/motion/motion-provider";
+import { DataSaverProvider } from "@/components/pwa/data-saver-provider";
+import { PwaLifecycle } from "@/components/pwa/pwa-lifecycle";
 import { ToastProvider } from "@/components/ui/toast";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
 import { LOCALES, LOCALE_META, isLocale, type Locale } from "@/lib/i18n/config";
@@ -24,6 +25,7 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500", "600"],
   variable: "--font-jetbrains",
   display: "swap",
+  preload: false,
 });
 
 export function generateStaticParams() {
@@ -50,6 +52,12 @@ export async function generateMetadata({
     description: dict.marketing.heroSubtitle,
     applicationName: dict.common.appName,
     manifest: "/manifest.webmanifest",
+    appleWebApp: {
+      capable: true,
+      title: "KontaFlow",
+      statusBarStyle: "default",
+    },
+    formatDetection: { telephone: false },
     icons: {
       icon: [
         { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -131,16 +139,18 @@ export default async function LocaleLayout({
         >
           {dict.common.continue}
         </a>
-        <ThemeProvider>
-          <I18nProvider key={locale} locale={locale} dict={dict}>
-            <MotionProvider>
-              <ToastProvider>
-                {children}
-                <ServiceWorkerRegistrar />
-              </ToastProvider>
-            </MotionProvider>
-          </I18nProvider>
-        </ThemeProvider>
+        <DataSaverProvider>
+          <ThemeProvider>
+            <I18nProvider key={locale} locale={locale} dict={dict}>
+              <MotionProvider>
+                <ToastProvider>
+                  {children}
+                  <PwaLifecycle />
+                </ToastProvider>
+              </MotionProvider>
+            </I18nProvider>
+          </ThemeProvider>
+        </DataSaverProvider>
       </body>
     </html>
   );

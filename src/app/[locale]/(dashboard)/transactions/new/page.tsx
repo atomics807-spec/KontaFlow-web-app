@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CloudOff, MessageCircle, Smartphone, Sparkles } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { TransactionForm } from "@/components/forms/transaction-form";
+import { OfflineOutboxPanel } from "@/components/offline/offline-outbox-panel";
 import { getTransactionOptions } from "@/services/transactions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
@@ -78,6 +79,7 @@ export default async function NewTransactionPage({
           </Card>
 
           <aside className="space-y-4">
+            <OfflineOutboxPanel compact />
             <Card className="p-5">
               <h2 className="text-sm font-bold text-heading">{dict.dashboard.channels}</h2>
               <p className="mt-1 text-xs text-muted">{dict.dashboard.channelsSubtitle}</p>

@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Download, FileText, Plus, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, FileText, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
+import { DebouncedSearch } from "@/components/dashboard/debounced-search";
+import { OfflineOutboxPanel } from "@/components/offline/offline-outbox-panel";
 import { listTransactions } from "@/services/transactions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
@@ -25,7 +27,7 @@ export default async function TransactionsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ kind?: string; q?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ kind?: string; q?: string; from?: string; to?: string; page?: string }>;
 }) {
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
@@ -39,7 +41,20 @@ export default async function TransactionsPage({
   const from = /^\d{4}-\d{2}-\d{2}$/.test(query.from ?? "") ? query.from : undefined;
   const to = /^\d{4}-\d{2}-\d{2}$/.test(query.to ?? "") ? query.to : undefined;
 
-  const items = await listTransactions(context.workspace.id, { kind, search, from, to, limit: 100 });
+  const PAGE_SIZE = 50;
+  const requestedPage = Number.parseInt(query.page ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const rows = await listTransactions(context.workspace.id, {
+    kind,
+    search,
+    from,
+    to,
+    limit: PAGE_SIZE + 1,
+    offset: (page - 1) * PAGE_SIZE,
+  });
+  const hasNext = rows.length > PAGE_SIZE;
+  const hasPrev = page > 1;
+  const items = rows.slice(0, PAGE_SIZE);
 
   const kindLabel = (value: TransactionKind | "all") =>
     value === "all"
@@ -58,6 +73,17 @@ export default async function TransactionsPage({
     if (to) params.set("to", to);
     params.set("locale", locale);
     return `/api/transactions/export${format === "pdf" ? "/pdf" : ""}?${params.toString()}`;
+  };
+
+  const pageHref = (nextPage: number) => {
+    const params = new URLSearchParams();
+    if (kind !== "all") params.set("kind", kind);
+    if (search) params.set("q", search);
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (nextPage > 1) params.set("page", String(nextPage));
+    const qs = params.toString();
+    return `/${locale}/transactions${qs ? `?${qs}` : ""}`;
   };
 
   const kindHref = (value: TransactionKind | "all") => {
@@ -116,20 +142,11 @@ export default async function TransactionsPage({
         <form method="get" className="flex flex-col gap-3 sm:flex-row sm:items-end">
           {kind !== "all" ? <input type="hidden" name="kind" value={kind} /> : null}
           <div className="min-w-0 flex-1">
-            <label htmlFor="q" className="sr-only">
-              {dict.common.search}
-            </label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
-              <Input
-                id="q"
-                name="q"
-                defaultValue={search}
-                placeholder={dict.transactions.searchPlaceholder}
-                className="pl-9"
-                maxLength={80}
-              />
-            </div>
+            <DebouncedSearch
+              defaultValue={search}
+              placeholder={dict.transactions.searchPlaceholder}
+              label={dict.common.search}
+            />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
             <div>
@@ -158,6 +175,8 @@ export default async function TransactionsPage({
 
       <p className="text-xs text-muted">{interpolate(dict.transactions.showingCount, { count: items.length }, { locale: intlLocale(locale) })}</p>
 
+      <OfflineOutboxPanel compact />
+
       <Card className="overflow-hidden">
         <TransactionsTable
           allowVoid={context.can("transactions:void")}
@@ -177,6 +196,38 @@ export default async function TransactionsPage({
           }))}
         />
       </Card>
+
+      {hasPrev || hasNext ? (
+        <nav className="flex items-center justify-between gap-2" aria-label={dict.pwa.pagination}>
+          <Link
+            href={pageHref(Math.max(1, page - 1))}
+            aria-disabled={!hasPrev}
+            className={buttonVariants({
+              variant: "secondary",
+              size: "sm",
+              className: hasPrev ? undefined : "pointer-events-none opacity-40",
+            })}
+          >
+            <ChevronLeft className="h-4 w-4" aria-hidden />
+            {dict.common.back}
+          </Link>
+          <span className="text-xs font-semibold text-muted">
+            {dict.pwa.page} {page}
+          </span>
+          <Link
+            href={pageHref(page + 1)}
+            aria-disabled={!hasNext}
+            className={buttonVariants({
+              variant: "secondary",
+              size: "sm",
+              className: hasNext ? undefined : "pointer-events-none opacity-40",
+            })}
+          >
+            {dict.common.next}
+            <ChevronRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </nav>
+      ) : null}
     </div>
   );
 }

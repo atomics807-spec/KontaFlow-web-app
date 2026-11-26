@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, CheckCircle2, Sparkles, TrendingUp } from "lucide-react";
 import type { HomeCopy } from "@/lib/content/types";
@@ -192,7 +192,7 @@ export function HomeHero({
 
         <div className="relative mx-auto w-full max-w-[34rem] pb-10 lg:max-w-none lg:pb-16">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-white/15 sm:aspect-[5/5] lg:aspect-[4/4.5] lg:rounded-b-none lg:border-b-0">
-            <Image
+            <AdaptiveImage
               src="/images/marketing/home-hero.webp"
               alt={copy.hero.imageAlt}
               fill

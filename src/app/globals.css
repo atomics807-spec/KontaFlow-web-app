@@ -322,3 +322,24 @@ dialog[data-side="right"][open] {
     animation: none;
   }
 }
+
+/* Low-data mode: stop decorative motion and expensive compositing. Images are
+   also requested at a lower quality and lazy-loaded by AdaptiveImage. */
+html[data-low-data="true"] *,
+html[data-low-data="true"] *::before,
+html[data-low-data="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+html[data-low-data="true"] .skeleton::after {
+  animation: none;
+}
+
+@media (prefers-reduced-data: reduce) {
+  html:not([data-low-data="false"]) .kf-decorative-image {
+    display: none;
+  }
+}

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import {
   ArrowDownLeft,
@@ -98,7 +98,7 @@ export function ProblemSection({ copy }: { copy: HomeCopy }) {
         <div className="mt-12 grid items-stretch gap-6 lg:grid-cols-[1.05fr_0.95fr]">
           <Reveal>
             <figure className="relative h-full min-h-[20rem] overflow-hidden rounded-[1.8rem] border border-line">
-              <Image
+              <AdaptiveImage
                 src="/images/marketing/market-douala.webp"
                 alt={copy.problem.imageAlt}
                 fill
@@ -200,7 +200,7 @@ export function AiSection({ copy }: { copy: HomeCopy }) {
         </div>
         <Reveal delay={0.08}>
           <div className="relative overflow-hidden rounded-[1.8rem] border border-white/15 bg-white/[0.06] p-2">
-            <Image
+            <AdaptiveImage
               src="/images/marketing/ai-bookkeeping-phone.webp"
               alt={copy.ai.imageAlt}
               width={900}
@@ -382,7 +382,7 @@ export function IncomeExpenseSection({ copy }: { copy: HomeCopy }) {
         <div className="grid items-center gap-10 lg:grid-cols-[0.92fr_1.08fr] lg:gap-14">
           <Reveal>
             <div className="relative overflow-hidden rounded-[1.8rem] border border-line">
-              <Image
+              <AdaptiveImage
                 src="/images/marketing/mobile-money.webp"
                 alt={copy.incomeExpense.imageAlt}
                 width={1200}
@@ -509,7 +509,7 @@ export function OfflineSection({ copy }: { copy: HomeCopy }) {
       <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
         <Reveal>
           <div className="relative overflow-hidden rounded-[1.8rem] border border-line bg-forest">
-            <Image
+            <AdaptiveImage
               src="/images/marketing/phone-feature.webp"
               alt={copy.offline.imageAlt}
               width={700}
@@ -690,7 +690,7 @@ export function ReportsSection({ copy }: { copy: HomeCopy }) {
         </div>
         <Reveal delay={0.08}>
           <div className="relative overflow-hidden rounded-[1.8rem] border border-line">
-            <Image
+            <AdaptiveImage
               src="/images/marketing/analysis-report.webp"
               alt={copy.reports.imageAlt}
               width={1200}

@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { CreditCard, LogOut, Settings } from "lucide-react";
 import { signOutAction } from "@/app/[locale]/(auth)/actions";
+import { clearOfflineDataBeforeSignOut } from "@/components/offline/offline-identity-provider";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { DropdownMenu } from "@/components/ui/dropdown";
@@ -28,7 +29,11 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
             label: dict.common.signOut,
             icon: LogOut,
             danger: true,
-            onSelect: () => formRef.current?.requestSubmit(),
+            onSelect: () => {
+              void clearOfflineDataBeforeSignOut()
+                .catch(() => undefined)
+                .finally(() => formRef.current?.requestSubmit());
+            },
           },
         ]}
       >

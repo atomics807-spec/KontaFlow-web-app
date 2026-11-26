@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Sparkles } from "lucide-react";
 import type { FaqItem, PageSection, SimplePageCopy, SiteContent } from "@/lib/content/types";
@@ -128,7 +128,7 @@ export function PageHero({
         </div>
 
         <div className="relative min-h-[18rem] lg:min-h-[31rem]">
-          <Image
+          <AdaptiveImage
             src={page.image}
             alt={page.imageAlt}
             fill

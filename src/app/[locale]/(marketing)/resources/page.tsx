@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock } from "lucide-react";
 import { CtaBand, PageHero, SectionHeading } from "@/components/marketing/site";
@@ -57,7 +57,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
             <Reveal>
               <article className="grid overflow-hidden rounded-[1.8rem] border border-line bg-panel lg:grid-cols-[1.05fr_0.95fr]">
                 <div className="relative min-h-[18rem] lg:min-h-[26rem]">
-                  <Image
+                  <AdaptiveImage
                     src={blog.featuredImage}
                     alt={blog.featuredImageAlt}
                     fill
@@ -107,7 +107,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
               <Reveal key={article.slug} delay={index * 0.05}>
                 <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-line bg-page">
                   <Link href={`/${locale}/resources/${article.slug}`} className="relative block aspect-[16/10] overflow-hidden">
-                    <Image
+                    <AdaptiveImage
                       src={article.image}
                       alt={article.imageAlt}
                       fill

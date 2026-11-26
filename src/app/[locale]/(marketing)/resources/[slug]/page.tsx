@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, CalendarDays, Clock } from "lucide-react";
@@ -101,7 +101,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ locale
 
         <div className="mx-auto w-full max-w-4xl px-4 pt-8 sm:px-6 sm:pt-10 lg:px-8">
           <div className="relative aspect-[16/9] overflow-hidden rounded-[1.6rem] border border-line shadow-pop">
-            <Image
+            <AdaptiveImage
               src={article.image}
               alt={article.imageAlt}
               fill

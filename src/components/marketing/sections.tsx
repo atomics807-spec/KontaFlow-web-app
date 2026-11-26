@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -317,7 +317,7 @@ export function ShowcaseSection() {
                         : "bg-[radial-gradient(circle_at_70%_30%,rgba(242,182,75,0.18),transparent_65%)]",
                     )}
                   />
-                  <Image
+                  <AdaptiveImage
                     src={item.image}
                     alt={item.title}
                     width={item.width}

@@ -70,6 +70,8 @@ export async function runAssistant(params: {
   requestId: string;
   conversationId?: string | null;
   mode?: AssistantMode;
+  /** Offline queues set this to false so the person must confirm the preview. */
+  autoPost?: boolean;
   /** Webhook channels have no user session; they run on the service role. */
   serviceRole?: boolean;
 }): Promise<AssistantReply> {
@@ -271,7 +273,11 @@ export async function runAssistant(params: {
         draft: interactiveContext.draft,
       });
 
-      if (reference?.settings.autoPost && interactiveContext.draft.preview.autoPostEligible) {
+      if (
+        params.autoPost !== false &&
+        reference?.settings.autoPost &&
+        interactiveContext.draft.preview.autoPostEligible
+      ) {
         try {
           command = await confirmAiCommand(command.id, true);
           reply = `${reply}\n\n${dict.assistant.autoPosted}\n${dict.assistant.undoHint}`;

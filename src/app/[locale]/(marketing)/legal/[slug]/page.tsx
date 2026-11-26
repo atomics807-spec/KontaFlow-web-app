@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import { AdaptiveImage } from "@/components/pwa/adaptive-image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight, Mail, ShieldCheck } from "lucide-react";
@@ -57,7 +57,7 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
             </p>
           </div>
           <div className="relative hidden min-h-[15rem] lg:block">
-            <Image
+            <AdaptiveImage
               src="/images/marketing/business-notes.webp"
               alt={content.common.illustrativePhotoAlt}
               fill

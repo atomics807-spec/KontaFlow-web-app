@@ -12,7 +12,9 @@ import { useI18n } from "@/components/layout/i18n-provider";
 import { moneyLocale, parseMoneyToMinor } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
 import { pickTranslation } from "@/lib/i18n/config";
-import { newClientId, queueItem, flushOutbox, type OutboxAttachment } from "@/lib/offline/outbox";
+import { enqueueTransaction, getOutboxItem, newClientId, type OutboxAttachment } from "@/lib/offline/outbox";
+import { requestBackgroundSync, syncOutbox } from "@/lib/offline/sync";
+import { useOfflineIdentity } from "@/components/offline/offline-identity-provider";
 import { cn } from "@/lib/utils";
 import type { AccountSubtype, CategoryKind, TransactionKind } from "@/types/database";
 
@@ -41,6 +43,7 @@ export function TransactionForm({
   const { locale, dict } = useI18n();
   const { toast } = useToast();
   const router = useRouter();
+  const identity = useOfflineIdentity();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [kind, setKind] = useState<TransactionKind>(defaultKind);
@@ -146,38 +149,55 @@ export function TransactionForm({
       return;
     }
 
+    if (!identity) {
+      setPending(false);
+      setMessage({ tone: "error", text: dict.errors.generic });
+      return;
+    }
+
     try {
-      await queueItem(item);
+      await enqueueTransaction(identity, item);
     } catch {
       setPending(false);
       setMessage({ tone: "error", text: dict.errors.generic });
       return;
     }
 
+    await requestBackgroundSync();
     setPending(true);
-    const result = await flushOutbox();
+    await syncOutbox(identity);
+    const saved = await getOutboxItem(item.clientGeneratedId);
     setPending(false);
 
-    if (result.remaining === 0 && result.synced > 0) {
+    form.reset();
+    setAmount("");
+    setCategoryId("");
+    setReceipt(null);
+
+    // Judge this entry by its own state: an older item elsewhere in the queue
+    // must not make a successful new transaction look like a failure.
+    if (saved?.status === "synced") {
       setMessage({ tone: "success", text: dict.transactions.createSuccess });
       toast({ title: dict.transactions.createSuccess, description: dict.transactions.createSuccessHint, tone: "success" });
-      form.reset();
-      setAmount("");
-      setCategoryId("");
-      setReceipt(null);
       router.refresh();
       return;
     }
 
-    if (typeof navigator !== "undefined" && !navigator.onLine) {
+    if (saved?.status === "attention") {
+      setMessage({ tone: "error", text: dict.pwa.syncNeedsAttention });
+      toast({ title: dict.pwa.syncNeedsAttention, tone: "error" });
+      router.refresh();
+      return;
+    }
+
+    if (saved?.status === "pending" || saved?.status === "failed" || saved?.status === "syncing") {
       setMessage({ tone: "warning", text: dict.transactions.offlineQueued });
       toast({ title: dict.transactions.offlineQueued, tone: "info" });
       return;
     }
 
-    const errorMessage = result.errors[0] ?? dict.transactions.createError;
-    setMessage({ tone: "error", text: errorMessage });
-    toast({ title: dict.errors.generic, description: errorMessage, tone: "error" });
+    setMessage({ tone: "error", text: dict.transactions.createError });
+    toast({ title: dict.errors.generic, tone: "error" });
   }
 
   return (

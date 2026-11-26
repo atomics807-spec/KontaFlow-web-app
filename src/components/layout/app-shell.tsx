@@ -27,6 +27,7 @@ import { SyncStatus } from "@/components/layout/sync-status";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { SignOutButton } from "@/components/forms/sign-out-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { DataSaverToggle } from "@/components/pwa/data-saver-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Avatar } from "@/components/ui/avatar";
@@ -230,6 +231,7 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
 
             <div className="ml-auto flex items-center gap-2">
               <SyncStatus />
+              <DataSaverToggle />
               <ThemeToggle className="hidden sm:inline-flex" />
               <UserMenu name={user.name} email={user.email} />
               {canRecord ? (
