@@ -266,6 +266,27 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   decimals in pages; the chart formatters expect minor units and scale them
   themselves. `CashflowChart` formats `YYYY-MM` ticks with the active locale.
 
+## Platform super administrators
+
+* Platform operators live in `public.platform_admins` (`super_admin`, `admin`,
+  `support`) and never in `workspace_members`; triggers reject both directions
+  of tenant linkage. The console is `/{locale}/admin`, protected by the request proxy
+  and `requirePlatformAdmin`, and uses its own `AdminShell`.
+* `app.is_user_restricted` is wired into `app.is_workspace_member` and
+  `app.workspace_role`, so every existing tenant policy and `SECURITY DEFINER`
+  financial RPC closes for a restricted account. Migration 0034 also adds a
+  restrictive `account_not_restricted` policy to every existing RLS table.
+  Exemptions: `profiles`, `account_restrictions` and the platform-only tables.
+* Restriction RPCs write `platform_admin_audit_log`. `limited` closes tenant
+  data but allows sign-in; `suspended` also sets a GoTrue `ban_duration` from
+  the server action. Keep the DB expiry and Auth ban in sync when changing the
+  restriction flow.
+* Provision demos with `npm run demo:super-admin` (reads `.env.local`); it
+  creates `superadmin@kontaflow.demo` and refuses the known demo password when
+  `APP_ENV=production` or `VERCEL_ENV=production`.
+* The auth sign-in action special-cases platform admins before the tenant
+  verification redirects, and tenant pages redirect platform admins to `/admin`.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 ## This is NOT the Next.js you know

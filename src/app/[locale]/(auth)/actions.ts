@@ -92,6 +92,30 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
       httpOnly: false,
     });
 
+    const { data: platformAdmin } = await supabase
+      .from("platform_admins")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (platformAdmin) {
+      revalidatePath("/", "layout");
+      redirect(`/${preferredLocale}/admin`);
+    }
+
+    const { data: restrictions } = await supabase
+      .from("account_restrictions")
+      .select("expires_at")
+      .eq("user_id", user.id)
+      .is("lifted_at", null);
+    const hasActiveRestriction = (restrictions ?? []).some(
+      (row) => row.expires_at === null || new Date(row.expires_at).getTime() > Date.now(),
+    );
+    if (hasActiveRestriction) {
+      revalidatePath("/", "layout");
+      redirect(`/${preferredLocale}/account-restricted`);
+    }
+
     if (profile?.verification_required) {
       if (!user.email_confirmed_at && !profile.email_verified_at) {
         redirect(

@@ -4,7 +4,7 @@ import { Logo } from "@/components/layout/logo";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
 import { OnboardingForm } from "@/components/forms/onboarding-form";
 import { SignOutButton } from "@/components/forms/sign-out-button";
-import { getWorkspaceContext, requireVerifiedUser } from "@/lib/supabase/auth";
+import { getPlatformAdmin, getWorkspaceContext, requireVerifiedUser } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -18,6 +18,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
   const dict = await getDictionary(locale);
   const { user, profile } = await requireVerifiedUser(locale, `/${locale}/onboarding`);
 
+  if (await getPlatformAdmin()) redirect(`/${locale}/admin`);
   const context = await getWorkspaceContext();
   if (context) redirect(`/${locale}/dashboard`);
 

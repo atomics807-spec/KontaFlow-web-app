@@ -156,6 +156,32 @@ Permissions-Policy: camera=(self), microphone=(), geolocation=()
 nonce-based CSP is the next step; it must be implemented in middleware and kept
 in sync with the framework version.
 
+## Platform administrators and account restrictions
+
+Platform operators are not tenant users. They are stored in
+`public.platform_admins`, which is readable only for the caller's own row and
+writable only through a `SECURITY DEFINER` RPC or the service role. Three
+triggers prevent an operator from owning a workspace, joining one, or converting
+an existing tenant account into an operator while it still belongs to a tenant.
+See `docs/architecture/platform-administration.md`.
+
+Account restrictions have two severities:
+
+- `limited` closes tenant access immediately through a restrictive RLS policy
+  and the shared membership helpers, while leaving sign-in and the reason page
+  available.
+- `suspended` does the same and also tells GoTrue to ban the Auth user for the
+  matching duration.
+
+Only `admin` and `super_admin` can restrict accounts. Only `super_admin` can
+create or deactivate other platform administrators; the last active super admin
+is protected by a database trigger. Every platform command writes an append-only
+audit row with the acting operator, target, safe details and request IP.
+
+The demo bootstrap script (`npm run demo:super-admin`) refuses to use its known
+demo password when `APP_ENV=production` or `VERCEL_ENV=production`; production provisioning requires an
+explicit `KONTAFLOW_SUPER_ADMIN_PASSWORD`.
+
 ## Logging and privacy
 
 `src/lib/logger.ts` emits structured JSON with a redaction list (tokens, keys,
@@ -169,6 +195,6 @@ action, entity and workspace — never full message bodies or credentials.
   `WHATSAPP_ACCESS_TOKEN`, `CRON_SECRET`, `USSD_CALLBACK_TOKEN` on a schedule.
 - Keep Supabase network restrictions / SSL enforcement on.
 - Enable Cloudflare WAF and rate limiting in front of `/api/*`.
-- Run `npm run test:db` (105 assertions) and `npm test` in CI before deploy.
+- Run `npm run test:db` and `npm test` in CI before deploy.
 - Verify RLS after any migration that adds a table (`alter table ... enable row
   level security` must be present).

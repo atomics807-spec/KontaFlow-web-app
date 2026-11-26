@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 import { can, permissionsForRole, type Permission, type WorkspaceRole } from "../permissions";
 import { createClient } from "./server";
 import type { ProfileRow, WorkspaceRow } from "@/types/database";
+import type { AccountRestrictionRow, PlatformAdminRow } from "@/types/platform-admin";
 
 export const WORKSPACE_COOKIE = "kontaflow_workspace";
 
@@ -41,6 +42,40 @@ export const getProfile = cache(async (): Promise<ProfileRow | null> => {
 
   const supabase = await createClient();
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+  return data ?? null;
+});
+
+export const getActiveRestriction = cache(async (): Promise<AccountRestrictionRow | null> => {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("account_restrictions")
+    .select("*")
+    .eq("user_id", user.id)
+    .is("lifted_at", null)
+    .order("created_at", { ascending: false });
+
+  const now = Date.now();
+  return (
+    (data ?? []).find((row) => row.expires_at === null || new Date(row.expires_at).getTime() > now) ??
+    null
+  );
+});
+
+/** Platform operators live outside tenant workspaces; this row is the source of truth. */
+export const getPlatformAdmin = cache(async (): Promise<PlatformAdminRow | null> => {
+  const user = await getSessionUser();
+  if (!user) return null;
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("platform_admins")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .maybeSingle();
   return data ?? null;
 });
 
@@ -143,6 +178,9 @@ export async function requireVerifiedUser(
   nextPath = `/${locale}/dashboard`,
 ): Promise<VerifiedIdentity> {
   const user = await requireUser(locale, nextPath);
+  const restriction = await getActiveRestriction();
+  if (restriction) redirect(`/${locale}/account-restricted`);
+
   const profile = await getProfile();
   const emailVerified = Boolean(user.email_confirmed_at || profile?.email_verified_at);
   const phoneVerified = Boolean(profile?.phone_verified_at);
@@ -161,6 +199,8 @@ export async function requireVerifiedUser(
 
 export async function requireWorkspaceContext(locale: string): Promise<WorkspaceContext> {
   await requireVerifiedUser(locale);
+  if (await getPlatformAdmin()) redirect(`/${locale}/admin`);
+
   const context = await getWorkspaceContext();
   if (!context) redirect(`/${locale}/onboarding`);
   return context;

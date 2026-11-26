@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getProfile, getSessionUser, WORKSPACE_COOKIE } from "@/lib/supabase/auth";
+import { getPlatformAdmin, getProfile, getSessionUser, WORKSPACE_COOKIE } from "@/lib/supabase/auth";
 import { mapSupabaseError } from "@/lib/supabase/errors";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
@@ -28,6 +28,7 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
   const dict = await getDictionary(locale);
   const user = await getSessionUser();
   if (!user) return formError(dict.errors.sessionExpired);
+  if (await getPlatformAdmin()) return formError(dict.admin.noAccess);
 
   const profile = await getProfile();
   if (!profile) return formError(dict.errors.generic);

@@ -4,6 +4,17 @@
  * schema changes and keep the RPC signatures in sync.
  */
 import type { AdvisorFocus, BusinessIntelligence } from "./ai-advisor";
+import type {
+  AccountRestrictionRow,
+  PlatformAdminAccount,
+  PlatformAdminAuditEntry,
+  PlatformAdminOverview,
+  PlatformAdminRole,
+  PlatformAdminRow,
+  PlatformAdminUser,
+  PlatformAdminWorkspace,
+  RestrictionSeverity,
+} from "./platform-admin";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
@@ -752,6 +763,18 @@ export type Database = {
       contact_messages: TableDefinition<ContactMessageRow>;
       ussd_sessions: TableDefinition<UssdSessionRow>;
       whatsapp_messages: TableDefinition<WhatsappMessageRow>;
+      platform_admins: TableDefinition<PlatformAdminRow>;
+      account_restrictions: TableDefinition<AccountRestrictionRow>;
+      platform_admin_audit_log: TableDefinition<{
+        id: string;
+        admin_user_id: string | null;
+        action: string;
+        target_type: string;
+        target_id: string | null;
+        details: Json;
+        ip: string | null;
+        created_at: string;
+      }>;
     };
     Views: {
       v_transactions: { Row: TransactionViewRow; Relationships: [] };
@@ -935,6 +958,68 @@ export type Database = {
           email: string;
         }[];
       };
+      platform_admin_overview: {
+        Args: Record<string, never>;
+        Returns: PlatformAdminOverview;
+      };
+      platform_admin_list_users: {
+        Args: { p_search?: string | null; p_limit?: number; p_offset?: number };
+        Returns: PlatformAdminUser[];
+      };
+      platform_admin_list_workspaces: {
+        Args: { p_search?: string | null; p_limit?: number; p_offset?: number };
+        Returns: PlatformAdminWorkspace[];
+      };
+      platform_admin_list_admins: {
+        Args: Record<string, never>;
+        Returns: PlatformAdminAccount[];
+      };
+      platform_admin_list_audit: {
+        Args: { p_limit?: number };
+        Returns: PlatformAdminAuditEntry[];
+      };
+      platform_admin_restrict_user: {
+        Args: {
+          p_user_id: string;
+          p_severity: RestrictionSeverity;
+          p_reason: string;
+          p_expires_at?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: {
+          id: string;
+          user_id: string;
+          severity: RestrictionSeverity;
+          reason: string;
+          expires_at: string | null;
+          created_at: string;
+        };
+      };
+      platform_admin_lift_restriction: {
+        Args: { p_restriction_id: string; p_reason?: string | null; p_ip?: string | null };
+        Returns: {
+          id: string;
+          user_id: string;
+          previous_severity: RestrictionSeverity;
+        };
+      };
+      platform_admin_set_workspace_plan: {
+        Args: {
+          p_workspace_id: string;
+          p_plan: WorkspacePlan;
+          p_note?: string | null;
+          p_ip?: string | null;
+        };
+        Returns: {
+          workspace_id: string;
+          previous_plan: WorkspacePlan;
+          plan: WorkspacePlan;
+        };
+      };
+      platform_admin_set_admin_status: {
+        Args: { p_user_id: string; p_is_active: boolean; p_ip?: string | null };
+        Returns: { user_id: string; is_active: boolean };
+      };
     };
     Enums: {
       workspace_role: WorkspaceRole;
@@ -956,6 +1041,8 @@ export type Database = {
       debt_direction: DebtDirection;
       debt_status: DebtStatus;
       goal_status: GoalStatus;
+      platform_admin_role: PlatformAdminRole;
+      restriction_severity: RestrictionSeverity;
     };
     CompositeTypes: Record<string, never>;
   };

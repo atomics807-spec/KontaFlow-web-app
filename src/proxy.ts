@@ -21,6 +21,7 @@ const PROTECTED_PAGES = [
   "/billing",
   "/onboarding",
   "/verify-phone",
+  "/admin",
 ];
 
 const STATIC_FILE = /\.(?:png|jpe?g|svg|ico|webp|avif|txt|xml|webmanifest|js|css|woff2?|map)$/i;

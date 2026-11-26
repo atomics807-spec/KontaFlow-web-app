@@ -18,12 +18,14 @@ const BOB = "22222222-2222-4222-8222-222222222222";
 const CHARLIE = "33333333-3333-4333-8333-333333333333";
 const DORA = "44444444-4444-4444-8444-444444444444";
 const EVE = "55555555-5555-4555-8555-555555555555";
+const SUPER = "66666666-6666-4666-8666-666666666666";
 
 const alice = { sub: ALICE, email: "alice@example.com", role: "authenticated" };
 const bob = { sub: BOB, email: "bob@example.com", role: "authenticated" };
 const charlie = { sub: CHARLIE, email: "charlie@example.com", role: "authenticated" };
 const dora = { sub: DORA, email: "dora@example.com", role: "authenticated" };
 const eve = { sub: EVE, email: "eve@example.com", role: "authenticated" };
+const superAdmin = { sub: SUPER, email: "super@example.com", role: "authenticated" };
 
 async function commitAs<T>(
   client: Client,
@@ -1021,7 +1023,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log')`,
       ),
       "",
     );
@@ -2065,6 +2067,241 @@ async function main(): Promise<void> {
       "delete-all purge is audited separately",
       await scalar(client, `select count(*) from audit_logs where workspace_id = $1 and action = 'ai.history_purged'`, [idA]),
       "2",
+    );
+
+    console.log("\nPhase 10 · platform administration");
+    await client.query(
+      `insert into auth.users (id, email, raw_user_meta_data)
+       values ($1, 'super@example.com', '{"full_name":"Super Operator"}'::jsonb)`,
+      [SUPER],
+    );
+    await client.query(
+      `update profiles set verification_required = false, email_verified_at = now(), phone_verified_at = now()
+       where id = $1`,
+      [SUPER],
+    );
+    await client.query(
+      `insert into platform_admins (user_id, role, is_active) values ($1, 'super_admin', true)`,
+      [SUPER],
+    );
+
+    const overview = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: Record<string, unknown> }>(
+        `select public.platform_admin_overview() as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    ok("platform overview reports users", Number(overview.users) >= 5, overview.users);
+    ok("platform overview reports workspaces", Number(overview.workspaces) >= 2, overview.workspaces);
+
+    eq(
+      "a normal tenant cannot open the platform overview",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.platform_admin_overview()`,
+        )
+      )?.code,
+      "42501",
+    );
+
+    const userList = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { email: string; workspaces: unknown[] }[] }>(
+        `select public.platform_admin_list_users('alice', 20, 0) as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform user search returns the matching account", userList.length, "1");
+    eq("platform user search includes tenant list", userList[0]!.workspaces.length, "2");
+
+    eq(
+      "platform admin cannot join a tenant",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          superAdmin,
+          `insert into workspace_members (workspace_id, user_id, role, status)
+           values ($1, $2, 'staff', 'active')`,
+          [idA, SUPER],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+    eq(
+      "platform admin cannot create a tenant",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          superAdmin,
+          `select public.create_workspace('Admin Co', 'XAF', 'CM', 'Africa/Douala', null, 'en')`,
+          [],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+
+    eq(
+      "tenant users cannot read the platform administrator directory",
+      await asAlice(`select count(*) from platform_admins`),
+      "0",
+    );
+    eq(
+      "platform administrators cannot be restricted as tenant accounts",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          superAdmin,
+          `select public.platform_admin_restrict_user(
+             $1, 'limited', 'Console operators must be deactivated instead', null, null
+           )`,
+          [SUPER],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+
+    const restriction = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { id: string } }>(
+        `select public.platform_admin_restrict_user(
+           $1, 'limited', 'Repeated failed payment reconciliation', now() + interval '1 day', null
+         ) as data`,
+        [BOB],
+      );
+      return result.rows[0]!.data;
+    });
+    ok("a platform admin can restrict an account", Boolean(restriction.id));
+
+    eq(
+      "restricted tenant loses workspace visibility",
+      await asBob(`select count(*) from workspaces where id = $1`, [idB]),
+      "0",
+    );
+    eq(
+      "restricted person can still read their own restriction",
+      await asBob(`select count(*) from account_restrictions where user_id = $1`, [BOB]),
+      "1",
+    );
+    eq(
+      "other tenants are unaffected by the restriction",
+      Number(await asAlice(`select count(*) from workspaces where id = $1`, [idA])) > 0,
+      true,
+    );
+    eq(
+      "tenant owner cannot lift a platform restriction",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          bob,
+          `select public.platform_admin_lift_restriction($1, 'self service', null)`,
+          [restriction.id],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    await commitAs(client, superAdmin, async (c) => {
+      await c.query(`select public.platform_admin_lift_restriction($1, 'Appeal accepted', null)`, [
+        restriction.id,
+      ]);
+      return true;
+    });
+    eq(
+      "lifting a restriction restores tenant access",
+      await asBob(`select count(*) from workspaces where id = $1`, [idB]),
+      "1",
+    );
+    eq(
+      "platform restrictions are audited",
+      await scalar(
+        client,
+        `select count(*) from platform_admin_audit_log where target_id = $1 and action in ('user.restricted', 'user.restriction_lifted')`,
+        [BOB],
+      ),
+      "2",
+    );
+
+    const planChange = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { previous_plan: string; plan: string } }>(
+        `select public.platform_admin_set_workspace_plan($1, 'growth', 'Support good-will upgrade', null) as data`,
+        [idB],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform plan change records the previous plan", planChange.previous_plan, "starter");
+    eq("workspace plan is updated", await scalar(client, `select plan from workspaces where id = $1`, [idB]), "growth");
+    eq(
+      "subscription plan follows the workspace",
+      await scalar(client, `select plan from subscriptions where workspace_id = $1`, [idB]),
+      "growth",
+    );
+
+    const workspaceList = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { id: string }[] }>(
+        `select public.platform_admin_list_workspaces('Mbarga', 20, 0) as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform workspace search finds the tenant", workspaceList[0]!.id, idB);
+
+    const adminList = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { role: string }[] }>(
+        `select public.platform_admin_list_admins() as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform admin directory lists the super admin", adminList[0]!.role, "super_admin");
+
+    eq(
+      "platform administrators cannot write the admin directory directly",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          superAdmin,
+          `update platform_admins set is_active = false where user_id = $1`,
+          [SUPER],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+    eq(
+      "the last super admin cannot be deactivated",
+      (
+        await expectError(
+          client,
+          "service_role",
+          null,
+          `update platform_admins set is_active = false where user_id = $1`,
+          [SUPER],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+    eq(
+      "a super admin cannot deactivate their own console account",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          superAdmin,
+          `select public.platform_admin_set_admin_status($1, false, null)`,
+          [SUPER],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
     );
 
     console.log("\nPhase 3 · tenant lifecycle");

@@ -49,6 +49,10 @@ export async function bootstrapLocalAuth(client: Client): Promise<void> {
 
     alter table auth.users
       add column if not exists email_confirmed_at timestamptz;
+    alter table auth.users
+      add column if not exists last_sign_in_at timestamptz;
+    alter table auth.users
+      add column if not exists banned_until timestamptz;
 
     create or replace function auth.jwt()
     returns jsonb

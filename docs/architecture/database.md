@@ -180,6 +180,21 @@ Webhooks and cron have no user session. `0010` wrappers accept an explicit
 actor, verify an active membership, then set `request.jwt.claims` locally before
 delegating to the user-facing RPC. They are granted to `service_role` only.
 
+## Platform administration tables (migration 0034)
+
+| Table | Purpose |
+| --- | --- |
+| `platform_admins` | Operator identity, role (`super_admin`, `admin`, `support`) and active flag. Never a tenant membership. |
+| `account_restrictions` | One active platform restriction per user, with severity, reason, expiry and lift metadata. |
+| `platform_admin_audit_log` | Append-only audit of every platform command. |
+
+`app.is_user_restricted(uuid, timestamptz)` is short-circuited into
+`app.is_workspace_member` and `app.workspace_role`, and a restrictive
+`account_not_restricted` RLS policy is installed on every existing public table
+that already had RLS. Exemptions are `profiles`, `account_restrictions` and the
+two platform-only tables. Read `docs/architecture/platform-administration.md`
+before adding a table that should participate in tenant isolation.
+
 ## Running migrations
 
 ```bash
@@ -200,12 +215,14 @@ PostgreSQL allows it (`if not exists`, `on conflict`, `drop ... if exists`).
 
 ## Test coverage
 
-`npm run test:db` currently runs 105 assertions. The Phase 3 block covers
+`npm run test:db` runs the full integration suite (250+ assertions). The Phase 3 block covers
 business-settings provisioning, plan catalogue linkage, invoice numbering,
 invoice totals and locking, debt repayment and overpayment, reversal mirroring
 and double-reversal protection, cross-tenant reads and writes for invoices,
 debts, budgets, inventory, AI suggestions, notification preferences and offline
 records, service-only table access, RLS presence on every public table, and
-`security_invoker` on the compatibility views. A lifecycle test deletes a whole
+`security_invoker` on the compatibility views. Phase 10 covers platform totals,
+operator RPCs, separation triggers, restriction enforcement, plan changes and
+the last-super-admin guard. A lifecycle test deletes a whole
 workspace that owns a sent invoice and a recorded payment, proving the
 delete-protection triggers yield during a tenant cascade.
