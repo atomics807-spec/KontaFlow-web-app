@@ -40,6 +40,13 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async redirects() {
+    return [
+      { source: "/:locale(en|fr|wes)/overview", destination: "/:locale", permanent: true },
+      { source: "/:locale(en|fr|wes)/product", destination: "/:locale/features", permanent: true },
+      { source: "/:locale(en|fr|wes)/channels", destination: "/:locale/services", permanent: true },
+    ];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
