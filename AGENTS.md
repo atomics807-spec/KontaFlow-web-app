@@ -433,3 +433,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   the next hourly run; a stale `sending` reservation is cleared after two hours.
 * The cron calls `has_workspace_feature` as `service_role`; that function
   allows the service role but keeps the membership check for tenant users.
+
+## Admin operations and transaction corrections
+
+* Apply `20260101000042_phase16_admin_operations.sql` before deploying.
+* Platform operations pages live under `/[locale]/admin/{support,usage,ai,email,ussd,whatsapp,security}`. Every page and server action calls `requirePlatformAdmin`/`guard`; the database repeats the `app.is_platform_admin()` check inside each RPC.
+* `system_announcements` is readable by authenticated users only while active, and the RLS policy limits `audience = 'workspace_admins'` rows to active owners/admins. `email_deliveries` and `support_access_grants` are service-role only.
+* Support access is time-boxed (1–72 hours), requires a written justification, cannot be self-approved, and is audited. The snapshot RPC increments `access_count` and refuses expired or revoked grants.
+* `amend_transaction(p_transaction_id, p_payload, p_reason)` is the only correction path. It validates the workspace, records the replacement and voids the original inside one database transaction, linking them through `metadata.amends_transaction_id`. Never edit posted ledger rows in place.
+* The dashboard quick-entry form reuses `record_transaction` with a per-submission `client_generated_id`; the AI command box calls `/api/ai/chat` with `requireConfirmation: true`, so it never posts without review.

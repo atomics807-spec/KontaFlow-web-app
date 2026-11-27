@@ -8,12 +8,25 @@ import type {
   AccountRestrictionRow,
   PlatformAdminAccount,
   PlatformAdminAuditEntry,
+  PlatformAdminOperationsOverview,
   PlatformAdminOverview,
+  PlatformAdminPayment,
   PlatformAdminRole,
   PlatformAdminRow,
   PlatformAdminUser,
   PlatformAdminWorkspace,
+  PlatformAiUsage,
+  PlatformEmailDelivery,
+  PlatformIntegrationStatus,
+  PlatformSecurityAudit,
+  PlatformSupportAccessGrant,
+  PlatformSupportRequest,
+  PlatformUssdActivity,
+  PlatformUsageMetrics,
+  PlatformWhatsappActivity,
   RestrictionSeverity,
+  SupportSnapshot,
+  SystemAnnouncement,
 } from "./platform-admin";
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
@@ -980,6 +993,50 @@ export type Database = {
         ip: string | null;
         created_at: string;
       }>;
+      system_announcements: TableDefinition<{
+        id: string;
+        title: string;
+        body: string;
+        tone: "info" | "success" | "warning" | "critical";
+        audience: "all" | "workspace_admins";
+        starts_at: string;
+        ends_at: string | null;
+        is_active: boolean;
+        created_by: string | null;
+        created_at: string;
+        updated_at: string;
+      }>;
+      email_deliveries: TableDefinition<{
+        id: string;
+        workspace_id: string | null;
+        recipient: string;
+        subject: string;
+        kind: string;
+        status: "sent" | "failed" | "skipped";
+        provider: string;
+        provider_message_id: string | null;
+        error: string | null;
+        metadata: Json;
+        created_at: string;
+      }>;
+      support_access_grants: TableDefinition<{
+        id: string;
+        workspace_id: string;
+        requested_by: string;
+        approved_by: string | null;
+        status: "pending" | "approved" | "denied" | "revoked" | "expired";
+        justification: string;
+        requested_hours: number;
+        decision_note: string | null;
+        requested_at: string;
+        decided_at: string | null;
+        expires_at: string | null;
+        revoked_at: string | null;
+        last_accessed_at: string | null;
+        access_count: number;
+        created_at: string;
+        updated_at: string;
+      }>;
     };
     Views: {
       v_transactions: { Row: TransactionViewRow; Relationships: [] };
@@ -1348,6 +1405,96 @@ export type Database = {
       platform_admin_set_admin_status: {
         Args: { p_user_id: string; p_is_active: boolean; p_ip?: string | null };
         Returns: { user_id: string; is_active: boolean };
+      };
+      amend_transaction: {
+        Args: { p_transaction_id: string; p_payload: Json; p_reason?: string | null };
+        Returns: Json;
+      };
+      platform_admin_operations_overview: {
+        Args: Record<string, never>;
+        Returns: PlatformAdminOperationsOverview;
+      };
+      platform_admin_list_payments: {
+        Args: { p_status?: string | null; p_search?: string | null; p_limit?: number; p_offset?: number };
+        Returns: PlatformAdminPayment[];
+      };
+      platform_admin_list_support_requests: {
+        Args: { p_status?: string | null; p_limit?: number };
+        Returns: PlatformSupportRequest[];
+      };
+      platform_admin_update_support_request: {
+        Args: { p_id: string; p_status: string; p_ip?: string | null };
+        Returns: Json;
+      };
+      platform_admin_integration_status: {
+        Args: Record<string, never>;
+        Returns: PlatformIntegrationStatus;
+      };
+      platform_admin_usage_metrics: {
+        Args: Record<string, never>;
+        Returns: PlatformUsageMetrics;
+      };
+      platform_admin_ai_usage: {
+        Args: Record<string, never>;
+        Returns: PlatformAiUsage;
+      };
+      platform_admin_email_delivery: {
+        Args: Record<string, never>;
+        Returns: PlatformEmailDelivery;
+      };
+      platform_admin_ussd_activity: {
+        Args: Record<string, never>;
+        Returns: PlatformUssdActivity;
+      };
+      platform_admin_whatsapp_activity: {
+        Args: Record<string, never>;
+        Returns: PlatformWhatsappActivity;
+      };
+      platform_admin_security_audit: {
+        Args: { p_limit?: number };
+        Returns: PlatformSecurityAudit;
+      };
+      platform_admin_list_announcements: {
+        Args: Record<string, never>;
+        Returns: SystemAnnouncement[];
+      };
+      platform_admin_save_announcement: {
+        Args: {
+          p_id?: string | null;
+          p_title?: string | null;
+          p_body?: string | null;
+          p_tone?: string;
+          p_audience?: string;
+          p_starts_at?: string | null;
+          p_ends_at?: string | null;
+          p_is_active?: boolean;
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
+      platform_admin_toggle_announcement: {
+        Args: { p_id: string; p_is_active: boolean; p_ip?: string | null };
+        Returns: Json;
+      };
+      platform_admin_support_access_list: {
+        Args: { p_limit?: number };
+        Returns: PlatformSupportAccessGrant[];
+      };
+      platform_admin_request_support_access: {
+        Args: { p_workspace_id: string; p_justification: string; p_hours?: number; p_ip?: string | null };
+        Returns: Json;
+      };
+      platform_admin_decide_support_access: {
+        Args: { p_grant_id: string; p_approve: boolean; p_note?: string | null; p_ip?: string | null };
+        Returns: Json;
+      };
+      platform_admin_revoke_support_access: {
+        Args: { p_grant_id: string; p_reason?: string | null; p_ip?: string | null };
+        Returns: Json;
+      };
+      platform_admin_support_snapshot: {
+        Args: { p_workspace_id: string };
+        Returns: SupportSnapshot;
       };
     };
     Enums: {

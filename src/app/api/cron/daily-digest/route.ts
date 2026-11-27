@@ -267,6 +267,8 @@ async function deliverEmail(
     html: message.html,
     text: message.text,
     idempotencyKey: `${workspace.id}:${recipient.userId}:${kind}:${reportDate}:email`,
+    workspaceId: workspace.id,
+    kind: `report_${kind}`,
   });
   if (result.sent) return { status: "sent", providerMessageId: result.id };
   if (result.reason === "not_configured") return { status: "skipped", error: "email_not_configured" };

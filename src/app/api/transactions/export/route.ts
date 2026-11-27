@@ -21,6 +21,12 @@ export async function GET(request: Request) {
   const kind = KINDS.includes(requestedKind as (typeof KINDS)[number])
     ? (requestedKind as (typeof KINDS)[number])
     : "all";
+  const requestedStatus = url.searchParams.get("status") ?? "all";
+  const status = ["posted", "voided", "all"].includes(requestedStatus)
+    ? (requestedStatus as "posted" | "voided" | "all")
+    : "all";
+  const categoryParam = url.searchParams.get("category") ?? "";
+  const categoryId = /^[0-9a-f-]{36}$/i.test(categoryParam) ? categoryParam : undefined;
   const search = (url.searchParams.get("q") ?? "").slice(0, 80);
   const fromParam = url.searchParams.get("from") ?? "";
   const toParam = url.searchParams.get("to") ?? "";
@@ -30,7 +36,7 @@ export async function GET(request: Request) {
 
   try {
     await consumeExportAllowance(context.workspace.id, context.user.id, "data_exports");
-    const csv = await exportTransactionRecordsCsv(context.workspace.id, { kind, search, from, to }, locale);
+    const csv = await exportTransactionRecordsCsv(context.workspace.id, { kind, status, categoryId, search, from, to }, locale);
     return new NextResponse(`\uFEFF${csv}`, {
       headers: {
         "content-type": "text/csv; charset=utf-8",

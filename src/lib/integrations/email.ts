@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 import { getServerEnv } from "../env";
 import { logger } from "../logger";
+import { createAdminClient, hasServiceRole } from "../supabase/admin";
 import { intlLocale, type Locale } from "../i18n/config";
 import { getDictionary } from "../i18n/server";
 import { interpolate } from "../i18n/interpolate";
@@ -16,6 +17,8 @@ export type EmailMessage = {
   replyTo?: string;
   /** Provider-level idempotency key. Resend deduplicates retries with the same key. */
   idempotencyKey?: string;
+  workspaceId?: string;
+  kind?: string;
 };
 
 export type SendResult = { sent: boolean; id?: string; reason?: string };
@@ -29,6 +32,7 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   const env = getServerEnv();
   if (!env.RESEND_API_KEY) {
     logger.info("email.skipped_not_configured", { to: message.to, subject: message.subject });
+    await logEmailDelivery(message, "skipped", "not_configured");
     return { sent: false, reason: "not_configured" };
   }
 
@@ -48,10 +52,37 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
       message.idempotencyKey ? { idempotencyKey: message.idempotencyKey } : undefined,
     );
     if (error) throw new Error(error.message);
+    await logEmailDelivery(message, "sent", null, data?.id);
     return { sent: true, id: data?.id };
   } catch (error) {
     logger.error("email.send_failed", { error, to: message.to });
+    await logEmailDelivery(message, "failed", error instanceof Error ? error.message : "provider_error");
     return { sent: false, reason: "provider_error" };
+  }
+}
+
+async function logEmailDelivery(
+  message: EmailMessage,
+  status: "sent" | "failed" | "skipped",
+  error: string | null,
+  providerMessageId?: string | null,
+): Promise<void> {
+  if (!hasServiceRole()) return;
+  try {
+    const admin = createAdminClient();
+    await admin.from("email_deliveries").insert({
+      workspace_id: message.workspaceId ?? null,
+      recipient: message.to.slice(0, 320),
+      subject: message.subject.slice(0, 500),
+      kind: (message.kind ?? "transactional").slice(0, 60),
+      status,
+      provider: "resend",
+      provider_message_id: providerMessageId ?? null,
+      error: error?.slice(0, 1000) ?? null,
+      metadata: message.idempotencyKey ? { idempotencyKey: message.idempotencyKey } : {},
+    });
+  } catch (logError) {
+    logger.warn("email.delivery_log_failed", { error: logError });
   }
 }
 

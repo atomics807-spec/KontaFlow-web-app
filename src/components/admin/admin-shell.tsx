@@ -5,9 +5,18 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   CreditCard,
+  Gauge,
   LayoutDashboard,
+  LifeBuoy,
+  Mail,
+  Megaphone,
+  MessageCircle,
+  PhoneCall,
+  PlugZap,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   UserCog,
   Users,
 } from "lucide-react";
@@ -35,6 +44,16 @@ export function AdminShell({ role, user, children }: AdminShellProps) {
     { href: `/${locale}/admin/users`, label: copy.users, icon: Users },
     { href: `/${locale}/admin/workspaces`, label: copy.workspaces, icon: Building2 },
     { href: `/${locale}/admin/plans`, label: copy.plans, icon: CreditCard },
+    { href: `/${locale}/admin/payments`, label: copy.payments, icon: CreditCard },
+    { href: `/${locale}/admin/support`, label: copy.support, icon: LifeBuoy },
+    { href: `/${locale}/admin/announcements`, label: copy.announcements, icon: Megaphone },
+    { href: `/${locale}/admin/integrations`, label: copy.integrations, icon: PlugZap },
+    { href: `/${locale}/admin/usage`, label: copy.usage, icon: Gauge },
+    { href: `/${locale}/admin/ai`, label: copy.aiUsage, icon: Sparkles },
+    { href: `/${locale}/admin/email`, label: copy.emailDelivery, icon: Mail },
+    { href: `/${locale}/admin/ussd`, label: copy.ussd, icon: PhoneCall },
+    { href: `/${locale}/admin/whatsapp`, label: copy.whatsapp, icon: MessageCircle },
+    { href: `/${locale}/admin/security`, label: copy.security, icon: ShieldAlert },
     ...(role === "super_admin"
       ? [{ href: `/${locale}/admin/admins`, label: copy.admins, icon: UserCog }]
       : []),
@@ -73,7 +92,7 @@ export function AdminShell({ role, user, children }: AdminShellProps) {
           <p className="mt-0.5 truncate text-[0.65rem] text-white/45">{user.email}</p>
         </div>
 
-        <nav aria-label={copy.console} className="mt-5 space-y-1">
+        <nav aria-label={copy.console} className="mt-5 space-y-1 overflow-y-auto pb-4">
           {items.map((item) => (
             <Link
               key={item.href}

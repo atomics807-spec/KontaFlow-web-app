@@ -1,3 +1,4 @@
+import { en } from "./en";
 import type { Dictionary } from "./en";
 
 export const fr: Dictionary = {
@@ -20,6 +21,7 @@ export const fr: Dictionary = {
     search: "Rechercher",
     filter: "Filtrer",
     back: "Retour",
+    switch: "Changer",
     next: "Suivant",
     continue: "Continuer",
     done: "Terminé",
@@ -263,6 +265,7 @@ export const fr: Dictionary = {
     welcomeDismiss: "Explorer le tableau de bord",
   },
   dashboard: {
+    ...en.dashboard,
     greeting: "Bonjour",
     subtitle: "Voici l'évolution de {business}.",
     income: "Recettes",
@@ -309,6 +312,7 @@ export const fr: Dictionary = {
     openDebts: "{count, plural, one {# dette ouverte} other {# dettes ouvertes}}",
   },
   transactions: {
+    ...en.transactions,
     title: "Transactions",
     subtitle: "Chaque franc qui entre et sort, dans un seul journal.",
     new: "Nouvelle transaction",
@@ -1465,6 +1469,7 @@ export const fr: Dictionary = {
     markAll: "Tout marquer comme lu",
   },
   admin: {
+    ...en.admin,
     console: "Console plateforme",
     badge: "Opérations",
     superAdmin: "Super administrateur",

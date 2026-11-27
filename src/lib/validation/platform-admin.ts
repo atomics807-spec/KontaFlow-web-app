@@ -84,6 +84,53 @@ export const platformAdminStatusSchema = z.object({
   active: z.enum(["true", "false"]).transform((value) => value === "true"),
 });
 
+export const announcementSchema = z
+  .object({
+    id: z.preprocess(emptyToNull, z.union([z.null(), uuid])),
+    title: z.string().trim().min(3, "Enter a title of at least 3 characters.").max(160),
+    body: z.string().trim().min(3, "Enter a message of at least 3 characters.").max(2000),
+    tone: z.enum(["info", "success", "warning", "critical"]),
+    audience: z.enum(["all", "workspace_admins"]),
+    startsAt: z.preprocess(emptyToNull, z.union([z.null(), z.iso.datetime({ local: true })])),
+    endsAt: z.preprocess(emptyToNull, z.union([z.null(), z.iso.datetime({ local: true })])),
+    isActive: z.enum(["true", "false"]).transform((value) => value === "true"),
+  })
+  .refine((value) => !value.endsAt || !value.startsAt || value.endsAt > value.startsAt, {
+    path: ["endsAt"],
+    message: "The end time must be after the start time.",
+  });
+
+export const announcementToggleSchema = z.object({
+  id: uuid,
+  active: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
+
+export const supportRequestStatusSchema = z.object({
+  id: uuid,
+  status: z.enum(["new", "read", "replied", "closed", "spam"]),
+});
+
+export const supportAccessRequestSchema = z.object({
+  workspaceId: uuid,
+  justification: z
+    .string()
+    .trim()
+    .min(20, "Explain what you need to investigate (at least 20 characters).")
+    .max(1000),
+  hours: z.coerce.number().int().min(1).max(72),
+});
+
+export const supportAccessDecisionSchema = z.object({
+  grantId: uuid,
+  decision: z.enum(["approve", "deny"]),
+  note: z.string().trim().max(500).optional(),
+});
+
+export const supportAccessRevokeSchema = z.object({
+  grantId: uuid,
+  reason: z.string().trim().max(500).optional(),
+});
+
 export function expiryFromDuration(duration: RestrictionDuration, now = new Date()): string | null {
   if (duration === "forever") return null;
   const hours = duration === "24h" ? 24 : duration === "7d" ? 24 * 7 : 24 * 30;

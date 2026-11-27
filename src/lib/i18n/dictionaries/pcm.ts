@@ -1,3 +1,4 @@
+import { en } from "./en";
 import type { Dictionary } from "./en";
 
 export const pcm: Dictionary = {
@@ -20,6 +21,7 @@ export const pcm: Dictionary = {
     search: "Find am",
     filter: "Filter",
     back: "Go back",
+    switch: "Switch",
     next: "Next",
     continue: "Continue",
     done: "Done",
@@ -262,6 +264,7 @@ export const pcm: Dictionary = {
     welcomeDismiss: "Explore the dashboard",
   },
   dashboard: {
+    ...en.dashboard,
     greeting: "Hello",
     subtitle: "See how {business} dey move.",
     income: "Moni wey kam in",
@@ -308,6 +311,7 @@ export const pcm: Dictionary = {
     openDebts: "{count, plural, one {# open debt} other {# open debts}}",
   },
   transactions: {
+    ...en.transactions,
     title: "Transactions",
     subtitle: "Every franc wey enter and comot, for one book.",
     new: "New transaction",
@@ -1461,6 +1465,7 @@ export const pcm: Dictionary = {
     markAll: "Mark all as read",
   },
   admin: {
+    ...en.admin,
     console: "Platform console",
     badge: "Operations",
     superAdmin: "Super administrator",

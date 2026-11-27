@@ -10,15 +10,21 @@ import { AiAdvisorSettingsForm } from "@/components/forms/ai-advisor-settings-fo
 import { ReportPreferencesForm } from "@/components/forms/report-preferences-form";
 import { getAiSettings } from "@/services/ai-commands";
 import { getAiPreferences } from "@/services/ai-preferences";
-import { listAuditLogs, listChannelIdentities } from "@/services/workspaces";
+import { getSubscription, listAuditLogs, listChannelIdentities } from "@/services/workspaces";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { formatDateTime, addDays, formatDate, todayInZone } from "@/lib/dates";
 import { getServerEnv } from "@/lib/env";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { getReportPreferences, getVerifiedWhatsappAddress, listReportDeliveries } from "@/services/report-preferences";
 import { unlinkChannelAction } from "./actions";
+
+function trialDaysRemaining(endsAt: string | null): number | null {
+  if (!endsAt) return null;
+  return Math.max(0, Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const dict = await getDictionary(resolveLocale((await params).locale));
@@ -39,7 +45,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const canExport = context.can("reports:export");
   const isOwner = context.role === "owner";
 
-  const [identities, audit, aiSettings, aiPreferences, reportPreferences, whatsappAddress, reportDeliveries, entitlements] =
+  const [identities, audit, aiSettings, aiPreferences, reportPreferences, whatsappAddress, reportDeliveries, entitlements, subscription] =
     await Promise.all([
       canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
       canAudit ? listAuditLogs(workspace.id, 25) : Promise.resolve([]),
@@ -49,6 +55,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
       getVerifiedWhatsappAddress(workspace.id, context.user.id).catch(() => null),
       listReportDeliveries(workspace.id, 8).catch(() => []),
       getWorkspaceEntitlements(workspace.id, context.user.id),
+      getSubscription(workspace.id),
     ]);
 
   const analysisToDate = todayInZone(workspace.timezone);
@@ -87,6 +94,34 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
         </span>
         <ChevronRight className="h-4 w-4 text-muted" aria-hidden />
       </Link>
+
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 className="text-base font-bold text-heading">{dict.dashboard.subscriptionTitle}</h2>
+            <p className="mt-0.5 text-xs text-muted">{dict.dashboard.planLabel}: {dict.plans[workspace.plan]}</p>
+          </div>
+          <Badge tone={subscription?.status === "active" || subscription?.status === "trialing" ? "jade" : "clay"}>
+            {subscription?.status ?? "—"}
+          </Badge>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+          {subscription?.trial_ends_at ? (
+            <span>
+              {interpolate(
+                dict.dashboard.trialRemaining,
+                { days: trialDaysRemaining(subscription.trial_ends_at) ?? 0 },
+                { locale: intlLocale(locale) },
+              )}
+            </span>
+          ) : subscription?.current_period_end ? (
+            <span>{dict.dashboard.manageSubscription}: {formatDate(subscription.current_period_end, intlLocale(locale))}</span>
+          ) : null}
+          <Link href={`/${locale}/billing`} className="font-bold text-accent hover:underline">
+            {dict.dashboard.manageSubscription}
+          </Link>
+        </div>
+      </Card>
 
       <Card className="p-5 sm:p-6">
         <h2 className="text-base font-bold text-heading">{dict.settings.businessProfile}</h2>

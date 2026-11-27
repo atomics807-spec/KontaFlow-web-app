@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableWrap, Td, Th } from "@/components/ui/table";
@@ -67,9 +68,12 @@ export function TransactionsTable({
                       <Icon className="h-3.5 w-3.5" aria-hidden />
                     </span>
                     <div className="min-w-0">
-                      <p className={item.status === "voided" ? "truncate text-sm text-muted line-through" : "truncate text-sm font-semibold text-heading"}>
+                      <Link
+                        href={`/${locale}/transactions/${item.id}`}
+                        className={item.status === "voided" ? "block truncate text-sm text-muted line-through" : "block truncate text-sm font-semibold text-heading hover:text-accent hover:underline"}
+                      >
                         {item.description}
-                      </p>
+                      </Link>
                       <p className="flex items-center gap-1.5 truncate text-xs text-muted">
                         <span className="truncate">
                           {item.contactName ? `${item.contactName} · ` : ""}

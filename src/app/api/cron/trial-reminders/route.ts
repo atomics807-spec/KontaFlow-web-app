@@ -132,7 +132,14 @@ async function run(request: Request): Promise<Response> {
           </a>
         </div>`;
 
-      const result = await sendEmail({ to: email, subject, html, text });
+      const result = await sendEmail({
+        to: email,
+        subject,
+        html,
+        text,
+        workspaceId: workspace.id,
+        kind: "trial_reminder",
+      });
       if (!result.sent) {
         skipped += 1;
         continue;

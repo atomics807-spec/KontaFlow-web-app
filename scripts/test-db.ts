@@ -1150,7 +1150,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries', 'email_deliveries', 'support_access_grants')`,
       ),
       "",
     );

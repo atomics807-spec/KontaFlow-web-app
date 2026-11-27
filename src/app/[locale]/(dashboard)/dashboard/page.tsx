@@ -6,6 +6,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   Banknote,
+  FileBarChart2,
+  FileText,
   HandCoins,
   Sparkles,
   Target,
@@ -17,11 +19,20 @@ import { CashflowChart } from "@/components/charts/cashflow-chart";
 import { KpiCard, deltaTenths } from "@/components/dashboard/kpi-card";
 import { TransactionListCard } from "@/components/dashboard/transaction-list";
 import { GettingStarted } from "@/components/dashboard/getting-started";
+import { QuickTransactionForm } from "@/components/dashboard/quick-transaction-form";
+import { AiCommandBox } from "@/components/dashboard/ai-command-box";
+import { SyncStatus } from "@/components/layout/sync-status";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 import { getDashboardSummary } from "@/services/dashboard";
+import { getTransactionOptions } from "@/services/transactions";
+import { getSubscription } from "@/services/workspaces";
+import { listActiveAnnouncements } from "@/services/announcements";
+import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { isAiConfigured } from "@/lib/ai/client";
 import { resolveLocale, intlLocale, pickTranslation } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -29,6 +40,11 @@ import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
 import { formatDate, monthBounds, todayInZone } from "@/lib/dates";
 import type { DashboardSummary } from "@/types/database";
+
+function trialDaysRemaining(endsAt: string | null): number | null {
+  if (!endsAt) return null;
+  return Math.max(0, Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86_400_000));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const dict = await getDictionary(resolveLocale((await params).locale));
@@ -59,9 +75,27 @@ export default async function DashboardPage({
     failed = true;
   }
 
+  const [subscription, announcements, transactionOptions] = await Promise.all([
+    getSubscription(workspace.id),
+    listActiveAnnouncements(3),
+    context.can("transactions:create") ? getTransactionOptions(workspace.id) : Promise.resolve(null),
+  ]);
+
   const currency = workspace.currency;
   const moneyFormat = (value: bigint) => formatMoney(value, currency, moneyLocale(locale, currency));
   const firstName = (profile.full_name || "").split(" ")[0];
+
+  const plan = subscription?.plan ?? workspace.plan;
+  const trialDaysLeft = trialDaysRemaining(subscription?.trial_ends_at ?? null);
+  const subscriptionEnded =
+    Boolean(subscription) &&
+    (subscription?.status === "canceled" || subscription?.status === "past_due" || subscription?.status === "paused");
+  const visibleAnnouncements = announcements.filter(
+    (announcement) =>
+      announcement.audience === "all" ||
+      context.role === "owner" ||
+      context.role === "admin",
+  );
 
   const header = (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -75,6 +109,7 @@ export default async function DashboardPage({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <SyncStatus />
         <Badge tone="forest">
           {formatDate(period.from, intlLocale(locale), workspace.timezone)} —{" "}
           {formatDate(period.to, intlLocale(locale), workspace.timezone)}
@@ -139,6 +174,30 @@ export default async function DashboardPage({
     <div className="space-y-6">
       {header}
 
+      {context.memberships.length > 1 ? (
+        <form action={switchWorkspaceFormAction} className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="locale" value={locale} />
+          <label htmlFor="dashboard-workspace" className="text-xs font-semibold text-muted">
+            {dict.nav.workspace}
+          </label>
+          <select
+            id="dashboard-workspace"
+            name="workspaceId"
+            defaultValue={workspace.id}
+            className="h-9 rounded-xl border border-line bg-panel px-2.5 text-xs font-semibold text-ink focus:border-accent-strong focus:outline-none"
+          >
+            {context.memberships.map((membership) => (
+              <option key={membership.workspaceId} value={membership.workspaceId}>
+                {membership.workspace.name}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" variant="secondary" size="sm">
+            {dict.common.switch}
+          </Button>
+        </form>
+      ) : null}
+
       <Card className="p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <nav aria-label={dict.dashboard.period} className="flex flex-wrap gap-2">
@@ -196,6 +255,128 @@ export default async function DashboardPage({
       </Card>
 
       {welcome === "1" ? <GettingStarted locale={locale} dict={dict} /> : null}
+
+      {visibleAnnouncements.length > 0 ? (
+        <section aria-labelledby="announcements-title" className="space-y-2">
+          <h2 id="announcements-title" className="text-sm font-bold text-heading">
+            {dict.dashboard.announcementsTitle}
+          </h2>
+          {visibleAnnouncements.map((announcement) => (
+            <Alert
+              key={announcement.id}
+              tone={
+                announcement.tone === "critical"
+                  ? "error"
+                  : announcement.tone === "warning"
+                    ? "warning"
+                    : announcement.tone === "success"
+                      ? "success"
+                      : "info"
+              }
+            >
+              <p className="font-semibold">{announcement.title}</p>
+              <p className="mt-0.5 whitespace-pre-wrap">{announcement.body}</p>
+            </Alert>
+          ))}
+        </section>
+      ) : null}
+
+      {subscriptionEnded ? <Alert tone="warning">{dict.plans.readOnly}</Alert> : null}
+
+      <section aria-label={dict.dashboard.subscriptionTitle} className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-base font-bold text-heading">{dict.dashboard.quickEntryTitle}</h2>
+              <p className="mt-0.5 text-xs text-muted">{dict.dashboard.quickEntryHint}</p>
+            </div>
+            <Badge tone="jade">{dict.dashboard.thisMonthLabel}</Badge>
+          </div>
+          <div className="mt-4">
+            {context.can("transactions:create") ? (
+              <QuickTransactionForm
+                defaultDate={todayInZone(workspace.timezone)}
+                accounts={(transactionOptions?.accounts ?? []).map((account) => ({ id: account.id, name: account.name }))}
+                categories={(transactionOptions?.categories ?? []).map((category) => ({
+                  id: category.id,
+                  name: category.name,
+                  kind: category.kind,
+                  translations: category.translations,
+                }))}
+              />
+            ) : (
+              <p className="text-sm text-muted">{dict.errors.forbidden}</p>
+            )}
+          </div>
+        </Card>
+
+        <div className="space-y-4">
+          <Card className="p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-bold text-heading">{dict.dashboard.subscriptionTitle}</h2>
+                <p className="mt-1 text-xs text-muted">{dict.dashboard.planLabel}</p>
+              </div>
+              <Badge tone={subscriptionEnded ? "clay" : "jade"}>
+                {dict.plans[plan] ?? plan}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm text-muted">
+              {subscriptionEnded
+                ? dict.dashboard.readOnlyLabel
+                : trialDaysLeft !== null
+                  ? interpolate(dict.dashboard.trialRemaining, { days: trialDaysLeft }, { locale: intlLocale(locale) })
+                  : subscription?.current_period_end
+                    ? `${dict.dashboard.manageSubscription}: ${formatDate(subscription.current_period_end, intlLocale(locale))}`
+                    : dict.dashboard.manageSubscription}
+            </p>
+            <Link href={`/${locale}/billing`} className={buttonVariants({ variant: "secondary", size: "sm", className: "mt-3" })}>
+              {dict.dashboard.manageSubscription}
+              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </Card>
+
+          <section aria-labelledby="ai-command-title" className="relative overflow-hidden rounded-2xl bg-forest p-5 text-white">
+            <div className="relative">
+              <h2 id="ai-command-title" className="flex items-center gap-2 text-sm font-bold">
+                <Sparkles className="h-4 w-4 text-mango-400" aria-hidden />
+                {dict.dashboard.aiCommandTitle}
+              </h2>
+              <p className="mt-1 text-xs text-jade-50/70">{dict.dashboard.aiCommandHint}</p>
+              <div className="mt-3">
+                <AiCommandBox configured={isAiConfigured()} />
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section aria-labelledby="reports-title" className="surface p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h2 id="reports-title" className="text-base font-bold text-heading">{dict.dashboard.reportsTitle}</h2>
+            <p className="mt-0.5 text-sm text-muted">{dict.dashboard.reportsHint}</p>
+          </div>
+          <Link href={`/${locale}/reports`} className="text-xs font-semibold text-accent hover:underline">
+            {dict.common.viewAll}
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {[
+            { label: dict.dashboard.reportProfitLoss, href: `/${locale}/reports`, icon: FileText },
+            { label: dict.dashboard.reportCashflow, href: `/${locale}/reports?period=quarter`, icon: TrendingUp },
+            { label: dict.dashboard.reportExpenses, href: `/${locale}/reports?period=last-month`, icon: FileBarChart2 },
+          ].map((report) => (
+            <Link key={report.label} href={report.href} className="group flex items-center gap-3 rounded-xl border border-line bg-panel px-3.5 py-3 text-sm font-semibold text-heading transition hover:border-accent-line hover:bg-accent-soft">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-page-soft text-accent">
+                <report.icon className="h-4 w-4" aria-hidden />
+              </span>
+              <span className="min-w-0 flex-1">{report.label}</span>
+              <ArrowRight className="h-4 w-4 text-muted transition group-hover:text-accent" aria-hidden />
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <section aria-label={dict.dashboard.quickActions} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard

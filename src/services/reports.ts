@@ -89,7 +89,14 @@ function formatMajor(amountMinor: number | string | bigint, currency: string): s
 
 export async function exportTransactionRecordsCsv(
   workspaceId: string,
-  filters: { kind?: "income" | "expense" | "transfer" | "all"; search?: string; from?: string; to?: string },
+  filters: {
+    kind?: "income" | "expense" | "transfer" | "all";
+    status?: "posted" | "voided" | "all";
+    categoryId?: string;
+    search?: string;
+    from?: string;
+    to?: string;
+  },
   locale: Locale = "en",
 ): Promise<string> {
   const supabase = await createClient();
@@ -102,6 +109,8 @@ export async function exportTransactionRecordsCsv(
     .limit(5000);
 
   if (filters.kind && filters.kind !== "all") query = query.eq("kind", filters.kind);
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.categoryId) query = query.eq("category_id", filters.categoryId);
   if (filters.from) query = query.gte("occurred_on", filters.from);
   if (filters.to) query = query.lte("occurred_on", filters.to);
   if (filters.search) {

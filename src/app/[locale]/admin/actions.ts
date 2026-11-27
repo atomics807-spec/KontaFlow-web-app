@@ -11,6 +11,8 @@ import { rateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import {
+  announcementSchema,
+  announcementToggleSchema,
   banDurationForExpiry,
   billingSettingsSchema,
   createPlatformAdminSchema,
@@ -19,6 +21,10 @@ import {
   planSaveSchema,
   platformAdminStatusSchema,
   restrictUserSchema,
+  supportAccessDecisionSchema,
+  supportAccessRequestSchema,
+  supportAccessRevokeSchema,
+  supportRequestStatusSchema,
   workspacePlanSchema,
 } from "@/lib/validation/platform-admin";
 import { FEATURE_IDS } from "@/types/entitlements";
@@ -49,6 +55,16 @@ function revalidateAdmin(): void {
   revalidatePath("/admin/admins");
   revalidatePath("/admin/audit");
   revalidatePath("/admin/plans");
+  revalidatePath("/admin/payments");
+  revalidatePath("/admin/integrations");
+  revalidatePath("/admin/announcements");
+  revalidatePath("/admin/support");
+  revalidatePath("/admin/usage");
+  revalidatePath("/admin/ai");
+  revalidatePath("/admin/email");
+  revalidatePath("/admin/ussd");
+  revalidatePath("/admin/whatsapp");
+  revalidatePath("/admin/security");
 }
 
 function failure(message: string, fieldErrors?: Record<string, string[]>): FormState {
@@ -384,4 +400,190 @@ export async function saveBillingSettingsAction(_prev: FormState, formData: Form
 
   revalidateAdmin();
   return formSuccess(dict.admin.billingUpdated);
+}
+
+export async function saveAnnouncementAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("admin");
+  if (!context) return failure(dict.admin.noAccess);
+
+  if (!rateLimit(`platform:announcement:${context.userId}`, 30, 15 * 60_000)) {
+    return failure(dict.errors.rateLimited);
+  }
+
+  const parsed = announcementSchema.safeParse({
+    id: formData.get("id") || null,
+    title: formData.get("title"),
+    body: formData.get("body"),
+    tone: formData.get("tone") ?? "info",
+    audience: formData.get("audience") ?? "all",
+    startsAt: formData.get("startsAt") || null,
+    endsAt: formData.get("endsAt") || null,
+    isActive: formData.get("isActive") ?? "true",
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_save_announcement", {
+    p_id: parsed.data.id,
+    p_title: parsed.data.title,
+    p_body: parsed.data.body,
+    p_tone: parsed.data.tone,
+    p_audience: parsed.data.audience,
+    p_starts_at: parsed.data.startsAt,
+    p_ends_at: parsed.data.endsAt,
+    p_is_active: parsed.data.isActive,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.announcement_save_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.announcementSaved);
+}
+
+export async function toggleAnnouncementAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("admin");
+  if (!context) return failure(dict.admin.noAccess);
+
+  const parsed = announcementToggleSchema.safeParse({
+    id: formData.get("id"),
+    active: formData.get("active"),
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_toggle_announcement", {
+    p_id: parsed.data.id,
+    p_is_active: parsed.data.active,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.announcement_toggle_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(parsed.data.active ? dict.admin.announcementPublished : dict.admin.announcementPaused);
+}
+
+export async function updateSupportRequestAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("support");
+  if (!context) return failure(dict.admin.noAccess);
+
+  const parsed = supportRequestStatusSchema.safeParse({
+    id: formData.get("id"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_update_support_request", {
+    p_id: parsed.data.id,
+    p_status: parsed.data.status,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.support_request_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.supportRequestUpdated);
+}
+
+export async function requestSupportAccessAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("support");
+  if (!context) return failure(dict.admin.noAccess);
+
+  if (!rateLimit(`platform:support-access:${context.userId}`, 10, 60 * 60_000)) {
+    return failure(dict.errors.rateLimited);
+  }
+
+  const parsed = supportAccessRequestSchema.safeParse({
+    workspaceId: formData.get("workspaceId"),
+    justification: formData.get("justification"),
+    hours: formData.get("hours") ?? 24,
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_request_support_access", {
+    p_workspace_id: parsed.data.workspaceId,
+    p_justification: parsed.data.justification,
+    p_hours: parsed.data.hours,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.support_access_request_failed", { code: error.code, message: error.message });
+    return failure(error.code === "23505" ? dict.admin.supportAccessAlreadyOpen : dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.supportAccessRequested);
+}
+
+export async function decideSupportAccessAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("super_admin");
+  if (!context) return failure(dict.admin.cannotApproveSupportAccess);
+
+  const parsed = supportAccessDecisionSchema.safeParse({
+    grantId: formData.get("grantId"),
+    decision: formData.get("decision"),
+    note: formData.get("note") || undefined,
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_decide_support_access", {
+    p_grant_id: parsed.data.grantId,
+    p_approve: parsed.data.decision === "approve",
+    p_note: parsed.data.note ?? null,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.support_access_decision_failed", { code: error.code, message: error.message });
+    return failure(error.code === "42501" ? dict.admin.cannotApproveOwnAccess : dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(parsed.data.decision === "approve" ? dict.admin.supportAccessApproved : dict.admin.supportAccessDenied);
+}
+
+export async function revokeSupportAccessAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("super_admin");
+  if (!context) return failure(dict.admin.cannotApproveSupportAccess);
+
+  const parsed = supportAccessRevokeSchema.safeParse({
+    grantId: formData.get("grantId"),
+    reason: formData.get("reason") || undefined,
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_revoke_support_access", {
+    p_grant_id: parsed.data.grantId,
+    p_reason: parsed.data.reason ?? null,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.support_access_revoke_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.supportAccessRevoked);
 }

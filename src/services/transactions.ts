@@ -4,15 +4,40 @@ import { AppError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 import { assertNoError } from "@/lib/supabase/errors";
 import { toTransactionPayload, type TransactionInput } from "@/lib/validation/schemas";
-import type { AccountRow, CategoryRow, ContactRow, TransactionKind, TransactionViewRow } from "@/types/database";
+import type {
+  AccountRow,
+  AttachmentRow,
+  AuditLogRow,
+  CategoryRow,
+  ContactRow,
+  TransactionKind,
+  TransactionStatus,
+  TransactionViewRow,
+} from "@/types/database";
 
 export type TransactionFilters = {
   kind?: TransactionKind | "all";
+  status?: TransactionStatus | "all";
+  categoryId?: string;
   search?: string;
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
+};
+
+export type TransactionDetail = {
+  transaction: TransactionViewRow & {
+    recorded_at: string;
+    recorded_timezone: string;
+    void_reason: string | null;
+    voided_at: string | null;
+    sync_received_at: string | null;
+    client_generated_id: string | null;
+    counter_account_id: string | null;
+  };
+  attachments: AttachmentRow[];
+  audit: (AuditLogRow & { actor_name: string | null })[];
 };
 
 export async function listTransactions(
@@ -32,6 +57,8 @@ export async function listTransactions(
   query = query.range(offset, offset + limit - 1);
 
   if (filters.kind && filters.kind !== "all") query = query.eq("kind", filters.kind);
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.categoryId) query = query.eq("category_id", filters.categoryId);
   if (filters.from) query = query.gte("occurred_on", filters.from);
   if (filters.to) query = query.lte("occurred_on", filters.to);
   if (filters.search) {
@@ -42,6 +69,67 @@ export async function listTransactions(
   const { data, error } = await query;
   if (error) throw assertNoError(error, "Could not load transactions.");
   return data ?? [];
+}
+
+export async function getTransactionDetail(
+  workspaceId: string,
+  transactionId: string,
+): Promise<TransactionDetail | null> {
+  const supabase = await createClient();
+  const [viewResult, rawResult, attachmentResult, auditResult] = await Promise.all([
+    supabase
+      .from("v_transactions")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("id", transactionId)
+      .maybeSingle(),
+    supabase
+      .from("transactions")
+      .select("recorded_at, recorded_timezone, void_reason, voided_at, sync_received_at, client_generated_id, counter_account_id")
+      .eq("workspace_id", workspaceId)
+      .eq("id", transactionId)
+      .maybeSingle(),
+    supabase
+      .from("attachments")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("transaction_id", transactionId)
+      .order("created_at"),
+    supabase
+      .from("audit_logs")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .eq("entity", "transaction")
+      .eq("entity_id", transactionId)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  for (const result of [viewResult, rawResult, attachmentResult, auditResult]) {
+    if (result.error) throw assertNoError(result.error, "Could not load the transaction.");
+  }
+  if (!viewResult.data || !rawResult.data) return null;
+
+  const auditRows = (auditResult.data ?? []) as AuditLogRow[];
+  const actorIds = [...new Set(auditRows.map((row) => row.actor_id).filter((id): id is string => Boolean(id)))];
+  const names = new Map<string, string>();
+  if (actorIds.length > 0) {
+    const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", actorIds);
+    for (const profile of profiles ?? []) {
+      if (profile.full_name) names.set(profile.id, profile.full_name);
+    }
+  }
+
+  return {
+    transaction: {
+      ...viewResult.data,
+      ...rawResult.data,
+    } as TransactionDetail["transaction"],
+    attachments: (attachmentResult.data ?? []) as AttachmentRow[],
+    audit: auditRows.map((row) => ({
+      ...row,
+      actor_name: row.actor_id ? names.get(row.actor_id) ?? null : null,
+    })),
+  };
 }
 
 export type TransactionOptions = {

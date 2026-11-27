@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowUpRight, Building2, ShieldAlert, Users } from "lucide-react";
+import { ArrowUpRight, Building2, Gauge, LifeBuoy, Megaphone, PlugZap, ShieldAlert, Users } from "lucide-react";
+import { AdminStat } from "@/components/admin/admin-ui";
 import { buttonVariants } from "@/components/ui/button";
 import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatDateTime, formatDate } from "@/lib/dates";
 import { formatMoney, moneyLocale } from "@/lib/money";
-import { getPlatformOverview } from "@/services/platform-admin";
+import { getPlatformOperationsOverview, getPlatformOverview } from "@/services/platform-admin";
 
 export async function generateMetadata({
   params,
@@ -43,7 +44,10 @@ export default async function AdminOverviewPage({
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const copy = dict.admin;
-  const overview = await getPlatformOverview();
+  const [overview, operations] = await Promise.all([
+    getPlatformOverview(),
+    getPlatformOperationsOverview(),
+  ]);
 
   const volume = Object.entries(overview.volume_30d_by_currency);
   const plans = Object.entries(overview.plan_distribution);
@@ -79,6 +83,40 @@ export default async function AdminOverviewPage({
           value={`${overview.restricted_users.toLocaleString(intlLocale(locale))} / ${overview.suspended_users.toLocaleString(intlLocale(locale))}`}
           detail={`${overview.trialing_subscriptions.toLocaleString(intlLocale(locale))} ${copy.trialingSubscriptions.toLowerCase()}`}
         />
+      </section>
+
+      <section aria-label={copy.usage} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AdminStat label={copy.aiMessages} value={operations.ai_interactions_30d.toLocaleString(intlLocale(locale))} detail={copy.last30Days} tone="accent" />
+        <AdminStat label={copy.sent30d} value={operations.emails_sent_30d.toLocaleString(intlLocale(locale))} detail={`${operations.emails_failed_30d} ${copy.failed30d.toLowerCase()}`} />
+        <AdminStat label={copy.ussd} value={operations.ussd_sessions_30d.toLocaleString(intlLocale(locale))} detail={copy.last30Days} />
+        <AdminStat label={copy.whatsapp} value={operations.whatsapp_messages_30d.toLocaleString(intlLocale(locale))} detail={`${operations.whatsapp_failed_30d} ${copy.failedMessages.toLowerCase()}`} />
+        <AdminStat label={copy.failedPayments} value={operations.failed_payments_30d} detail={copy.last30Days} tone={operations.failed_payments_30d ? "danger" : "neutral"} />
+        <AdminStat label={copy.supportRequests} value={operations.new_support_requests} detail={`${operations.pending_support_access} ${copy.pending.toLowerCase()}`} tone={operations.new_support_requests ? "warning" : "neutral"} />
+        <AdminStat label={copy.webhookFailures} value={operations.webhook_failures_24h} detail="24h" tone={operations.webhook_failures_24h ? "warning" : "neutral"} />
+        <AdminStat label={copy.activeAnnouncements} value={operations.active_announcements} />
+      </section>
+
+      <section className="flex flex-wrap gap-2">
+        <Link href={`/${locale}/admin/payments`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <Building2 className="h-4 w-4" aria-hidden />
+          {copy.payments}
+        </Link>
+        <Link href={`/${locale}/admin/support`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <LifeBuoy className="h-4 w-4" aria-hidden />
+          {copy.support}
+        </Link>
+        <Link href={`/${locale}/admin/announcements`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <Megaphone className="h-4 w-4" aria-hidden />
+          {copy.announcements}
+        </Link>
+        <Link href={`/${locale}/admin/integrations`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <PlugZap className="h-4 w-4" aria-hidden />
+          {copy.integrations}
+        </Link>
+        <Link href={`/${locale}/admin/usage`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+          <Gauge className="h-4 w-4" aria-hidden />
+          {copy.usage}
+        </Link>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">

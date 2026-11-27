@@ -8,7 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { TransactionsTable } from "@/components/dashboard/transactions-table";
 import { DebouncedSearch } from "@/components/dashboard/debounced-search";
 import { OfflineOutboxPanel } from "@/components/offline/offline-outbox-panel";
-import { listTransactions } from "@/services/transactions";
+import { getTransactionOptions, listTransactions } from "@/services/transactions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
@@ -27,7 +27,15 @@ export default async function TransactionsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ kind?: string; q?: string; from?: string; to?: string; page?: string }>;
+  searchParams: Promise<{
+    kind?: string;
+    status?: string;
+    category?: string;
+    q?: string;
+    from?: string;
+    to?: string;
+    page?: string;
+  }>;
 }) {
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
@@ -40,18 +48,25 @@ export default async function TransactionsPage({
   const search = (query.q ?? "").slice(0, 80);
   const from = /^\d{4}-\d{2}-\d{2}$/.test(query.from ?? "") ? query.from : undefined;
   const to = /^\d{4}-\d{2}-\d{2}$/.test(query.to ?? "") ? query.to : undefined;
+  const status = query.status === "posted" || query.status === "voided" ? query.status : "all";
+  const category = /^[0-9a-f-]{36}$/i.test(query.category ?? "") ? query.category : undefined;
 
   const PAGE_SIZE = 50;
   const requestedPage = Number.parseInt(query.page ?? "1", 10);
   const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const rows = await listTransactions(context.workspace.id, {
-    kind,
-    search,
-    from,
-    to,
-    limit: PAGE_SIZE + 1,
-    offset: (page - 1) * PAGE_SIZE,
-  });
+  const [rows, options] = await Promise.all([
+    listTransactions(context.workspace.id, {
+      kind,
+      status,
+      categoryId: category,
+      search,
+      from,
+      to,
+      limit: PAGE_SIZE + 1,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+    getTransactionOptions(context.workspace.id),
+  ]);
   const hasNext = rows.length > PAGE_SIZE;
   const hasPrev = page > 1;
   const items = rows.slice(0, PAGE_SIZE);
@@ -68,6 +83,8 @@ export default async function TransactionsPage({
   const exportHref = (format: "csv" | "pdf" = "csv") => {
     const params = new URLSearchParams();
     if (kind !== "all") params.set("kind", kind);
+    if (status !== "all") params.set("status", status);
+    if (category) params.set("category", category);
     if (search) params.set("q", search);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -78,6 +95,8 @@ export default async function TransactionsPage({
   const pageHref = (nextPage: number) => {
     const params = new URLSearchParams();
     if (kind !== "all") params.set("kind", kind);
+    if (status !== "all") params.set("status", status);
+    if (category) params.set("category", category);
     if (search) params.set("q", search);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -89,6 +108,8 @@ export default async function TransactionsPage({
   const kindHref = (value: TransactionKind | "all") => {
     const params = new URLSearchParams();
     if (value !== "all") params.set("kind", value);
+    if (status !== "all") params.set("status", status);
+    if (category) params.set("category", category);
     if (search) params.set("q", search);
     if (from) params.set("from", from);
     if (to) params.set("to", to);
@@ -147,6 +168,39 @@ export default async function TransactionsPage({
               placeholder={dict.transactions.searchPlaceholder}
               label={dict.common.search}
             />
+          </div>
+          <div>
+            <label htmlFor="status" className="mb-1 block text-xs font-semibold text-muted">
+              {dict.transactions.statusFilter}
+            </label>
+            <select
+              id="status"
+              name="status"
+              defaultValue={status}
+              className="h-11 rounded-xl border border-line bg-panel px-3 text-sm text-ink focus:border-accent-strong focus:outline-none"
+            >
+              <option value="all">{dict.transactions.allStatuses}</option>
+              <option value="posted">{dict.transactions.posted}</option>
+              <option value="voided">{dict.transactions.voided}</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="category" className="mb-1 block text-xs font-semibold text-muted">
+              {dict.transactions.categoryFilter}
+            </label>
+            <select
+              id="category"
+              name="category"
+              defaultValue={category ?? ""}
+              className="h-11 max-w-[12rem] rounded-xl border border-line bg-panel px-3 text-sm text-ink focus:border-accent-strong focus:outline-none"
+            >
+              <option value="">{dict.transactions.allCategories}</option>
+              {options.categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {pickTranslation(item.translations, locale) ?? item.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
             <div>
