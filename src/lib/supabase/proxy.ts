@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getPublicEnv, getSupabaseServerUrl } from "../env";
+import { authCookieOptions, limitAuthCookie } from "@/lib/security/cookies";
 import { logger } from "../logger";
 import type { Database } from "@/types/database";
 
@@ -17,6 +18,7 @@ export async function refreshSession(request: NextRequest): Promise<{
   try {
     const env = getPublicEnv();
     const supabase = createServerClient<Database>(getSupabaseServerUrl(), env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+      cookieOptions: authCookieOptions(),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -27,7 +29,7 @@ export async function refreshSession(request: NextRequest): Promise<{
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
-            response.cookies.set(name, value, options);
+            response.cookies.set(name, value, limitAuthCookie(options));
           }
         },
       },

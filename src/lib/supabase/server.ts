@@ -3,6 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getPublicEnv, getSupabaseServerUrl } from "../env";
+import { authCookieOptions, limitAuthCookie } from "@/lib/security/cookies";
 import type { Database } from "@/types/database";
 
 /**
@@ -14,6 +15,7 @@ export async function createClient() {
   const env = getPublicEnv();
 
   return createServerClient<Database>(getSupabaseServerUrl(), env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -21,7 +23,7 @@ export async function createClient() {
       setAll(cookiesToSet) {
         try {
           for (const { name, value, options } of cookiesToSet) {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, limitAuthCookie(options));
           }
         } catch {
           // Server Components cannot write cookies. The proxy refreshes the

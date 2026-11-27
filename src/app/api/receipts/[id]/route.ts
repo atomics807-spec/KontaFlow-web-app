@@ -6,6 +6,9 @@ import { logger } from "@/lib/logger";
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!context.can("transactions:read")) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
 
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) {
@@ -30,13 +33,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   const { data: signed, error: signError } = await supabase.storage
     .from("kontaflow-receipts")
-    .createSignedUrl(data.storage_path, 60);
+    .createSignedUrl(data.storage_path, 60, { download: true });
   if (signError || !signed?.signedUrl) {
     logger.warn("receipt.sign_failed", { message: signError?.message });
     return NextResponse.json({ error: "unavailable" }, { status: 500 });
   }
 
   return NextResponse.redirect(signed.signedUrl, {
-    headers: { "cache-control": "private, no-store" },
+    headers: { "cache-control": "private, no-store", "referrer-policy": "no-referrer" },
   });
 }

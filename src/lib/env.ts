@@ -81,10 +81,18 @@ const serverSchema = z.object({
   TOLGEE_API_KEY: optionalSecret,
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   SENTRY_DSN: optionalSecret,
+  TRUSTED_ORIGINS: optionalSecret,
+  MALWARE_SCAN_MODE: z.enum(["disabled", "warn", "enforce"]).default("disabled"),
+  MALWARE_SCAN_URL: optionalSecret,
+  MALWARE_SCAN_API_KEY: optionalSecret,
   RATE_LIMIT_AI_PER_MINUTE: z.coerce.number().int().min(1).default(20),
   RATE_LIMIT_USSD_PER_MINUTE: z.coerce.number().int().min(1).default(30),
   RATE_LIMIT_WHATSAPP_PER_MINUTE: z.coerce.number().int().min(1).default(30),
   RATE_LIMIT_WEBHOOK_PER_MINUTE: z.coerce.number().int().min(1).default(120),
+  RATE_LIMIT_UPLOAD_PER_MINUTE: z.coerce.number().int().min(1).default(20),
+  RATE_LIMIT_SYNC_PER_MINUTE: z.coerce.number().int().min(1).default(60),
+  RATE_LIMIT_EXPORT_PER_MINUTE: z.coerce.number().int().min(1).default(10),
+  SESSION_COOKIE_MAX_AGE_SECONDS: z.coerce.number().int().min(3600).max(2592000).default(604800),
 });
 
 export type PublicEnv = z.infer<typeof publicSchema>;
@@ -196,10 +204,18 @@ export function getServerEnv(): ServerEnv {
     TOLGEE_API_KEY: process.env.TOLGEE_API_KEY,
     LOG_LEVEL: process.env.LOG_LEVEL,
     SENTRY_DSN: process.env.SENTRY_DSN,
+    TRUSTED_ORIGINS: process.env.TRUSTED_ORIGINS,
+    MALWARE_SCAN_MODE: process.env.MALWARE_SCAN_MODE,
+    MALWARE_SCAN_URL: process.env.MALWARE_SCAN_URL,
+    MALWARE_SCAN_API_KEY: process.env.MALWARE_SCAN_API_KEY,
     RATE_LIMIT_AI_PER_MINUTE: process.env.RATE_LIMIT_AI_PER_MINUTE,
     RATE_LIMIT_USSD_PER_MINUTE: process.env.RATE_LIMIT_USSD_PER_MINUTE,
     RATE_LIMIT_WHATSAPP_PER_MINUTE: process.env.RATE_LIMIT_WHATSAPP_PER_MINUTE,
     RATE_LIMIT_WEBHOOK_PER_MINUTE: process.env.RATE_LIMIT_WEBHOOK_PER_MINUTE,
+    RATE_LIMIT_UPLOAD_PER_MINUTE: process.env.RATE_LIMIT_UPLOAD_PER_MINUTE,
+    RATE_LIMIT_SYNC_PER_MINUTE: process.env.RATE_LIMIT_SYNC_PER_MINUTE,
+    RATE_LIMIT_EXPORT_PER_MINUTE: process.env.RATE_LIMIT_EXPORT_PER_MINUTE,
+    SESSION_COOKIE_MAX_AGE_SECONDS: process.env.SESSION_COOKIE_MAX_AGE_SECONDS,
   });
 
   if (!parsed.success) throw new EnvValidationError("server", formatIssues(parsed.error));

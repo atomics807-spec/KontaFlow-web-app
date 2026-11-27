@@ -9,7 +9,7 @@
 | Webhook spoofer | Posts to `/api/ussd`, `/api/whatsapp`, `/api/webhooks/payments/*` | Shared USSD token, Meta HMAC signature, per-payment callback token + optional HMAC, fail-closed when secrets are absent |
 | Payment callback replayer | Replays a valid callback or changes its amount | `(provider, external_event_id)` deduplication; amount/currency/reference are re-read from the provider before activation |
 | Stolen service-role key | Full database access | Server-only env, never bundled; blast radius limited by audited RPCs and an out-of-band rotation runbook |
-| Abusive user | Costs via AI or floods | Per-plan monthly quota in Postgres, per-minute limiter, 900-token output cap |
+| Abusive user | Costs via AI or floods | Per-plan monthly quota in Postgres, durable per-minute limiter, configured output-token cap |
 | Prompt injection through receipts | Trick the assistant into writing bad data | Interactive AI tools can only create drafts; confirmation re-validates through audited RPCs. Direct-channel tools call `record_channel_transaction`, which re-checks actor membership and amounts |
 
 ## Identity and sessions
@@ -199,22 +199,118 @@ short-lived signed URLs. No bucket has `public = true`.
   Phone numbers and verification codes are not logged. The route sets
   `no-store`, `nosniff` and `no-referrer`.
 
+## Browser session cookies
+
+`src/lib/security/cookies.ts` centralises the Supabase SSR cookie options:
+
+- `HttpOnly` — JavaScript cannot read the session, so an XSS bug cannot exfiltrate it directly.
+- `Secure` outside local HTTP.
+- `SameSite=Lax` — top-level navigation still works; cross-site POSTs do not carry the session.
+- `Path=/` and a capped `maxAge` (`SESSION_COOKIE_MAX_AGE_SECONDS`, seven days by default).
+
+`@supabase/ssr` writes a 400-day `maxAge` by default. `limitAuthCookie()`
+overrides positive lifetimes with the configured cap but preserves `maxAge: 0`
+so sign-out still clears the cookie. Supabase refresh tokens can outlive the
+browser cookie; server-side revocation is still required after a password reset
+or a suspected compromise.
+
+## CSRF and request origin
+
+Every mutating API route and the local Supabase gateway call
+`rejectCrossOrigin()` from `src/lib/security/csrf.ts`. It uses
+`src/lib/security/request-origin.ts` and checks, in order:
+
+1. `Sec-Fetch-Site` must not be `cross-site` or `same-site`.
+2. If `Origin` is present, it must match the configured app origin or an entry
+   in `TRUSTED_ORIGINS`. Client-supplied `X-Forwarded-Host` is not trusted; a
+   preview proxy host must be listed explicitly.
+3. Requests without `Origin` are allowed only when no browser cross-site
+   signal is present; this keeps server-to-server webhooks and native clients
+   working.
+
+Server Actions have a second layer in `next.config.ts`: `serverActions
+.allowedOrigins` includes the app host and every trusted origin, and the body
+size is capped at 3 MB. Next.js's built-in action-id check remains the primary
+control.
+
+## Durable rate limiting
+
+`src/lib/security/durable-rate-limit.ts` calls the
+`public.consume_security_rate_limit(key, limit, window_seconds)` RPC. Buckets
+live in `public.security_rate_limits`, which is service-role only, so a process
+restart or a second edge instance cannot reset a limit.
+
+The in-memory `src/lib/rate-limit.ts` helper is only a fallback for local
+development and tests. Production paths for auth, onboarding, AI, payments,
+uploads, sync, USSD, WhatsApp and platform admin use the durable limiter.
+When the RPC is unavailable the limiter fails open to the in-process bucket and
+logs a warning; this avoids taking the product down when Postgres is already
+unhealthy.
+
+## Upload pipeline
+
+1. Reject cross-origin requests and enforce a per-user durable rate limit.
+2. Read the multipart body with a hard byte cap before parsing.
+3. Accept only JPEG, PNG, WebP and PDF where the surface allows them. SVG is
+   rejected because it can carry script.
+4. Check the magic bytes, not just the browser-supplied MIME type. A PDF named
+   `logo.png` is rejected with `content_mismatch`.
+5. Sanitise the filename and generate the storage path on the server. The
+   client never chooses the bucket or the tenant folder.
+6. Optionally POST the bytes to `MALWARE_SCAN_URL`. `MALWARE_SCAN_MODE` is
+   `disabled`, `warn` or `enforce`; `enforce` fails closed if the scanner is
+   unreachable.
+7. Store in a private bucket and hand out short-lived signed URLs only.
+
+## AI abuse and prompt injection
+
+- Only the server calls OpenAI. The API key is never in a client bundle.
+- `RATE_LIMIT_AI_PER_MINUTE` and the monthly plan quota are both enforced.
+- Request bodies are capped at 64 KB and must be JSON.
+- Output is capped by `AI_MAX_OUTPUT_TOKENS` and the per-mode ceiling.
+- The system prompt marks user text, receipt text, contact names and imported
+  files as untrusted data. The model must not follow instructions embedded in
+  them or reveal the prompt.
+- Interactive tools can only create drafts. Confirmation re-validates through
+  audited RPCs, so a prompt injection cannot post a ledger entry by itself.
+- AI command confirmation and undo are idempotent and permission-checked.
+
+## Security events and privacy rights
+
+`public.security_events` is an append-only trail for authentication, CSRF,
+rate-limit, upload, webhook and privacy events. It stores identifiers and safe
+metadata, never passwords, tokens or full message bodies. Tenant members cannot
+read it; platform administrators can.
+
+Self-service privacy controls live at `/{locale}/settings/security`:
+
+- JSON export: `GET /api/privacy/export`, rate-limited and `no-store`.
+- Marketing consent: separate opt-in/opt-out row in `privacy_consents`.
+- Deletion: `request_account_deletion` opens a reviewable request;
+  `cancel_account_deletion` closes it before completion.
+- Legal mapping and open questions: `docs/security/compliance-cameroon.md`.
+
 ## HTTP headers
 
 Set in `next.config.ts` for every response:
 
 ```
-Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; ...
+Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co <app> <supabase>; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
 Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 X-Frame-Options: DENY
 X-Content-Type-Options: nosniff
 Referrer-Policy: strict-origin-when-cross-origin
-Permissions-Policy: camera=(self), microphone=(), geolocation=()
+X-DNS-Prefetch-Control: off
+X-Permitted-Cross-Domain-Policies: none
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
+Origin-Agent-Cluster: ?1
+Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)
 ```
 
 `'unsafe-inline'` for scripts is required by Next.js's inline bootstrap. A
 nonce-based CSP is the next step; it must be implemented in middleware and kept
-in sync with the framework version.
+in sync with the framework version. `'unsafe-eval'` is added only in development.
 
 ## Platform administrators and account restrictions
 
@@ -280,6 +376,9 @@ action, entity and workspace — never full message bodies or credentials.
   MTN/Orange/aggregator credentials and webhook secrets on a schedule.
 - Keep Supabase network restrictions / SSL enforcement on.
 - Enable Cloudflare WAF and rate limiting in front of `/api/*`.
-- Run `npm run test:db` and `npm test` in CI before deploy.
+- Run `npm run typecheck`, `npm test` and `npm run test:db` in CI before deploy.
 - Verify RLS after any migration that adds a table (`alter table ... enable row
   level security` must be present).
+- Keep `MALWARE_SCAN_MODE=enforce` in production once a scanner is contracted.
+- Review `security_events` and `audit_logs` for anomalies at least weekly.
+- Rehearse the incident runbook in `docs/security/incident-response.md` twice a year.

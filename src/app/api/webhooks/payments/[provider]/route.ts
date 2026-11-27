@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerEnv } from "@/lib/env";
 import { hasServiceRole, createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { getPaymentAdapter } from "@/lib/payments/registry";
 import { isPaymentProvider, type PaymentProviderId } from "@/lib/payments/types";
 import { sha256Hex } from "@/lib/payments/signature";
+import { logSecurityEvent } from "@/lib/security/events";
 import {
   getPaymentWebhookContext,
   processPaymentWebhook,
@@ -30,7 +31,7 @@ async function handle(request: Request, context: Context): Promise<Response> {
   }
   const provider: PaymentProviderId = rawProvider;
 
-  if (!rateLimit(clientKey(request, provider), getServerEnv().RATE_LIMIT_WEBHOOK_PER_MINUTE)) {
+  if (!(await consumeRateLimit(clientKey(request, provider), getServerEnv().RATE_LIMIT_WEBHOOK_PER_MINUTE, 60))) {
     return new Response("Too many requests", { status: 429 });
   }
 
@@ -88,7 +89,13 @@ async function handle(request: Request, context: Context): Promise<Response> {
   });
   if (!verification.valid) {
     logger.warn("payments.webhook_auth_failed", { provider, reason: verification.reason });
-    return new Response("Forbidden", { status: 401 });
+    await logSecurityEvent({
+      type: "payments.webhook_auth_failed",
+      workspaceId: payment?.workspaceId ?? null,
+      severity: "critical",
+      metadata: { provider, reason: verification.reason },
+    });
+    return new Response("Forbidden", { status: 401, headers: { "cache-control": "no-store" } });
   }
 
   const admin = createAdminClient();

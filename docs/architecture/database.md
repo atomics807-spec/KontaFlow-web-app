@@ -42,6 +42,9 @@ its tests cannot drift apart.
 | `0033_phase9_ai_history_retention` | AI retention cutoff and honest history purge |
 | `0034_phase10_platform_admin` | `platform_admins`, account restrictions, platform console policies |
 | `0035_phase11_whatsapp` | WhatsApp link challenges, delivery state, webhook claim lease, service reporting wrappers, channel-link write revocation |
+| `0036_phase12_ussd` | USSD session state, channel-link verification, bounded session RPCs |
+| `0042_phase16_admin_operations` | Platform support access, announcements and operations audit |
+| `0043_phase18_security_hardening` | `security_events`, `security_rate_limits`, `account_deletion_requests`, consent metadata, deletion RPCs, durable rate-limit RPC |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 
@@ -70,6 +73,9 @@ domain names without duplicating data.
 | report_deliveries | `report_deliveries` (per-recipient and per-channel scheduled report audit, service-written) |
 | audit_logs | `audit_logs` (append-only) |
 | privacy_consents | `privacy_consents` |
+| security_events | `security_events` (append-only, platform-readable) |
+| security_rate_limits | `security_rate_limits` (service-role only) |
+| account_deletion_requests | `account_deletion_requests` (owner-readable, staff-reviewed) |
 | otp_verifications | `otp_verifications` |
 | integration_accounts, integration_messages | same names |
 | offline_sync_records | `offline_sync_records` |
@@ -234,6 +240,21 @@ an HMAC of the six-digit code, a ten-minute expiry, an attempt counter and
 `verification_method = 'ussd_link'`. `verified_at` is only set by the
 service-role verification path, never by a browser update.
 
+## Privacy and security tables (migration 0043)
+
+| Table / function | Purpose |
+| --- | --- |
+| `security_events` | Append-only authentication, CSRF, rate-limit, upload, webhook and privacy events. Tenant members have no select policy; platform admins can read. |
+| `security_rate_limits` | Durable rate-limit buckets keyed by hashed subject. Service-role only. |
+| `account_deletion_requests` | User-initiated erasure workflow with `pending`, `in_review`, `approved`, `completed`, `rejected` and `cancelled` states. Owner can read and cancel their own request; staff update through service role. |
+| `consume_security_rate_limit(text, int, int)` | Atomic fixed-window limiter used by auth, AI, payments, uploads, sync, USSD and WhatsApp paths. |
+| `request_account_deletion(text, uuid)` | Opens one active request per user, writes a `privacy.deletion_requested` event. |
+| `cancel_account_deletion(uuid)` | Cancels the caller's own pending request before completion. |
+
+`privacy_consents` gains `locale`, `metadata` and `source` so the exact notice
+and channel can be reconstructed. The active-consent unique index remains
+scoped to `(user_id, consent_type, version) where revoked_at is null`.
+
 ## Platform administration tables (migration 0034)
 
 | Table | Purpose |
@@ -269,7 +290,7 @@ PostgreSQL allows it (`if not exists`, `on conflict`, `drop ... if exists`).
 
 ## Test coverage
 
-`npm run test:db` runs the full integration suite (250+ assertions). The Phase 3 block covers
+`npm run test:db` runs the full integration suite (349 assertions at the time of writing). The Phase 3 block covers
 business-settings provisioning, plan catalogue linkage, invoice numbering,
 invoice totals and locking, debt repayment and overpayment, reversal mirroring
 and double-reversal protection, cross-tenant reads and writes for invoices,

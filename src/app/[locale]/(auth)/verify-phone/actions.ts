@@ -10,7 +10,8 @@ import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { getRequestMeta } from "@/lib/security/request-meta";
 import { generateOtp, hashOtp } from "@/lib/security/otp";
 import { sendSms } from "@/lib/integrations/sms";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { logSecurityEvent } from "@/lib/security/events";
 import { interpolate as fill } from "@/lib/i18n/interpolate";
 import { safeNextPath, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { logger } from "@/lib/logger";
@@ -28,7 +29,14 @@ export async function sendPhoneCodeAction(_prev: FormState, formData: FormData):
   const user = await getSessionUser();
   if (!user) return formError(dict.errors.sessionExpired);
 
-  if (!rateLimit(`phone-send:${meta.ip ?? "unknown"}:${user.id}`, 5, 10 * 60_000)) {
+  if (!(await consumeRateLimit(`phone-send:${meta.ip ?? "unknown"}:${user.id}`, 5, 10 * 60))) {
+    await logSecurityEvent({
+      type: "auth.otp_send_rate_limited",
+      userId: user.id,
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
     return formError(dict.identity.tooManyAttempts);
   }
 
@@ -77,6 +85,13 @@ export async function sendPhoneCodeAction(_prev: FormState, formData: FormData):
   }
 
   logger.info("phone.code_sent", { userId: user.id });
+  await logSecurityEvent({
+    type: "auth.otp_sent",
+    userId: user.id,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    metadata: { channel: "sms" },
+  });
   return formSuccess(dict.identity.codeSent);
 }
 
@@ -88,6 +103,10 @@ export async function verifyPhoneCodeAction(
   const dict = await getDictionary(locale);
   const user = await getSessionUser();
   if (!user) return formError(dict.errors.sessionExpired);
+  const meta = await getRequestMeta();
+  if (!(await consumeRateLimit(`phone-verify:${meta.ip ?? "unknown"}:${user.id}`, 10, 10 * 60))) {
+    return formError(dict.identity.tooManyAttempts);
+  }
 
   const parsed = z
     .string()
@@ -111,6 +130,13 @@ export async function verifyPhoneCodeAction(
   const result = data as ChallengeStatus | null;
   switch (result?.status) {
     case "verified": {
+      await logSecurityEvent({
+        type: "auth.otp_verified",
+        userId: user.id,
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { channel: "sms" },
+      });
       const next = safeNextPath(formData.get("next"), `/${locale}/onboarding`);
       revalidatePath("/", "layout");
       redirect(next);

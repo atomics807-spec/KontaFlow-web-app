@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { can } from "@/lib/permissions";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { paymentInitiateSchema } from "@/lib/validation/payments";
 import { resolveLocale } from "@/lib/i18n/config";
 import { initiateSubscriptionPayment } from "@/services/payments";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   if (!can(context.role, "billing:manage")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!rateLimit(`payment-initiate:${context.user.id}`, 10)) {
+  if (!(await consumeRateLimit(`payment-initiate:${context.user.id}`, 10, 60))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 

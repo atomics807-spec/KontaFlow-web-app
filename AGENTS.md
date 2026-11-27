@@ -455,3 +455,33 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Do not emit `FAQPage` for ordinary marketing FAQs. Google restricts FAQ rich results to authoritative government and health sites. The public FAQ remains visible content; it is not marked up as `FAQPage`.
 * AEO/GEO hubs are `/[locale]/compare` and `/[locale]/glossary`. Their copy lives in `src/lib/content/aeo.ts`; keep definitions short, factual and internally linked.
 * Validation: `npx vitest run tests/seo.test.ts`, `npx structured-data-testing-tool --url <page>`, and Lighthouse. The local production baseline is SEO 100, best practices 100, accessibility 96 and performance 88 on mobile; LCP is dominated by the cold Next image optimizer, so measure on the deployed CDN before making ranking or speed claims.
+
+## Phase 18 security hardening
+
+* Apply `20260101000043_phase18_security_hardening.sql` before deploying. It adds
+  `security_events`, `security_rate_limits`, `account_deletion_requests`, the
+  durable limiter RPC and the deletion RPCs.
+* `security_events` is append-only and service-written. Authenticated users have
+  `select` but no matching RLS policy, so the table is empty for them;
+  `security_rate_limits` is service-role only.
+* Route Handlers that mutate cookie-authenticated state call
+  `rejectCrossOrigin()` before parsing the body. It trusts `NEXT_PUBLIC_APP_URL`
+  and `TRUSTED_ORIGINS`; do not add `X-Forwarded-Host` to the allow-list, because
+  a client can spoof it when the app is directly reachable.
+* `@supabase/ssr` hard-codes a 400-day cookie `maxAge` on write. Wrap its
+  `setAll` options with `limitAuthCookie()` from
+  `src/lib/security/cookies.ts`; preserve `maxAge: 0` so sign-out still clears.
+* Uploads validate magic bytes, reject SVG, sanitise the filename and can call
+  `MALWARE_SCAN_URL`. `MALWARE_SCAN_MODE=enforce` fails closed when the scanner
+  is missing or unreachable.
+* AI requests are rate-limited, body-capped and output-capped. User text,
+  receipts, contacts and imports are untrusted data; interactive tools may only
+  create drafts, and confirmation re-validates through audited RPCs.
+* Privacy controls: `GET /api/privacy/export`, marketing consent, and the
+  `request_account_deletion`/`cancel_account_deletion` RPCs. Financial records
+  may outlive an account request for legal, tax, fraud or dispute reasons.
+* Cameroon note: Law No. 2010/013 governs electronic communications, not personal
+  data. The current personal-data act is Law No. 2024/017. See
+  `docs/security/compliance-cameroon.md` before making compliance claims.
+* Validation: `npm run typecheck`, `npm test` (188), `npm run test:db` (349),
+  `npm run lint`, `npm run build`.

@@ -6,6 +6,7 @@ import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { paymentRefundSchema } from "@/lib/validation/payments";
 import { refundSubscriptionPayment } from "@/services/payments";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,9 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 
 export async function POST(request: Request, context: Context) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const admin = await getPlatformAdmin();
   if (!admin) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   if (!canManageAccounts(admin.role)) {

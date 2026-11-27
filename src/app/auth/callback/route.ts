@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { getPublicEnv, getSupabaseServerUrl } from "@/lib/env";
+import { authCookieOptions } from "@/lib/security/cookies";
 import { isLocale } from "@/lib/i18n/config";
 import { safeNextPath } from "@/lib/action-utils";
 import { logger } from "@/lib/logger";
@@ -35,6 +36,7 @@ export async function GET(request: NextRequest) {
   const { NEXT_PUBLIC_SUPABASE_ANON_KEY } = getPublicEnv();
 
   const supabase = createServerClient<Database>(getSupabaseServerUrl(), NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookieOptions: authCookieOptions(),
     cookies: {
       getAll() {
         return request.cookies.getAll();

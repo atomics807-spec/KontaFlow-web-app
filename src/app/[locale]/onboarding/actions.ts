@@ -13,12 +13,13 @@ import { onboardingSchema } from "@/lib/validation/onboarding";
 import { normalizePhone } from "@/lib/validation/phone";
 import { fieldErrorsFrom, formError, type FormState } from "@/lib/action-utils";
 import { logger } from "@/lib/logger";
+import { getRequestMeta } from "@/lib/security/request-meta";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { LOGO_MIMES, validateUploadedFile } from "@/lib/security/file-validation";
+import { scanBlocksUpload, scanUploadedFile } from "@/lib/security/malware-scan";
+import { logSecurityEvent, writeWorkspaceAudit } from "@/lib/security/events";
+import { secureCookieFlag } from "@/lib/security/cookies";
 
-const LOGO_TYPES: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-};
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 type CreatedWorkspace = { id: string; name: string; slug: string; onboarding_completed: boolean };
@@ -32,6 +33,10 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
 
   const profile = await getProfile();
   if (!profile) return formError(dict.errors.generic);
+  const meta = await getRequestMeta();
+  if (!(await consumeRateLimit(`workspace-create:${user.id}`, 5, 60 * 60))) {
+    return formError(dict.identity.tooManyAttempts);
+  }
   if (
     profile.verification_required &&
     (!(user.email_confirmed_at || profile.email_verified_at) || !profile.phone_verified_at)
@@ -66,10 +71,43 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
   }
 
   const logoEntry = formData.get("logo");
-  const logo = logoEntry instanceof File && logoEntry.size > 0 ? logoEntry : null;
-  const logoExtension = logo ? LOGO_TYPES[logo.type] : null;
-  if (logo && (!logoExtension || logo.size > MAX_LOGO_BYTES)) {
-    return formError(dict.onboarding.logoHint, { logo: [dict.onboarding.logoHint] });
+  const logoFile = logoEntry instanceof File && logoEntry.size > 0 ? logoEntry : null;
+  let logo: { bytes: Uint8Array; mime: string; extension: string; sizeBytes: number } | null = null;
+  if (logoFile) {
+    const bytes = new Uint8Array(await logoFile.arrayBuffer());
+    const validated = validateUploadedFile({
+      name: logoFile.name,
+      type: logoFile.type,
+      size: logoFile.size,
+      bytes,
+      allowed: LOGO_MIMES,
+      maxBytes: MAX_LOGO_BYTES,
+    });
+    if (!validated.ok) {
+      return formError(dict.onboarding.logoHint, { logo: [dict.onboarding.logoHint] });
+    }
+    const scan = await scanUploadedFile({
+      bytes: validated.bytes,
+      fileName: validated.fileName,
+      mime: validated.mime,
+    });
+    if (scanBlocksUpload(scan)) {
+      await logSecurityEvent({
+        type: "upload.malware_blocked",
+        userId: user.id,
+        severity: "critical",
+        ip: meta.ip,
+        userAgent: meta.userAgent,
+        metadata: { context: "workspace_logo", scan: scan.status, reason: scan.reason },
+      });
+      return formError(dict.onboarding.logoHint, { logo: [dict.onboarding.logoHint] });
+    }
+    logo = {
+      bytes: validated.bytes,
+      mime: validated.mime,
+      extension: validated.extension,
+      sizeBytes: validated.sizeBytes,
+    };
   }
 
   const supabase = await createClient();
@@ -97,12 +135,12 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
   const workspace = data as CreatedWorkspace | null;
   if (!workspace?.id) return formError(dict.errors.generic);
 
-  if (logo && logoExtension) {
-    const path = `${workspace.id}/logo-${Date.now()}.${logoExtension}`;
+  if (logo) {
+    const path = `${workspace.id}/logo-${Date.now()}.${logo.extension}`;
     const { error: uploadError } = await supabase.storage
       .from("kontaflow-workspace-logos")
-      .upload(path, await logo.arrayBuffer(), {
-        contentType: logo.type,
+      .upload(path, logo.bytes, {
+        contentType: logo.mime,
         cacheControl: "3600",
         upsert: false,
       });
@@ -116,6 +154,26 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
         .update({ logo_path: path })
         .eq("id", workspace.id);
       if (updateError) logger.warn("workspace.logo_save_failed", { code: updateError.code });
+      await Promise.all([
+        logSecurityEvent({
+          type: "upload.accepted",
+          userId: user.id,
+          workspaceId: workspace.id,
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+          metadata: { context: "workspace_logo", mime: logo.mime, size: logo.sizeBytes },
+        }),
+        writeWorkspaceAudit({
+          workspaceId: workspace.id,
+          actorId: user.id,
+          action: "workspace.logo_uploaded",
+          entity: "workspace",
+          entityId: workspace.id,
+          metadata: { mime: logo.mime, size: logo.sizeBytes },
+          ip: meta.ip,
+          userAgent: meta.userAgent,
+        }),
+      ]);
     }
   }
 
@@ -123,14 +181,14 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
   cookieStore.set(WORKSPACE_COOKIE, workspace.id, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieFlag(),
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
   cookieStore.set(LOCALE_COOKIE, parsed.data.uiLocale, {
     httpOnly: false,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieFlag(),
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
@@ -160,7 +218,7 @@ export async function switchWorkspaceAction(workspaceId: string, locale: string)
   cookieStore.set(WORKSPACE_COOKIE, workspaceId, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookieFlag(),
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });

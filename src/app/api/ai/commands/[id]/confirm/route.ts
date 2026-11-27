@@ -6,8 +6,12 @@ import { confirmAiCommand } from "@/services/ai-commands";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { requireFeature } from "@/lib/entitlements/service";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "no_workspace" }, { status: 403 });
   if (!can(context.role, "ai:use")) return NextResponse.json({ error: "forbidden" }, { status: 403 });

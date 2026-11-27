@@ -26,9 +26,10 @@ verified. This page tracks what is real today and what comes next.
 | i18n en/fr/pcm (Cameroon Pidgin) with typed dictionaries, ICU plurals and runtime parity tests | done |
 | PWA manifest + service worker + offline fallback | done |
 | Security headers incl. CSP, HSTS, frame denial | done |
+| Phase 18 hardening: HttpOnly session cap, CSRF/origin checks, durable rate limits, upload MIME/malware gate, AI abuse controls, security events, privacy export/delete | done |
 | Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
-| Unit tests (money, permissions, i18n, validation, rate limits) | done |
-| Database integration suite (326 assertions on a fresh DB) | done |
+| Unit tests (188 assertions across money, permissions, i18n, validation, rate limits, security) | done |
+| Database integration suite (349 assertions on a fresh DB) | done |
 
 ## Next
 
@@ -40,7 +41,7 @@ verified. This page tracks what is real today and what comes next.
 5. **Notifications**: in-app centre, email/SMS preferences, low-cash alerts.
 6. **Offline depth**: background sync, conflict review UI, storage for receipts
    captured offline.
-7. **Hardening**: nonce-based CSP, distributed rate limiting (Cloudflare /
-   Upstash), Sentry release tracking, load tests on reports.
-8. **Compliance**: data-retention policy, export/delete for account closure,
-   audit export for accountants.
+7. **Hardening**: nonce-based CSP, Sentry release tracking, load tests on reports,
+   external malware scanner in enforce mode.
+8. **Compliance**: retention schedule, accountant audit export, DPA and
+   international-transfer review for every subprocessor.

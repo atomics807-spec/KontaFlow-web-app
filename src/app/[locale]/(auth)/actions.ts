@@ -12,7 +12,8 @@ import { signupSchema } from "@/lib/validation/auth";
 import { normalizePhone } from "@/lib/validation/phone";
 import { PRIVACY_POLICY_VERSION } from "@/lib/legal";
 import { getRequestMeta } from "@/lib/security/request-meta";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { logSecurityEvent } from "@/lib/security/events";
 import {
   fieldErrorsFrom,
   formError,
@@ -47,9 +48,20 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
   }
 
-  const limitKey = `signin:${meta.ip ?? "unknown"}:${parsed.data.email}`;
-  if (!rateLimit(limitKey, 5, 15 * 60_000)) {
-    logger.warn("auth.sign_in_rate_limited", { ip: meta.ip, email: parsed.data.email });
+  const ipKey = `signin-ip:${meta.ip ?? "unknown"}`;
+  const identityKey = `signin:${meta.ip ?? "unknown"}:${parsed.data.email}`;
+  const [ipAllowed, identityAllowed] = await Promise.all([
+    consumeRateLimit(ipKey, 30, 15 * 60),
+    consumeRateLimit(identityKey, 5, 15 * 60),
+  ]);
+  if (!ipAllowed || !identityAllowed) {
+    await logSecurityEvent({
+      type: "auth.sign_in_rate_limited",
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      metadata: { scope: !ipAllowed ? "ip" : "identity" },
+    });
     return formError(dict.identity.tooManyAttempts);
   }
 
@@ -61,6 +73,13 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 
   if (error) {
     logger.warn("auth.sign_in_failed", { message: error.message });
+    await logSecurityEvent({
+      type: "auth.sign_in_failed",
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      metadata: { reason: unconfirmedEmail(error.message) ? "unconfirmed_email" : "invalid_credentials" },
+    });
     if (unconfirmedEmail(error.message)) {
       redirect(
         `/${locale}/verify-email?email=${encodeURIComponent(parsed.data.email)}&next=${encodeURIComponent(
@@ -76,6 +95,12 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   let preferredLocale = locale;
 
   if (user) {
+    await logSecurityEvent({
+      type: "auth.signed_in",
+      userId: user.id,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
     const { data: profile } = await supabase
       .from("profiles")
       .select("verification_required, phone_verified_at, email_verified_at, locale")
@@ -165,8 +190,13 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
   }
 
-  if (!rateLimit(`signup:${meta.ip ?? "unknown"}`, 5, 60 * 60_000)) {
-    logger.warn("auth.sign_up_rate_limited", { ip: meta.ip });
+  if (!(await consumeRateLimit(`signup:${meta.ip ?? "unknown"}`, 5, 60 * 60))) {
+    await logSecurityEvent({
+      type: "auth.sign_up_rate_limited",
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
     return formError(dict.identity.tooManyAttempts);
   }
 
@@ -221,6 +251,16 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
     return formError(message);
   }
 
+  if (data.user) {
+    await logSecurityEvent({
+      type: "auth.signed_up",
+      userId: data.user.id,
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+      metadata: { requires_email_confirmation: !data.session },
+    });
+  }
+
   if (data.session && data.user) {
     // With email confirmations disabled the account is already confirmed and
     // the trigger has set email_verified_at. Phone proof is still required.
@@ -247,7 +287,7 @@ export async function resendEmailVerificationAction(
   if (!parsed.success) {
     return formError(dict.auth.emailInvalid, { email: [dict.auth.emailInvalid] });
   }
-  if (!rateLimit(`verify-email:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 10 * 60_000)) {
+  if (!(await consumeRateLimit(`verify-email:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 10 * 60))) {
     return formError(dict.identity.tooManyAttempts);
   }
 
@@ -279,7 +319,7 @@ export async function requestPasswordResetAction(
   if (!parsed.success) {
     return formError(dict.auth.emailInvalid, { email: [dict.auth.emailInvalid] });
   }
-  if (!rateLimit(`reset:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 15 * 60_000)) {
+  if (!(await consumeRateLimit(`reset:${meta.ip ?? "unknown"}:${parsed.data}`, 3, 15 * 60))) {
     return formError(dict.identity.tooManyAttempts);
   }
 
@@ -287,6 +327,11 @@ export async function requestPasswordResetAction(
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${NEXT_PUBLIC_APP_URL}/auth/callback?next=/${locale}/reset-password`,
+  });
+  await logSecurityEvent({
+    type: "auth.password_reset_requested",
+    ip: meta.ip,
+    userAgent: meta.userAgent,
   });
 
   // Never reveal whether the account exists.
@@ -316,6 +361,10 @@ export async function updatePasswordAction(_prev: FormState, formData: FormData)
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return formError(dict.errors.sessionExpired);
+  const meta = await getRequestMeta();
+  if (!(await consumeRateLimit(`password-update:${user.id}`, 5, 15 * 60))) {
+    return formError(dict.identity.tooManyAttempts);
+  }
 
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
   if (error) {
@@ -323,6 +372,13 @@ export async function updatePasswordAction(_prev: FormState, formData: FormData)
     return formError(dict.errors.generic);
   }
 
+  await supabase.auth.signOut({ scope: "others" });
+  await logSecurityEvent({
+    type: "auth.password_reset_completed",
+    userId: user.id,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+  });
   return formSuccess(dict.auth.passwordUpdated);
 }
 

@@ -21,6 +21,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { todayInZone } from "@/lib/dates";
 import { getDictionary } from "@/lib/i18n/server";
+import { getServerEnv } from "@/lib/env";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import type { Locale } from "@/lib/i18n/config";
@@ -200,7 +201,10 @@ export async function runAssistant(params: {
         tools,
         tool_choice: "auto",
         temperature: mode === "interactive" ? 0.1 : 0.2,
-        max_completion_tokens: mode === "interactive" ? 1200 : 700,
+        max_completion_tokens:
+          mode === "interactive"
+            ? Math.min(getServerEnv().AI_MAX_OUTPUT_TOKENS, 1200)
+            : Math.min(getServerEnv().AI_MAX_OUTPUT_TOKENS, 700),
       });
 
       const choice = completion.choices[0]?.message;

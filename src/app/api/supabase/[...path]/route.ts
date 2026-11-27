@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -19,6 +20,11 @@ const RESPONSE_HEADERS_TO_DROP = new Set([
  * only reachable when SUPABASE_INTERNAL_URL is configured.
  */
 async function forward(request: Request, context: Context): Promise<Response> {
+  if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+    const blocked = rejectCrossOrigin(request);
+    if (blocked) return blocked;
+  }
+
   const internal = process.env.SUPABASE_INTERNAL_URL?.trim();
   if (!internal) return NextResponse.json({ error: "not_configured" }, { status: 404 });
 

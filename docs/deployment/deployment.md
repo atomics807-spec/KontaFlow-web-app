@@ -38,6 +38,16 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `ORANGE_MONEY_*` | Client id/secret, merchant key, base URL and optional webhook secret |
 | `PAYMENT_AGGREGATOR_*` | Base URL, API key, paths and required webhook secret |
 
+Security-sensitive values added in Phase 18:
+
+| Variable | Production guidance |
+| --- | --- |
+| `TRUSTED_ORIGINS` | Comma-separated extra origins allowed to call Server Actions. Keep empty on a single custom domain. |
+| `SESSION_COOKIE_MAX_AGE_SECONDS` | Browser session cap. Default `604800` (seven days). Lower it for high-risk tenants. |
+| `MALWARE_SCAN_MODE` | `disabled`, `warn` or `enforce`. Use `enforce` once a scanner is contracted. |
+| `MALWARE_SCAN_URL`, `MALWARE_SCAN_API_KEY` | Scanner endpoint and bearer token. Server-only. |
+| `RATE_LIMIT_AI_PER_MINUTE`, `RATE_LIMIT_UPLOAD_PER_MINUTE`, `RATE_LIMIT_SYNC_PER_MINUTE`, `RATE_LIMIT_EXPORT_PER_MINUTE` | Durable per-minute caps. Tune per plan and monitor `security_events`. |
+
 Never commit `.env.local`. Vercel stores encrypted env vars per environment;
 Cloudflare uses `wrangler secret put` or the dashboard.
 
@@ -143,3 +153,11 @@ npm run deploy:cloudflare
 5. `curl -H "Authorization: Bearer $CRON_SECRET" https://.../api/cron/daily-digest`
    and `/api/cron/trial-reminders` return `{ "processed": n, ... }`.
 6. Response headers include CSP and HSTS.
+7. `GET /api/privacy/export` returns JSON with `cache-control: no-store` and
+   only the signed-in user's workspace data.
+8. A cross-origin POST to `/api/ai/chat` or `/api/sync` is rejected with 403.
+9. `select count(*) from security_rate_limits` as `authenticated` fails with
+   `42501`; the same query as `service_role` succeeds.
+10. `security_events` contains `auth.signed_up` after a test registration and
+    is not readable by a tenant account.
+11. `MALWARE_SCAN_MODE=enforce` blocks uploads when the scanner is unreachable.

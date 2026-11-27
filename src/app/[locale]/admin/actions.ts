@@ -7,7 +7,7 @@ import { getActiveRestriction, getPlatformAdmin, getSessionUser } from "@/lib/su
 import { getRequestMeta } from "@/lib/security/request-meta";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { logger } from "@/lib/logger";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import {
@@ -77,7 +77,7 @@ export async function restrictUserAction(_prev: FormState, formData: FormData): 
   const context = await guard("admin");
   if (!context) return failure(dict.admin.noAccess);
 
-  if (!rateLimit(`platform:restrict:${context.userId}`, 30, 15 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:restrict:${context.userId}`, 30, 900))) {
     return failure(dict.errors.rateLimited);
   }
 
@@ -202,7 +202,7 @@ export async function createPlatformAdminAction(
   const context = await guard("super_admin");
   if (!context) return failure(dict.admin.cannotManageAdmins);
 
-  if (!rateLimit(`platform:create-admin:${context.userId}`, 5, 60 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:create-admin:${context.userId}`, 5, 3600))) {
     return failure(dict.errors.rateLimited);
   }
 
@@ -306,7 +306,7 @@ export async function savePlanAction(_prev: FormState, formData: FormData): Prom
   const context = await guard("admin");
   if (!context) return failure(dict.admin.noAccess);
 
-  if (!rateLimit(`platform:plan:${context.userId}`, 30, 15 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:plan:${context.userId}`, 30, 900))) {
     return failure(dict.errors.rateLimited);
   }
 
@@ -375,7 +375,7 @@ export async function saveBillingSettingsAction(_prev: FormState, formData: Form
   const context = await guard("admin");
   if (!context) return failure(dict.admin.noAccess);
 
-  if (!rateLimit(`platform:billing:${context.userId}`, 30, 15 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:billing:${context.userId}`, 30, 900))) {
     return failure(dict.errors.rateLimited);
   }
 
@@ -408,7 +408,7 @@ export async function saveAnnouncementAction(_prev: FormState, formData: FormDat
   const context = await guard("admin");
   if (!context) return failure(dict.admin.noAccess);
 
-  if (!rateLimit(`platform:announcement:${context.userId}`, 30, 15 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:announcement:${context.userId}`, 30, 900))) {
     return failure(dict.errors.rateLimited);
   }
 
@@ -505,7 +505,7 @@ export async function requestSupportAccessAction(_prev: FormState, formData: For
   const context = await guard("support");
   if (!context) return failure(dict.admin.noAccess);
 
-  if (!rateLimit(`platform:support-access:${context.userId}`, 10, 60 * 60_000)) {
+  if (!(await consumeRateLimit(`platform:support-access:${context.userId}`, 10, 3600))) {
     return failure(dict.errors.rateLimited);
   }
 

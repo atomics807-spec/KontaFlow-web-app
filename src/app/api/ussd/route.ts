@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { addDays, todayInZone } from "@/lib/dates";
 import { getServerEnv } from "@/lib/env";
 import { hasServiceRole } from "@/lib/supabase/admin";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { safeEqual } from "@/lib/security/safe-equal";
 import { buildChannelAccess, type ChannelAccess } from "@/lib/channels/access";
 import {
@@ -109,7 +109,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   const key = `ussd:${createHash("sha256").update(phone).digest("hex").slice(0, 16)}`;
-  if (!rateLimit(key, env.RATE_LIMIT_USSD_PER_MINUTE)) {
+  if (!(await consumeRateLimit(key, env.RATE_LIMIT_USSD_PER_MINUTE, 60))) {
     return reply("END", fallbackCopy.tooManyRequests, 429);
   }
 

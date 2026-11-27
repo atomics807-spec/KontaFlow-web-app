@@ -3,7 +3,7 @@ import "server-only";
 import { AppError } from "@/lib/errors";
 import { getServerEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateOtp, hashOtp, OTP_COOLDOWN_SECONDS, OTP_TTL_MS } from "@/lib/security/otp";
 import { normalizePhone } from "@/lib/validation/phone";
@@ -62,7 +62,7 @@ export async function requestWhatsappLink(params: {
   if (!address) {
     throw new AppError("validation_failed", "Enter a valid phone number for the selected country.");
   }
-  if (!rateLimit(`whatsapp-link:${params.userId}`, 5)) {
+  if (!(await consumeRateLimit(`whatsapp-link:${params.userId}`, 5, 60))) {
     throw new AppError("rate_limited", "Too many link attempts. Wait a minute and try again.");
   }
 

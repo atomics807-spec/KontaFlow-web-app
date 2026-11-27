@@ -1129,6 +1129,117 @@ async function main(): Promise<void> {
       "23514",
     );
 
+    console.log("\nPhase 18 · privacy and security workflow");
+    eq(
+      "security rate limit buckets are service-only",
+      (await expectError(client, "authenticated", alice, `select count(*) from security_rate_limits`))?.code,
+      "42501",
+    );
+    eq(
+      "browser roles cannot call the security rate limiter",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `select public.consume_security_rate_limit('phase18-browser-key', 1, 60)`,
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "security rate limiter allows within the window",
+      await asRole(
+        client,
+        "service_role",
+        null,
+        async (c) => scalar(c, `select public.consume_security_rate_limit('phase18-service-key', 2, 60)`),
+        true,
+      ),
+      "true",
+    );
+    eq(
+      "security rate limiter rejects over the window",
+      await (async () => {
+        await asRole(client, "service_role", null, async (c) => {
+          await c.query(`select public.consume_security_rate_limit('phase18-service-key', 2, 60)`);
+          await c.query(`select public.consume_security_rate_limit('phase18-service-key', 2, 60)`);
+        }, true);
+        return asRole(client, "service_role", null, async (c) =>
+          scalar(c, `select public.consume_security_rate_limit('phase18-service-key', 2, 60)`),
+        true);
+      })(),
+      "false",
+    );
+
+    const deletion = await commitAs(client, alice, async (c) => {
+      const result = await c.query<{ data: { id: string; status: string } }>(
+        `select public.request_account_deletion('Please close my account.', $1) as data`,
+        [idA],
+      );
+      return result.rows[0]!.data;
+    });
+    eq("deletion request starts pending", deletion.status, "pending");
+    eq(
+      "owner can read their deletion request",
+      await scalar(
+        client,
+        `select count(*) from account_deletion_requests where id = $1 and user_id = $2`,
+        [deletion.id, ALICE],
+      ),
+      "1",
+    );
+    eq(
+      "another tenant cannot read the deletion request",
+      await commitAs(client, bob, async (c) =>
+        scalar(c, `select count(*) from account_deletion_requests where id = $1`, [deletion.id]),
+      ),
+      "0",
+    );
+    eq(
+      "deletion request writes a security event",
+      await scalar(
+        client,
+        `select count(*) from security_events where event_type = 'privacy.deletion_requested' and user_id = $1`,
+        [ALICE],
+      ),
+      "1",
+    );
+    eq(
+      "tenant members cannot read the security event trail",
+      await commitAs(client, alice, async (c) =>
+        scalar(c, `select count(*) from security_events where user_id = $1`, [ALICE]),
+      ),
+      "0",
+    );
+    eq(
+      "authenticated users cannot insert security events",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into security_events (user_id, event_type) values ($1, 'auth.forged')`,
+        [ALICE],
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "authenticated users cannot insert deletion requests directly",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into account_deletion_requests (user_id, reason) values ($1, 'forged')`,
+        [ALICE],
+      ))?.code,
+      "42501",
+    );
+    eq(
+      "deletion request can be cancelled by the owner",
+      await commitAs(client, alice, async (c) =>
+        scalar(c, `select public.cancel_account_deletion($1) ->> 'status'`, [deletion.id]),
+      ),
+      "cancelled",
+    );
+
     console.log("\nPhase 3 · security coverage");
     eq(
       "every public table has RLS enabled",
@@ -1150,7 +1261,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries', 'email_deliveries', 'support_access_grants')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries', 'email_deliveries', 'support_access_grants', 'security_rate_limits')`,
       ),
       "",
     );

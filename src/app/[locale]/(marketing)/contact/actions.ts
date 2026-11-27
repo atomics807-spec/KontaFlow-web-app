@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
 import { sendContactNotification } from "@/lib/integrations/email";
 import { logger } from "@/lib/logger";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { createContactSchema } from "@/lib/validation/contact";
 import { resolveLocale } from "@/lib/i18n/config";
@@ -25,7 +25,7 @@ export async function submitContactMessage(_state: FormState, formData: FormData
     requestHeaders.get("cf-connecting-ip") ??
     requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown";
-  if (!rateLimit(`contact:${ip}`, 5, 10 * 60_000)) {
+  if (!(await consumeRateLimit(`contact:${ip}`, 5, 600))) {
     return formError(dict.errors.rateLimited);
   }
 

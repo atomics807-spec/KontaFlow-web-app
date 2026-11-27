@@ -9,8 +9,18 @@ import { findAiCommandByRequest } from "@/services/ai-commands";
 import { requireFeature } from "@/lib/entitlements/service";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
+import { getServerEnv } from "@/lib/env";
+import { getRequestMeta } from "@/lib/security/request-meta";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { logSecurityEvent } from "@/lib/security/events";
+
+const MAX_BODY_BYTES = 64 * 1024;
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -21,7 +31,43 @@ export async function POST(request: Request) {
   if (!context) return NextResponse.json({ error: "no_workspace" }, { status: 403 });
   if (!can(context.role, "ai:use")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
-  const payload = await request.json().catch(() => null);
+  const meta = await getRequestMeta();
+  if (
+    !(await consumeRateLimit(
+      `ai-chat:${user.id}`,
+      getServerEnv().RATE_LIMIT_AI_PER_MINUTE,
+      60,
+    ))
+  ) {
+    await logSecurityEvent({
+      type: "ai.rate_limited",
+      userId: user.id,
+      workspaceId: context.workspace.id,
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().startsWith("application/json")) {
+    return NextResponse.json({ error: "unsupported_media_type" }, { status: 415 });
+  }
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+  const raw = await request.text();
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+  let payload: unknown = null;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 422 });
+  }
   const parsed = aiRequestSchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_payload", details: parsed.error.flatten() }, { status: 422 });

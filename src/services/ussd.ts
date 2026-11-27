@@ -3,7 +3,7 @@ import "server-only";
 import { channelAddressCandidates } from "@/lib/channels";
 import { auditChannelEvent } from "@/lib/channels/audit";
 import { AppError } from "@/lib/errors";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { generateOtp, hashOtp, OTP_COOLDOWN_SECONDS, OTP_TTL_MS } from "@/lib/security/otp";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { USSD_LINK_OTP_PURPOSE } from "@/lib/ussd/commands";
@@ -55,7 +55,7 @@ export async function linkUssdChannel(params: {
   if (!address) {
     throw new AppError("validation_failed", "Enter a valid phone number for the selected country.");
   }
-  if (!rateLimit(`ussd-link:${params.userId}`, 5)) {
+  if (!(await consumeRateLimit(`ussd-link:${params.userId}`, 5, 60))) {
     throw new AppError("rate_limited", "Too many link attempts. Wait a minute and try again.");
   }
 

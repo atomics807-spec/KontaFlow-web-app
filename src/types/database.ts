@@ -380,6 +380,52 @@ export type AuditLogRow = {
   created_at: string;
 };
 
+export type PrivacyConsentRow = {
+  id: string;
+  user_id: string;
+  workspace_id: string | null;
+  consent_type: "terms" | "privacy" | "marketing" | "analytics" | "ai_processing";
+  version: string;
+  granted: boolean;
+  granted_at: string;
+  revoked_at: string | null;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: string;
+  locale: string | null;
+  metadata: Json;
+  source: string;
+};
+
+export type SecurityEventRow = {
+  id: number;
+  user_id: string | null;
+  workspace_id: string | null;
+  event_type: string;
+  severity: "info" | "warning" | "critical";
+  ip: string | null;
+  user_agent: string | null;
+  metadata: Json;
+  created_at: string;
+};
+
+export type AccountDeletionRequestRow = {
+  id: string;
+  user_id: string;
+  workspace_id: string | null;
+  status: "pending" | "in_review" | "approved" | "completed" | "rejected" | "cancelled";
+  reason: string;
+  decision_note: string | null;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  completed_at: string | null;
+  retention_hold_until: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
+
 export type SubscriptionPlanRow = {
   id: string;
   code: WorkspacePlan;
@@ -956,6 +1002,14 @@ export type Database = {
       business_settings: TableDefinition<BusinessSettingsRow>;
       ai_workspace_preferences: TableDefinition<AiWorkspacePreferencesRow>;
       audit_logs: TableDefinition<AuditLogRow>;
+      privacy_consents: TableDefinition<PrivacyConsentRow>;
+      security_events: TableDefinition<SecurityEventRow>;
+      account_deletion_requests: TableDefinition<AccountDeletionRequestRow>;
+      security_rate_limits: TableDefinition<{
+        bucket_key: string;
+        count: number;
+        window_start: string;
+      }>;
       subscription_plans: TableDefinition<SubscriptionPlanRow>;
       subscription_features: TableDefinition<SubscriptionFeatureRow>;
       plan_features: TableDefinition<PlanFeatureRow>;
@@ -1046,6 +1100,18 @@ export type Database = {
       v_budget_progress: { Row: BudgetProgressRow; Relationships: [] };
     };
     Functions: {
+      consume_security_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number };
+        Returns: boolean;
+      };
+      request_account_deletion: {
+        Args: { p_reason?: string | null; p_workspace_id?: string | null };
+        Returns: { id: string; status: string; requested_at: string; existing: boolean };
+      };
+      cancel_account_deletion: {
+        Args: { p_request_id: string };
+        Returns: { id: string; status: string };
+      };
       record_channel_transaction: {
         Args: {
           p_workspace_id: string;

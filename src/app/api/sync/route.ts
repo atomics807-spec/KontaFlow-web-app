@@ -10,6 +10,13 @@ import { parseMoneyToMinor } from "@/lib/money";
 import { hasIdempotencyConflict } from "@/lib/offline/conflict";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import type { WorkspaceRole } from "@/types/database";
+import { rejectCrossOrigin } from "@/lib/security/csrf";
+import { getServerEnv } from "@/lib/env";
+import { getRequestMeta } from "@/lib/security/request-meta";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { logSecurityEvent } from "@/lib/security/events";
+
+const MAX_BODY_BYTES = 256 * 1024;
 
 const itemSchema = z.object({
   clientGeneratedId: z.string().min(8).max(120),
@@ -47,6 +54,9 @@ type Result = {
 };
 
 export async function POST(request: Request) {
+  const blocked = rejectCrossOrigin(request);
+  if (blocked) return blocked;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,7 +66,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
 
-  const payload = await request.json().catch(() => null);
+  const meta = await getRequestMeta();
+  if (!(await consumeRateLimit(`offline-sync:${user.id}`, getServerEnv().RATE_LIMIT_SYNC_PER_MINUTE, 60))) {
+    await logSecurityEvent({
+      type: "offline.sync_rate_limited",
+      userId: user.id,
+      severity: "warning",
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const declaredLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+  const raw = await request.text();
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  }
+  let payload: unknown = null;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return NextResponse.json({ error: "invalid_payload" }, { status: 422 });
+  }
   const parsed = bodySchema.safeParse(payload);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_payload" }, { status: 422 });

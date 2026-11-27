@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { can } from "@/lib/permissions";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { refreshPaymentStatus } from "@/services/payments";
@@ -17,7 +17,7 @@ export async function GET(_request: Request, context: Context) {
   if (!can(workspace.role, "billing:manage")) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
-  if (!rateLimit(`payment-status:${workspace.user.id}`, 30)) {
+  if (!(await consumeRateLimit(`payment-status:${workspace.user.id}`, 30, 60))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
   }
 

@@ -6,7 +6,7 @@ import { getDictionary } from "@/lib/i18n/server";
 import { DEFAULT_LOCALE, resolveLocale, type Locale } from "@/lib/i18n/config";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { logger } from "@/lib/logger";
-import { rateLimit } from "@/lib/rate-limit";
+import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
 import { sendWhatsappText, isWhatsappConfigured } from "@/lib/integrations/whatsapp";
 import {
   buildWhatsappAccess,
@@ -138,7 +138,7 @@ async function processInboundMessage(params: {
   const text = messageText(message);
   const body = text ?? null;
 
-  if (!rateLimit(`wa:${from}`, getServerEnv().RATE_LIMIT_WHATSAPP_PER_MINUTE)) {
+  if (!(await consumeRateLimit(`wa:${from}`, getServerEnv().RATE_LIMIT_WHATSAPP_PER_MINUTE, 60))) {
     logger.warn("whatsapp.rate_limited", { messageId: message.id });
     return;
   }

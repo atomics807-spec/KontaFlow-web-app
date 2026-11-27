@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, KeyRound, LifeBuoy, MonitorSmartphone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Download, KeyRound, LifeBuoy, MonitorSmartphone, ShieldCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChangePasswordForm, RecoveryForm, SessionActions } from "@/components/forms/security-forms";
+import {
+  AccountDataExportLink,
+  ChangePasswordForm,
+  DeletionRequestForm,
+  MarketingConsentForm,
+  RecoveryForm,
+  SessionActions,
+} from "@/components/forms/security-forms";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/server";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatDateTime } from "@/lib/dates";
@@ -21,6 +29,25 @@ export default async function SecuritySettingsPage({ params }: { params: Promise
   const { user, profile } = await requireWorkspaceContext(locale);
   const emailVerified = Boolean(user.email_confirmed_at || profile?.email_verified_at);
   const phoneVerified = Boolean(profile?.phone_verified_at);
+  const supabase = await createClient();
+  const [{ data: deletionRequests }, { data: marketingConsent }] = await Promise.all([
+    supabase
+      .from("account_deletion_requests")
+      .select("id, status, requested_at")
+      .eq("user_id", user.id)
+      .in("status", ["pending", "in_review", "approved"])
+      .order("requested_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("privacy_consents")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("consent_type", "marketing")
+      .eq("granted", true)
+      .is("revoked_at", null)
+      .maybeSingle(),
+  ]);
+  const activeDeletion = deletionRequests?.[0] ?? null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -121,6 +148,47 @@ export default async function SecuritySettingsPage({ params }: { params: Promise
         </CardHeader>
         <CardContent>
           <RecoveryForm />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-4 w-4 text-accent-strong" aria-hidden />
+              {dict.identity.privacyTitle}
+            </CardTitle>
+            <CardDescription>{dict.identity.privacySubtitle}</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <AccountDataExportLink />
+          <div className="border-t border-line pt-4">
+            <p className="mb-2 text-sm font-semibold text-heading">{dict.identity.privacyMarketingTitle}</p>
+            <MarketingConsentForm optedIn={Boolean(marketingConsent)} />
+          </div>
+          <div className="border-t border-line pt-4">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-heading">
+              <Trash2 className="h-4 w-4 text-danger" aria-hidden />
+              {dict.identity.privacyDeleteTitle}
+            </p>
+            <DeletionRequestForm
+              request={
+                activeDeletion
+                  ? {
+                      id: activeDeletion.id,
+                      status: activeDeletion.status,
+                      requested_at: activeDeletion.requested_at,
+                    }
+                  : null
+              }
+            />
+          </div>
+          <p className="border-t border-line pt-4 text-xs text-muted">
+            <Link href={`/${locale}/legal/privacy`} className="font-semibold text-accent-strong hover:underline">
+              {dict.identity.privacyPolicy}
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </div>
