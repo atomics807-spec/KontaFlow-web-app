@@ -76,6 +76,23 @@ export function OfflineCapture() {
   }, [locale]);
 
   useEffect(() => {
+    if (session || loading) return;
+    const onOnline = () => {
+      void bootstrapOffline(locale)
+        .then(async (created) => {
+          if (!created) return;
+          setSession(created);
+          const cached = await getCachedOptions(created.userId, created.workspaceId);
+          setAccounts(cached.accounts);
+          setCategories(cached.categories);
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [session, loading, locale]);
+
+  useEffect(() => {
     if (!session) return;
     let cancelled = false;
 

@@ -485,4 +485,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
 * Validation: `npm run typecheck`, `npm test` (214), `npm run test:db` (362),
-  `npm run test:e2e` (16), `npm run lint`, `npm run build`.
+  `npm run test:e2e` (17), `npm run lint`, `npm run build`.

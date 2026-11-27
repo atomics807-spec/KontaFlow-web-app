@@ -71,3 +71,20 @@ test("offline capture hydrates an authenticated session when opened directly", a
   await expect(page.locator("#offline-amount")).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("Direct Offline")).toBeVisible();
 });
+
+test("offline page prepares capture when the connection returns", async ({ page, context }) => {
+  const user = await seedUser({ workspaceName: "Reconnect Shop" });
+  await login(page, user.email);
+  await waitForOfflineReady(page);
+  await page.evaluate(() => navigator.serviceWorker?.ready);
+  await clearOfflineSession(page);
+
+  await context.setOffline(true);
+  await page.goto("/en/offline");
+  await expect(page.getByText(/open KontaFlow while online once/i)).toBeVisible({ timeout: 30_000 });
+
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.locator("#offline-amount")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Reconnect Shop")).toBeVisible();
+});

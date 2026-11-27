@@ -11,7 +11,7 @@ fake OpenAI server, Playwright Chromium desktop and Pixel 7 emulation.
 | TypeScript strict | `npm run typecheck` | Pass |
 | Unit tests | `npm test` | 25 files, 214 tests passed |
 | Database and RLS integration | `npm run test:db` | 362 assertions passed |
-| End-to-end | `npm run test:e2e` | 16 tests passed (14 desktop, 2 mobile) |
+| End-to-end | `npm run test:e2e` | 17 tests passed (15 desktop, 2 mobile) |
 | Lint | `npm run lint` | Pass |
 | Production build | `npm run build` | Pass |
 
@@ -36,7 +36,8 @@ fake OpenAI server, Playwright Chromium desktop and Pixel 7 emulation.
   finished and never refreshed its state. It now rehydrates after bootstrap.
 * The offline page had no identity when opened directly instead of through the
   dashboard, so it showed “Open KontaFlow while online once” even for a signed-in
-  user. It now bootstraps the session and cached options itself while online.
+  user. It now bootstraps the session and cached options itself while online,
+  and retries automatically when the connection returns.
 * The service worker was not exercised because E2E ran the development server;
   the suite now builds and tests the production server.
 * React effect-driven cooldown state triggered a lint failure; the cooldown is
