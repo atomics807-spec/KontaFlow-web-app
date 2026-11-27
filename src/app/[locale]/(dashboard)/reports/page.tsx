@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DailyChart } from "@/components/charts/daily-chart";
 import { buttonVariants } from "@/components/ui/button";
+import { PlanGate } from "@/components/ui/plan-gate";
 import { getReport } from "@/services/reports";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
@@ -12,6 +13,7 @@ import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
 import { formatDate, monthBounds, todayInZone } from "@/lib/dates";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import type { ReportResult } from "@/types/database";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -43,7 +45,8 @@ function periodFor(preset: Preset, timezone: string): { from: string; to: string
   return { from: `${year}-01-01`, to: `${year}-12-31` };
 }
 
-const PRESETS: Preset[] = ["month", "last-month", "quarter", "year"];
+const BASE_PRESETS: Preset[] = ["month", "last-month"];
+const CUSTOM_PRESETS: Preset[] = ["quarter", "year"];
 
 export default async function ReportsPage({
   params,
@@ -57,8 +60,31 @@ export default async function ReportsPage({
   const context = await requireWorkspaceContext(locale);
   const { workspace } = context;
   const query = await searchParams;
+  const entitlements = await getWorkspaceEntitlements(workspace.id, context.user.id);
 
-  const preset: Preset = PRESETS.includes((query.period ?? "month") as Preset)
+  if (!entitlements.features.monthly_reports.included) {
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.reports.title}</h1>
+          <p className="mt-1 text-sm text-muted">{dict.reports.subtitle}</p>
+        </header>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.monthly_reports.requiredPlan ?? dict.plans.growth,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
+      </div>
+    );
+  }
+
+  const presets = entitlements.features.custom_reports.included
+    ? [...BASE_PRESETS, ...CUSTOM_PRESETS]
+    : BASE_PRESETS;
+  const preset: Preset = presets.includes((query.period ?? "month") as Preset)
     ? ((query.period ?? "month") as Preset)
     : "month";
   const { from, to } = periodFor(preset, workspace.timezone);
@@ -99,25 +125,29 @@ export default async function ReportsPage({
           <p className="mt-1 text-sm text-muted">{dict.reports.subtitle}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`/api/reports/export/pdf?from=${from}&to=${to}&locale=${locale}`}
-            className={buttonVariants({ variant: "secondary", size: "md" })}
-          >
-            <FileText className="h-4 w-4" aria-hidden />
-            {dict.reports.downloadPdf}
-          </a>
-          <a
-            href={`/api/reports/export?from=${from}&to=${to}&locale=${locale}`}
-            className={buttonVariants({ variant: "secondary", size: "md" })}
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            {dict.reports.export}
-          </a>
+          {entitlements.features.advanced_exports.included ? (
+            <a
+              href={`/api/reports/export/pdf?from=${from}&to=${to}&locale=${locale}`}
+              className={buttonVariants({ variant: "secondary", size: "md" })}
+            >
+              <FileText className="h-4 w-4" aria-hidden />
+              {dict.reports.downloadPdf}
+            </a>
+          ) : null}
+          {entitlements.features.data_exports.included ? (
+            <a
+              href={`/api/reports/export?from=${from}&to=${to}&locale=${locale}`}
+              className={buttonVariants({ variant: "secondary", size: "md" })}
+            >
+              <Download className="h-4 w-4" aria-hidden />
+              {dict.reports.export}
+            </a>
+          ) : null}
         </div>
       </header>
 
       <nav aria-label={dict.reports.period} className="flex flex-wrap gap-2 text-sm">
-        {PRESETS.map((option) => (
+        {presets.map((option) => (
           <Link
             key={option}
             href={`/${locale}/reports?period=${option}`}

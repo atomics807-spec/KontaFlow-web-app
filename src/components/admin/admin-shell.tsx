@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  CreditCard,
   LayoutDashboard,
   ScrollText,
   ShieldCheck,
@@ -33,6 +34,7 @@ export function AdminShell({ role, user, children }: AdminShellProps) {
     { href: `/${locale}/admin`, label: copy.overview, icon: LayoutDashboard },
     { href: `/${locale}/admin/users`, label: copy.users, icon: Users },
     { href: `/${locale}/admin/workspaces`, label: copy.workspaces, icon: Building2 },
+    { href: `/${locale}/admin/plans`, label: copy.plans, icon: CreditCard },
     ...(role === "super_admin"
       ? [{ href: `/${locale}/admin/admins`, label: copy.admins, icon: UserCog }]
       : []),

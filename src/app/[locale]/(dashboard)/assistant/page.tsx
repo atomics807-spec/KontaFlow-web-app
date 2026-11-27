@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bot } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PlanGate } from "@/components/ui/plan-gate";
 import { AssistantChat, type ChatMessage } from "@/components/assistant/assistant-chat";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +10,8 @@ import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { isAiConfigured } from "@/lib/ai/client";
 import { monthBounds } from "@/lib/dates";
-import { planFor } from "@/lib/plans";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { getAiSettings, getLatestActionableCommand } from "@/services/ai-commands";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -22,6 +24,29 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const supabase = await createClient();
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+
+  if (!entitlements.features.ai_bookkeeping.included) {
+    return (
+      <div className="space-y-4">
+        <header>
+          <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-heading">
+            <Bot className="h-6 w-6 text-accent-strong" aria-hidden />
+            {dict.assistant.title}
+          </h1>
+          <p className="mt-1 text-sm text-muted">{dict.assistant.subtitle}</p>
+        </header>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.ai_bookkeeping.requiredPlan ?? dict.plans.growth,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
+      </div>
+    );
+  }
 
   const { data: conversation } = await supabase
     .from("ai_conversations")
@@ -72,7 +97,7 @@ export default async function AssistantPage({ params }: { params: Promise<{ loca
           <p className="mt-1 text-sm text-muted">{dict.assistant.subtitle}</p>
         </div>
         <Badge tone="jade">
-          {dict.settings.usage}: {aiUsed ?? 0} / {planFor(context.workspace.plan).aiMessagesPerMonth}
+          {dict.settings.usage}: {aiUsed ?? 0} / {entitlements.limits.aiMessagesPerMonth ?? "∞"}
         </Badge>
       </header>
 

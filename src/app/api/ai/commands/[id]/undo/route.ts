@@ -5,6 +5,7 @@ import { aiCommandIdSchema } from "@/lib/ai/schemas";
 import { undoAiCommand } from "@/services/ai-commands";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { requireFeature } from "@/lib/entitlements/service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await getWorkspaceContext();
@@ -18,6 +19,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const reason = typeof body?.reason === "string" ? body.reason.slice(0, 300) : undefined;
 
   try {
+    await requireFeature(context.workspace.id, "ai_bookkeeping", {
+      userId: context.user.id,
+      write: true,
+    });
     const command = await undoAiCommand(commandId.data, reason);
     return NextResponse.json({ command }, { headers: { "cache-control": "no-store" } });
   } catch (error) {

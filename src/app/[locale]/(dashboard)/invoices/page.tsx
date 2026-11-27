@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, FileText, LockKeyhole, Plus } from "lucide-react";
+import { ArrowRight, FileText, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buttonVariants } from "@/components/ui/button";
-import { hasFeature, listInvoices } from "@/services/finance";
+import { listInvoices } from "@/services/finance";
+import { PlanGate } from "@/components/ui/plan-gate";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
@@ -25,32 +28,23 @@ export default async function InvoicesPage({ params }: { params: Promise<{ local
   const currency = context.workspace.currency;
   const timezone = context.workspace.timezone;
   const canManage = context.can("invoices:manage");
-  const enabled = await hasFeature(context.workspace.id, "invoicing");
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
 
-  if (!enabled) {
+  if (!entitlements.features.invoice_management.included) {
     return (
       <div className="space-y-5">
         <header>
           <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.finance.invoices.title}</h1>
           <p className="mt-1 text-sm text-muted">{dict.finance.invoices.subtitle}</p>
         </header>
-        <Card className="relative overflow-hidden p-6 sm:p-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_85%_0%,rgba(242,182,75,0.18),transparent_50%)]"
-          />
-          <div className="relative max-w-xl">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-accent-soft text-accent">
-              <LockKeyhole className="h-5 w-5" aria-hidden />
-            </span>
-            <h2 className="mt-4 text-xl font-extrabold text-heading">{dict.finance.invoices.planRequired}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted">{dict.finance.invoices.planRequiredHint}</p>
-            <Link href={`/${locale}/billing`} className={buttonVariants({ size: "md", className: "mt-5" })}>
-              {dict.nav.billing}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
-        </Card>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.invoice_management.requiredPlan ?? dict.plans.scale,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
       </div>
     );
   }

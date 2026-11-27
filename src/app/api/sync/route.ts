@@ -8,6 +8,7 @@ import { isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { parseMoneyToMinor } from "@/lib/money";
 import { hasIdempotencyConflict } from "@/lib/offline/conflict";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import type { WorkspaceRole } from "@/types/database";
 
 const itemSchema = z.object({
@@ -71,6 +72,10 @@ export async function POST(request: Request) {
 
   const roles = new Map((memberships ?? []).map((m) => [m.workspace_id, m.role as WorkspaceRole]));
   const results: Result[] = [];
+  const entitlementsByWorkspace = new Map<
+    string,
+    Awaited<ReturnType<typeof getWorkspaceEntitlements>>
+  >();
 
   for (const item of parsed.data.items) {
     const role = roles.get(item.workspaceId);
@@ -80,6 +85,30 @@ export async function POST(request: Request) {
         status: "failed",
         code: "forbidden",
         error: "You no longer have permission to record transactions in this business.",
+      });
+      continue;
+    }
+
+    let entitlements = entitlementsByWorkspace.get(item.workspaceId);
+    if (!entitlements) {
+      entitlements = await getWorkspaceEntitlements(item.workspaceId, user.id);
+      entitlementsByWorkspace.set(item.workspaceId, entitlements);
+    }
+    if (!entitlements.features.offline_bookkeeping.included) {
+      results.push({
+        clientGeneratedId: item.clientGeneratedId,
+        status: "failed",
+        code: "plan_required",
+        error: "Offline bookkeeping is not included in this plan.",
+      });
+      continue;
+    }
+    if (!entitlements.writable) {
+      results.push({
+        clientGeneratedId: item.clientGeneratedId,
+        status: "failed",
+        code: "plan_required",
+        error: "Your trial or subscription has ended. Your books are read-only until you choose a plan.",
       });
       continue;
     }

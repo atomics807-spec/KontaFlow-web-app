@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PlanGate } from "@/components/ui/plan-gate";
 import { buttonVariants } from "@/components/ui/button";
 import { CashflowChart } from "@/components/charts/cashflow-chart";
 import { DailyChart } from "@/components/charts/daily-chart";
@@ -24,6 +25,7 @@ import { buildAdvisorBrief } from "@/lib/ai/advisor";
 import { analysisBounds, getBusinessIntelligence } from "@/services/business-intelligence";
 import { getAiPreferences } from "@/services/ai-preferences";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -48,6 +50,25 @@ export default async function InsightsPage({
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.advanced_analytics.included) {
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.advisor.title}</h1>
+          <p className="mt-1 text-sm text-muted">{dict.advisor.subtitle}</p>
+        </header>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.advanced_analytics.requiredPlan ?? dict.plans.growth,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
+      </div>
+    );
+  }
   const { workspace } = context;
   const query = await searchParams;
   const preferences = await getAiPreferences(workspace.id);

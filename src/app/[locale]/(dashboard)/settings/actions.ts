@@ -19,6 +19,7 @@ import { persistLocalePreference } from "@/app/[locale]/locale-actions";
 import { logger } from "@/lib/logger";
 import { normalizePhone } from "@/lib/validation/phone";
 import { interpolate } from "@/lib/i18n/interpolate";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { getServerEnv } from "@/lib/env";
 
 export async function updateWorkspaceAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -156,6 +157,21 @@ export async function linkChannelAction(_prev: FormState, formData: FormData): P
 
   if (channel !== "whatsapp" && channel !== "ussd") return formError(dict.errors.generic);
   if (!address) return formError(dict.settings.phoneInvalid);
+
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  const feature = channel === "whatsapp" ? "whatsapp_integration" : "ussd_integration";
+  if (!entitlements.features[feature].included) {
+    return formError(
+      interpolate(dict.plans.lockedBody, {
+        plan: entitlements.features[feature].requiredPlan ?? dict.plans.growth,
+      }),
+    );
+  }
+  if (!entitlements.writable) return formError(dict.plans.readOnly);
+  const integrationLimit = entitlements.limits.integrations;
+  if (integrationLimit !== null && entitlements.usage.integrations >= integrationLimit) {
+    return formError(dict.errors.generic);
+  }
 
   try {
     if (channel === "whatsapp") {

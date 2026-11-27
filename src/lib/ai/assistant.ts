@@ -15,10 +15,10 @@ import { loadAiReference } from "./reference";
 import type { AiCommandView, Clarification } from "./types";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getWorkspaceEntitlements, getWorkspaceEntitlementsAsService } from "@/lib/entitlements/service";
 import { createAiCommand, confirmAiCommand, setAiCommandReply } from "@/services/ai-commands";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
-import { planFor } from "@/lib/plans";
 import { todayInZone } from "@/lib/dates";
 import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -85,7 +85,16 @@ export async function runAssistant(params: {
 
   const supabase = params.serviceRole ? createAdminClient() : await createClient();
   const { workspace, userId, locale } = params;
-  const limit = planFor(workspace.plan).aiMessagesPerMonth;
+  const entitlements = params.serviceRole
+    ? await getWorkspaceEntitlementsAsService(workspace.id)
+    : await getWorkspaceEntitlements(workspace.id, userId);
+  if (!entitlements.features.ai_bookkeeping.included) {
+    throw new AppError("plan_required", dict.assistant.quotaReached);
+  }
+  if (!entitlements.writable) {
+    throw new AppError("plan_required", dict.assistant.quotaReached);
+  }
+  const limit = entitlements.limits.aiMessagesPerMonth ?? 0;
 
   const { data: allowed, error: quotaError } = params.serviceRole
     ? await supabase.rpc("consume_channel_quota", {

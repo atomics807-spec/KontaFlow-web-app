@@ -32,6 +32,46 @@ export const workspacePlanSchema = z.object({
   note: z.string().trim().max(500).optional(),
 });
 
+export const planSaveSchema = z.object({
+  planCode: z.enum(["starter", "growth", "scale"]),
+  name: z.string().trim().min(2).max(60),
+  description: z.string().trim().max(500).default(""),
+  priceMinor: z.coerce.number().int().min(0),
+  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  billingInterval: z.enum(["month", "year"]).default("month"),
+  seats: z.coerce.number().int().min(1).max(100000),
+  workspaceLimit: optionalLimit(1),
+  aiMessageLimit: z.coerce.number().int().min(0),
+  transactionLimit: optionalLimit(1),
+  integrationLimit: optionalLimit(0),
+  exportLimit: optionalLimit(0),
+  sortOrder: z.coerce.number().int().min(0).max(100),
+  isActive: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
+
+export const billingSettingsSchema = z.object({
+  trialDays: z.coerce.number().int().min(1).max(90),
+  trialPlanCode: z.enum(["starter", "growth", "scale"]),
+  reminderDays: z
+    .string()
+    .trim()
+    .default("7,3,1")
+    .transform((value) =>
+      [...new Set(value.split(",").map((part) => Number(part.trim())).filter((day) => Number.isInteger(day) && day >= 1 && day <= 90))].sort(
+        (a, b) => b - a,
+      ),
+    )
+    .refine((days) => days.length > 0, "Add at least one reminder day."),
+});
+
+function emptyToNull(value: unknown): unknown {
+  return value === "" || value === null || value === undefined ? null : value;
+}
+
+function optionalLimit(minimum: number) {
+  return z.preprocess(emptyToNull, z.union([z.null(), z.coerce.number().int().min(minimum)]));
+}
+
 export const createPlatformAdminSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the person's name.").max(120),
   email: emailSchema,

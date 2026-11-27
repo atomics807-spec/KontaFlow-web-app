@@ -114,6 +114,21 @@ async function main(): Promise<void> {
       "Sale",
     );
 
+    eq(
+      "workspace plan limit blocks an extra business",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.create_workspace('Third Shop', 'XAF', 'CM', 'Africa/Douala', null, 'en')`,
+          [],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+
     const idA = workspaceA.id;
     const idB = workspaceB.id;
     const todayA = await scalar(client, `select (now() at time zone 'Africa/Douala')::date::text`);
@@ -1087,7 +1102,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log')`,
       ),
       "",
     );
@@ -1309,6 +1324,118 @@ async function main(): Promise<void> {
       "8",
     );
 
+    console.log("\nPhase 13 · plans, trials and entitlements");
+    eq(
+      "a new workspace starts on the configured trial plan",
+      await scalar(
+        client,
+        `select p.code from subscriptions s join subscription_plans p on p.id = s.trial_plan_id where s.workspace_id = $1`,
+        [eveWorkspace],
+      ),
+      "growth",
+    );
+    eq(
+      "trial entitlements include advanced analytics",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'advanced_analytics')::text`, [eveWorkspace]),
+      ),
+      "true",
+    );
+    eq(
+      "trial entitlements exclude invoicing",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'invoice_management')::text`, [eveWorkspace]),
+      ),
+      "false",
+    );
+    eq(
+      "an active trial is writable",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(c, `select app.workspace_read_only($1)::text`, [eveWorkspace]),
+      ),
+      "false",
+    );
+    eq(
+      "export usage consumes the plan allowance",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.consume_quota($1, 'export', 0)::text`, [eveWorkspace]),
+      ),
+      "true",
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update subscription_plans set export_limit = 0 where code = 'growth'`);
+      },
+      true,
+    );
+    eq(
+      "a zero export allowance blocks exports",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.consume_quota($1, 'export', 0)::text`, [eveWorkspace]),
+      ),
+      "false",
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update subscription_plans set export_limit = 200 where code = 'growth'`);
+      },
+      true,
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update subscriptions set trial_ends_at = now() - interval '1 hour' where workspace_id = $1`, [eveWorkspace]);
+      },
+      true,
+    );
+    eq(
+      "an ended trial is read-only",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(c, `select app.workspace_read_only($1)::text`, [eveWorkspace]),
+      ),
+      "true",
+    );
+    eq(
+      "an ended trial loses feature access",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'advanced_analytics')::text`, [eveWorkspace]),
+      ),
+      "false",
+    );
+    ok(
+      "the expiry job moves the subscription to past due",
+      Number(
+        await asRole(client, "service_role", null, (c) => scalar(c, `select public.expire_trials()`), true),
+      ) >= 1,
+    );
+    eq(
+      "the expired subscription is past due",
+      await scalar(client, `select status::text from subscriptions where workspace_id = $1`, [eveWorkspace]),
+      "past_due",
+    );
+    eq(
+      "expired trials cannot write transactions",
+      (
+        await expectError(
+          client,
+          "service_role",
+          null,
+          `select app.assert_transaction_limit($1)`,
+          [eveWorkspace],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
     const planEscalation = await expectError(
       client,
       "authenticated",
@@ -1401,7 +1528,7 @@ async function main(): Promise<void> {
       null,
       async (c) => {
         await c.query(
-          `update subscriptions set plan = 'scale', plan_id = (select id from subscription_plans where code = 'scale') where workspace_id = $1`,
+          `update subscriptions set plan = 'scale', plan_id = (select id from subscription_plans where code = 'scale'), status = 'active', trial_plan_id = null, trial_ends_at = null where workspace_id = $1`,
           [idA],
         );
       },
@@ -2306,6 +2433,74 @@ async function main(): Promise<void> {
       "subscription plan follows the workspace",
       await scalar(client, `select plan from subscriptions where workspace_id = $1`, [idB]),
       "growth",
+    );
+
+    const savedPlan = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { saved: boolean } }>(
+        `select public.platform_admin_save_plan('growth', jsonb_build_object(
+           'name', 'Growth', 'description', 'For businesses that need deeper financial management.',
+           'priceMinor', 9900, 'currency', 'XAF', 'billingInterval', 'month', 'seats', 8,
+           'workspaceLimit', 2, 'aiMessageLimit', 500, 'transactionLimit', 5000,
+           'integrationLimit', 3, 'exportLimit', 200, 'sortOrder', 2, 'isActive', true,
+           'features', jsonb_build_array(jsonb_build_object('code', 'budget_management', 'included', true, 'limit', null))
+         ), null) as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform admins can save a plan with the camel-case payload", savedPlan.saved, true);
+    eq(
+      "saving a plan updates its price",
+      await scalar(client, `select price_minor::text from subscription_plans where code = 'growth'`),
+      "9900",
+    );
+    eq(
+      "saving a plan updates its feature grant",
+      await scalar(
+        client,
+        `select pf.included::text from plan_features pf join subscription_features f on f.id = pf.feature_id
+          join subscription_plans p on p.id = pf.plan_id where p.code = 'growth' and f.code = 'budget_management'`,
+      ),
+      "true",
+    );
+    eq(
+      "tenant users cannot save platform plans",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.platform_admin_save_plan('growth', jsonb_build_object('name', 'Hacked'), null)`,
+          [],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+    const savedBilling = await commitAs(client, superAdmin, async (c) => {
+      const result = await c.query<{ data: { trial_days: number } }>(
+        `select public.platform_admin_save_billing_settings(14, 'growth', array[7,3,1], null) as data`,
+      );
+      return result.rows[0]!.data;
+    });
+    eq("platform admins can save trial settings", savedBilling.trial_days, 14);
+    eq(
+      "trial settings are stored",
+      await scalar(client, `select value ->> 'trial_days' from platform_settings where key = 'billing'`),
+      "14",
+    );
+    eq(
+      "tenant users cannot change trial settings",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.platform_admin_save_billing_settings(14, 'growth', array[7,3,1], null)`,
+          [],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
     );
 
     const workspaceList = await commitAs(client, superAdmin, async (c) => {

@@ -13,6 +13,7 @@ import { OfflineOutboxPanel } from "@/components/offline/offline-outbox-panel";
 import { getCachedOptions, getOfflineSession, newClientId, type CachedAccount, type CachedCategory, type OfflineSession } from "@/lib/offline/db";
 import { enqueueTransaction, getOutboxItem, type NewOutboxItem } from "@/lib/offline/outbox";
 import { requestBackgroundSync, syncOutbox } from "@/lib/offline/sync";
+import { refreshOfflineBootstrap } from "@/lib/offline/bootstrap";
 import { parseMoneyToMinor } from "@/lib/money";
 import { todayInZone } from "@/lib/dates";
 import type { TransactionKind } from "@/types/database";
@@ -29,6 +30,18 @@ export function OfflineCapture() {
   const [amount, setAmount] = useState("");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<Message>(null);
+  const [online, setOnline] = useState(true);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -49,6 +62,43 @@ export function OfflineCapture() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+
+    const syncNow = async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      await syncOutbox(session).catch(() => undefined);
+      if (cancelled) return;
+      await refreshOfflineBootstrap(session).catch(() => undefined);
+    };
+
+    const onOnline = () => {
+      void requestBackgroundSync();
+      void syncNow();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void syncNow();
+    };
+    const onServiceWorker = (event: MessageEvent) => {
+      if (event.data?.type === "KONTAFLOW_SYNC") void syncNow();
+    };
+
+    void syncNow();
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    navigator.serviceWorker?.addEventListener("message", onServiceWorker);
+    const interval = window.setInterval(() => void syncNow(), 30_000);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+      navigator.serviceWorker?.removeEventListener("message", onServiceWorker);
+      window.clearInterval(interval);
+    };
+  }, [session]);
 
   const visibleCategories = categories.filter(
     (category) => category.kind === (kind === "income" ? "income" : "expense"),
@@ -144,10 +194,15 @@ export function OfflineCapture() {
     return (
       <Alert tone="warning">
         <span>
-          {dict.pwa.offlineNoSession}{" "}
-          <Link href={`/${locale}/login`} className="font-semibold underline">
-            {dict.auth.signIn}
-          </Link>
+          {dict.pwa.offlineNoSession}
+          {online ? (
+            <>
+              {" "}
+              <Link href={`/${locale}/login`} className="font-semibold underline">
+                {dict.auth.signIn}
+              </Link>
+            </>
+          ) : null}
         </span>
       </Alert>
     );

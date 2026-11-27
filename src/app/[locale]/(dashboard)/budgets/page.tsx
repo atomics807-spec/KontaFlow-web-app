@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { Archive, PiggyBank, Target, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PlanGate } from "@/components/ui/plan-gate";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NewBudgetForm } from "@/components/forms/new-budget-form";
 import { GoalProgressForm, NewGoalForm } from "@/components/forms/goal-forms";
 import { archiveBudgetAction } from "@/app/[locale]/(dashboard)/finance/actions";
 import { listBudgetProgress, listExpenseCategories, listGoals } from "@/services/finance";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { intlLocale, pickTranslation, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
@@ -35,6 +38,25 @@ export default async function BudgetsPage({ params }: { params: Promise<{ locale
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.budget_management.included) {
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.finance.budgets.title}</h1>
+          <p className="mt-1 text-sm text-muted">{dict.finance.budgets.subtitle}</p>
+        </header>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.budget_management.requiredPlan ?? dict.plans.growth,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
+      </div>
+    );
+  }
   const currency = context.workspace.currency;
   const timezone = context.workspace.timezone;
   const today = todayInZone(timezone);

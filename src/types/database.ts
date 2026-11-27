@@ -42,7 +42,7 @@ export type MemberStatus = "invited" | "active" | "suspended";
 export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
 export type AiMessageRole = "user" | "assistant" | "tool";
 export type AiCommandStatus = "pending" | "confirmed" | "dismissed" | "reversed" | "failed";
-export type UsageKind = "ai_message" | "ussd_session" | "whatsapp_message" | "sync_push";
+export type UsageKind = "ai_message" | "ussd_session" | "whatsapp_message" | "sync_push" | "export";
 export type InvoiceStatus = "draft" | "sent" | "partially_paid" | "paid" | "overdue" | "void";
 export type DebtDirection = "receivable" | "payable";
 export type DebtStatus = "open" | "partially_paid" | "settled" | "written_off";
@@ -359,22 +359,86 @@ export type AuditLogRow = {
   created_at: string;
 };
 
+export type SubscriptionPlanRow = {
+  id: string;
+  code: WorkspacePlan;
+  name: string;
+  description: string | null;
+  price_minor: number;
+  currency: string;
+  billing_interval: string;
+  seats_included: number;
+  workspace_limit: number | null;
+  ai_message_limit: number;
+  transaction_limit: number | null;
+  integration_limit: number | null;
+  export_limit: number | null;
+  sort_order: number;
+  is_active: boolean;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionFeatureRow = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  category: string;
+  created_at: string;
+};
+
+export type PlanFeatureRow = {
+  plan_id: string;
+  feature_id: string;
+  included: boolean;
+  limit_value: number | null;
+  created_at: string;
+};
+
 export type SubscriptionRow = {
   id: string;
   workspace_id: string;
   plan: WorkspacePlan;
+  plan_id: string | null;
   status: SubscriptionStatus;
   provider: string;
   provider_ref: string | null;
   price_minor: number;
   currency: string;
   seats: number;
+  trial_started_at: string | null;
   trial_ends_at: string | null;
+  trial_plan_id: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  canceled_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type PlatformSettingRow = {
+  key: string;
+  value: Json;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+export type TrialGrantRow = {
+  user_id: string;
+  first_workspace_id: string | null;
+  phone_hash: string | null;
+  email_hash: string | null;
+  trial_started_at: string;
+  created_at: string;
+};
+
+export type TrialReminderLogRow = {
+  workspace_id: string;
+  days_before: number;
+  sent_at: string;
 };
 
 export type PaymentTransactionRow = {
@@ -782,7 +846,13 @@ export type Database = {
       business_settings: TableDefinition<BusinessSettingsRow>;
       ai_workspace_preferences: TableDefinition<AiWorkspacePreferencesRow>;
       audit_logs: TableDefinition<AuditLogRow>;
+      subscription_plans: TableDefinition<SubscriptionPlanRow>;
+      subscription_features: TableDefinition<SubscriptionFeatureRow>;
+      plan_features: TableDefinition<PlanFeatureRow>;
       subscriptions: TableDefinition<SubscriptionRow>;
+      platform_settings: TableDefinition<PlatformSettingRow>;
+      trial_grants: TableDefinition<TrialGrantRow>;
+      trial_reminder_log: TableDefinition<TrialReminderLogRow>;
       payment_transactions: TableDefinition<PaymentTransactionRow>;
       usage_events: TableDefinition<UsageEventRow>;
       channel_identities: TableDefinition<ChannelIdentityRow>;
@@ -864,7 +934,16 @@ export type Database = {
           p_legal_name?: string | null;
           p_locale?: string;
         };
-        Returns: { id: string; name: string; slug: string; currency: string; timezone: string; locale: string };
+        Returns: {
+          id: string;
+          name: string;
+          slug: string;
+          currency: string;
+          timezone: string;
+          locale: string;
+          trial: boolean;
+          trial_days: number;
+        };
       };
       complete_onboarding: {
         Args: {
@@ -915,6 +994,46 @@ export type Database = {
       has_workspace_feature: {
         Args: { p_workspace_id: string; p_feature_code: string };
         Returns: boolean;
+      };
+      get_plan_catalogue: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      platform_admin_plan_catalogue: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      platform_admin_billing_settings: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      platform_admin_save_billing_settings: {
+        Args: {
+          p_trial_days: number;
+          p_trial_plan_code: string;
+          p_reminder_days: number[];
+          p_ip?: string | null;
+        };
+        Returns: Json;
+      };
+      platform_admin_save_plan: {
+        Args: { p_plan_code: string; p_payload: Json; p_ip?: string | null };
+        Returns: { code: string; saved: boolean };
+      };
+      activate_paid_subscription: {
+        Args: {
+          p_workspace_id: string;
+          p_plan_code: string;
+          p_provider: string;
+          p_provider_ref: string;
+          p_amount_minor: number;
+          p_currency: string;
+        };
+        Returns: Json;
+      };
+      expire_trials: {
+        Args: Record<string, never>;
+        Returns: number;
       };
       next_invoice_number: {
         Args: { p_workspace_id: string };

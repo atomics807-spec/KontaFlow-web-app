@@ -17,6 +17,7 @@ All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 | `/api/ussd` | POST | Required `USSD_CALLBACK_TOKEN` | Africa's Talking USSD menu; returns plain-text `CON`/`END` |
 | `/api/whatsapp` | GET/POST | Verify token / HMAC | Meta webhook handshake and inbound messages |
 | `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails the previous day's close to workspace owners |
+| `/api/cron/trial-reminders` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Expires trials and sends configured reminder emails |
 
 ### Error shape
 
@@ -66,6 +67,11 @@ Called through the Supabase client; all are `SECURITY DEFINER` with
 | `undo_ai_command(id, reason)` | authenticated | Creator-only reversal of a confirmed transaction draft; 24-hour window |
 | `set_ai_command_reply(id, reply)` | authenticated | Creator-only final reply update used after auto-post |
 | `get_workspace_summary_as_service(workspace, from, to)` | `service_role` only | Digest job |
+| `get_plan_catalogue()` | public | Active plans and feature grants for pricing and billing |
+| `platform_admin_plan_catalogue()` / `platform_admin_billing_settings()` | platform admin | Plan console reads |
+| `platform_admin_save_plan(code, payload, ip)` / `platform_admin_save_billing_settings(days, plan, reminders, ip)` | platform admin | Audited plan and trial configuration |
+| `expire_trials()` | `service_role` only | Moves ended trials to `past_due` (read-only) |
+| `activate_paid_subscription(...)` | `service_role` only | Verified payment activates a plan and clears the trial |
 
 ## Offline payload
 

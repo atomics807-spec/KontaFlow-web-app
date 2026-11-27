@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { getTransactionOptions, listTransactions } from "@/services/transactions";
 import { pickTranslation, resolveLocale } from "@/lib/i18n/config";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,14 @@ export async function GET(request: Request) {
 
   const context = await getWorkspaceContext();
   if (!context) return NextResponse.json({ error: "no_workspace" }, { status: 403 });
+
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, user.id);
+  if (!entitlements.features.offline_bookkeeping.included) {
+    return NextResponse.json({ error: "plan_required" }, { status: 402 });
+  }
+  if (!entitlements.writable) {
+    return NextResponse.json({ error: "read_only" }, { status: 402 });
+  }
 
   const locale = resolveLocale(new URL(request.url).searchParams.get("locale") ?? "en");
   const [options, transactions] = await Promise.all([

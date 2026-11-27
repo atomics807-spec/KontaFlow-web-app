@@ -5,7 +5,10 @@ import { FaqList, PageHero, PricingTiers, SectionHeading } from "@/components/ma
 import { buttonVariants } from "@/components/ui/button";
 import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { resolveLocale } from "@/lib/i18n/config";
+import { getPlanCatalogue } from "@/services/plans";
+import { formatMoney, moneyLocale } from "@/lib/money";
 import { marketingMetadata } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -22,8 +25,36 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 export default async function PricingPage({ params }: { params: Promise<{ locale: string }> }) {
   const locale = resolveLocale((await params).locale);
-  const [content, dict] = await Promise.all([getSiteContent(locale), getDictionary(locale)]);
+  const [content, dict, catalogue] = await Promise.all([
+    getSiteContent(locale),
+    getDictionary(locale),
+    getPlanCatalogue().catch(() => []),
+  ]);
   const pricing = content.home.subscription;
+  const tiers = catalogue.length
+    ? catalogue.map((plan) => ({
+        name: plan.name,
+        description: plan.description,
+        price: plan.priceMinor === 0 ? "0" : formatMoney(BigInt(plan.priceMinor), plan.currency, moneyLocale(locale, plan.currency)),
+        period: plan.priceMinor === 0 ? "" : dict.common.perMonth,
+        cta: plan.priceMinor === 0 ? content.common.startTrial : content.common.talkToUs,
+        featured: plan.code === "growth",
+        features: [
+          plan.transactionLimit
+            ? interpolate(dict.plans.transactionsPerMonth, { count: plan.transactionLimit.toLocaleString() })
+            : dict.plans.unlimitedTransactions,
+          interpolate(dict.plans.seatsIncluded, { count: plan.seats }),
+          plan.features.some((feature) => feature.code === "ai_bookkeeping" && feature.included)
+            ? interpolate(dict.plans.aiMessagesIncluded, { count: plan.aiMessageLimit.toLocaleString() })
+            : dict.plans.noAi,
+          ...plan.features
+            .filter((feature) => feature.included && feature.code !== "team_members")
+            .map((feature) => dict.plans.featureNames[feature.code as keyof typeof dict.plans.featureNames])
+            .filter((label): label is string => Boolean(label))
+            .slice(0, 4),
+        ],
+      }))
+    : pricing.tiers;
   const faqItems = content.home.faq.items.slice(0, 6);
   const refundTitle = content.legal.find((doc) => doc.slug === "refunds")?.title ?? content.legal[0].title;
 
@@ -46,7 +77,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
       />
       <section className="py-16 sm:py-20">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-          <PricingTiers tiers={pricing.tiers} locale={locale} footnote={pricing.footnote} headingLevel={2} />
+          <PricingTiers tiers={tiers} locale={locale} footnote={pricing.footnote} headingLevel={2} />
           <div className="mt-12 rounded-2xl border border-line bg-panel p-6 sm:p-8">
             <h2 className="text-lg font-extrabold text-heading">{pricing.includedTitle}</h2>
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

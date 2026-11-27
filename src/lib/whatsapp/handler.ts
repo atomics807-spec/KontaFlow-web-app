@@ -31,6 +31,11 @@ export async function handleWhatsappCommand(params: {
   if (intent.intent === "start") return copy.optedIn;
 
   if (!access.activeMember) return access.restricted ? copy.restricted : copy.accessRevoked;
+  if (!access.whatsappAllowed) {
+    return interpolate(copy.planRequired, {
+      plan: access.entitlements.features.whatsapp_integration.requiredPlan ?? "Growth",
+    });
+  }
   if (!access.subscriptionReadable) return copy.subscriptionInactive;
 
   const money = (value: bigint | number | string) =>
@@ -56,7 +61,7 @@ export async function handleWhatsappCommand(params: {
       }
 
       case "weekly_report": {
-        if (!access.reportAllowed) return copy.noPermission;
+        if (!access.weeklyReportAllowed) return copy.noPermission;
         const to = todayInZone(access.workspace.timezone);
         const from = addDays(to, -6);
         const report = await reportAsService(access.workspace.id, from, to);

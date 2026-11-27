@@ -1,5 +1,5 @@
 /* KontaFlow service worker: safe app shell, offline fallback and update control. */
-const VERSION = "kontaflow-v4";
+const VERSION = "kontaflow-v6";
 const SHELL_CACHE = `${VERSION}-shell`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const IMAGE_CACHE = `${VERSION}-images`;

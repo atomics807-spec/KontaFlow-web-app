@@ -2,6 +2,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { OfflineIdentityProvider } from "@/components/offline/offline-identity-provider";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 
 export default async function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default async function DashboardLayout({
 }) {
   const locale = resolveLocale((await params).locale);
   const context = await requireWorkspaceContext(locale);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
 
   return (
     <OfflineIdentityProvider
@@ -39,6 +41,12 @@ export default async function DashboardLayout({
           email: context.user.email ?? "",
         }}
         canRecord={context.can("transactions:create")}
+        billing={{
+          readOnly: entitlements.readOnly,
+          trialActive: entitlements.trial.active,
+          trialDays: entitlements.trial.daysRemaining,
+          planName: entitlements.trial.planName ?? entitlements.planName,
+        }}
       >
         {children}
       </AppShell>

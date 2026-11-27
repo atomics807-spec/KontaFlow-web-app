@@ -19,6 +19,7 @@ const serverSchema = z.object({
   APP_ENV: z.enum(["development", "preview", "production", "test"]).default("development"),
   DEPLOYMENT_TARGET: z.enum(["local", "node", "vercel", "cloudflare"]).default("local"),
   SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
+  SUPABASE_INTERNAL_URL: optionalSecret,
   SUPABASE_DB_URL: optionalSecret,
   OPENAI_API_KEY: optionalSecret,
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
@@ -108,6 +109,7 @@ export function getServerEnv(): ServerEnv {
     APP_ENV: process.env.APP_ENV,
     DEPLOYMENT_TARGET: process.env.DEPLOYMENT_TARGET,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    SUPABASE_INTERNAL_URL: process.env.SUPABASE_INTERNAL_URL,
     SUPABASE_DB_URL: process.env.SUPABASE_DB_URL,
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
@@ -153,6 +155,16 @@ export function getServerEnv(): ServerEnv {
   if (!parsed.success) throw new EnvValidationError("server", formatIssues(parsed.error));
   cachedServerEnv = parsed.data;
   return cachedServerEnv;
+}
+
+/** Server-side Supabase origin. Local previews can proxy through the app. */
+export function getSupabaseServerUrl(): string {
+  const internal = process.env.SUPABASE_INTERNAL_URL?.trim();
+  if (internal) {
+    const parsed = z.url().safeParse(internal);
+    if (parsed.success) return parsed.data.replace(/\/$/, "");
+  }
+  return getPublicEnv().NEXT_PUBLIC_SUPABASE_URL;
 }
 
 /** True when the public Supabase credentials are present and well-formed. */

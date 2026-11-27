@@ -158,6 +158,14 @@ export async function POST(request: Request): Promise<Response> {
       return reply("END", access.restricted ? copy.restricted : copy.accessRevoked);
     }
     if (!access.subscriptionReadable) return reply("END", copy.subscriptionInactive);
+    if (!access.ussdAllowed) {
+      return reply(
+        "END",
+        format(copy.planRequired, {
+          plan: access.entitlements.features.ussd_integration.requiredPlan ?? "Business Pro",
+        }),
+      );
+    }
 
     let existing = await loadUssdSession(sessionId);
     if (existing && !samePhone(existing.phone, phone)) {

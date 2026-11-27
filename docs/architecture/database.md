@@ -19,6 +19,7 @@ its tests cannot drift apart.
 | `0008_storage` | first private documents bucket and object policies |
 | `0009_member_directory` | `get_workspace_members` |
 | `0010_channel_ingestion` | service-role entry points for USSD/WhatsApp/cron |
+| `0037_phase13_entitlements` | configurable plans, feature grants, trial lifecycle, read-only enforcement |
 | `0011_phase3_finance_ops` | transaction provenance/reversal columns, `business_settings`, `invoices`, `invoice_items`, `debts`, `debt_payments`, `budgets`, `financial_goals`, `inventory_items`, `financial_reports`, composite FK targets |
 | `0012_phase3_platform` | `subscription_plans`, `subscription_features`, `plan_features`, `payment_webhooks`, `ai_interactions`, `ai_suggestions`, `notification_preferences`, `privacy_consents`, `otp_verifications`, `integration_accounts`, `integration_messages`, `offline_sync_records`, `idempotency_records`, compatibility views |
 | `0013_phase3_integrity` | invoice totals/locking triggers, invoice numbering, debt repayment triggers, audit triggers, `reverse_transaction` |

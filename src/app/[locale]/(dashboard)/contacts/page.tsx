@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import { Search, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PlanGate } from "@/components/ui/plan-gate";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NewContactForm } from "@/components/forms/new-contact-form";
 import { listContacts } from "@/services/workspaces";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { cn } from "@/lib/utils";
@@ -27,6 +30,25 @@ export default async function ContactsPage({
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.customer_supplier_management.included) {
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.contacts.title}</h1>
+          <p className="mt-1 text-sm text-muted">{dict.contacts.subtitle}</p>
+        </header>
+        <PlanGate
+          title={dict.plans.lockedTitle}
+          body={interpolate(dict.plans.lockedBody, {
+            plan: entitlements.features.customer_supplier_management.requiredPlan ?? dict.plans.growth,
+          })}
+          cta={dict.plans.upgrade}
+          href={`/${locale}/billing`}
+        />
+      </div>
+    );
+  }
   const { q } = await searchParams;
   const search = (q ?? "").slice(0, 80);
 

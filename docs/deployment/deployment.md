@@ -22,6 +22,7 @@ Set every variable from `.env.example`. Minimum for a working app:
 | --- | --- |
 | `NEXT_PUBLIC_APP_URL` | Canonical HTTPS origin, no trailing slash |
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public client config |
+| `SUPABASE_INTERNAL_URL` | Optional server-only origin for a local Supabase stack; only used with the `/api/supabase` preview gateway |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only; required by USSD, WhatsApp, cron |
 | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Invitations and daily digest |
 | `CONTACT_INBOX_EMAIL` | Destination for public contact form notifications (defaults to `info@kontaflow.com`) |
@@ -30,10 +31,16 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN`, `USSD_SESSION_TTL_SECONDS` | Africa's Talking callback |
 | `SMS_PROVIDER=africastalking` + `AFRICASTALKING_*` | Phone OTP delivery; `none` blocks onboarding, `console` is local-only |
 | `OTP_HMAC_SECRET` | Dedicated 32-byte secret for OTP hashing; do not reuse the service-role key |
-| `CRON_SECRET` | Bearer token for `/api/cron/daily-digest` |
+| `CRON_SECRET` | Bearer token for `/api/cron/daily-digest` and `/api/cron/trial-reminders` |
 
 Never commit `.env.local`. Vercel stores encrypted env vars per environment;
 Cloudflare uses `wrangler secret put` or the dashboard.
+
+For a local preview where Supabase runs beside the app, set
+`SUPABASE_INTERNAL_URL=http://127.0.0.1:54321` and
+`NEXT_PUBLIC_SUPABASE_URL=<preview-origin>/api/supabase`. The same-origin
+gateway keeps browser auth calls on the preview host. Hosted deployments should
+leave `SUPABASE_INTERNAL_URL` unset.
 
 ## Vercel
 
@@ -45,12 +52,17 @@ Cloudflare uses `wrangler secret put` or the dashboard.
 
 ```json
 {
-  "crons": [{ "path": "/api/cron/daily-digest", "schedule": "0 18 * * *" }]
+  "crons": [
+    { "path": "/api/cron/daily-digest", "schedule": "0 18 * * *" },
+    { "path": "/api/cron/trial-reminders", "schedule": "0 8 * * *" }
+  ]
 }
 ```
 
-18:00 UTC is 19:00 in `Africa/Douala`. Vercel sends
-`Authorization: Bearer $CRON_SECRET` automatically when the env var is set.
+18:00 UTC is 19:00 in `Africa/Douala`. The trial reminder job expires finished
+trials, sends the configured 7/3/1-day emails and writes one reminder log row
+per workspace per interval. Vercel sends `Authorization: Bearer $CRON_SECRET`
+automatically when the env var is set.
 
 5. Point Cloudflare DNS at Vercel and keep the proxy (orange cloud) on for WAF,
    TLS and caching of static assets.
@@ -70,9 +82,11 @@ npm run deploy:cloudflare
 2. Add secrets: `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY`, plus the
    other server-only values.
 3. Add the custom domain in Cloudflare and enable WAF managed rules.
-4. Schedule the digest with a Cron Trigger and a Worker fetch to the route, or
-   use Cloudflare Snippets/Workers Cron to call
-   `https://app.example.com/api/cron/daily-digest` with the bearer token.
+4. Schedule both jobs with Cron Triggers and a Worker fetch, or use Cloudflare
+   Snippets/Workers Cron to call `/api/cron/daily-digest` at 18:00 UTC and
+   `/api/cron/trial-reminders` at 08:00 UTC with the bearer token. `vercel.json`
+   is ignored by Cloudflare; configure the schedules in `wrangler.jsonc` or the
+   dashboard.
 5. Edge caching: keep HTML on `no-store` (dynamic, per-tenant); static assets
    (`/_next/static/*`, `/icons/*`) can be cached aggressively.
 
@@ -104,5 +118,5 @@ npm run deploy:cloudflare
 4. `GET /api/whatsapp?hub.mode=subscribe&hub.verify_token=...&hub.challenge=ok`
    returns `ok`; a signed POST reaches the assistant.
 5. `curl -H "Authorization: Bearer $CRON_SECRET" https://.../api/cron/daily-digest`
-   returns `{ "processed": n, ... }`.
+   and `/api/cron/trial-reminders` return `{ "processed": n, ... }`.
 6. Response headers include CSP and HSTS.

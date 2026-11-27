@@ -2,6 +2,7 @@ import "server-only";
 
 import { can, type WorkspaceRole } from "@/lib/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getWorkspaceEntitlementsAsService } from "@/lib/entitlements/service";
 import { resolveLocale, type Locale } from "@/lib/i18n/config";
 import type {
   ChannelIdentityRow,
@@ -28,6 +29,10 @@ export type ChannelAccess = {
   writeAllowed: boolean;
   reportAllowed: boolean;
   aiAllowed: boolean;
+  whatsappAllowed: boolean;
+  ussdAllowed: boolean;
+  weeklyReportAllowed: boolean;
+  entitlements: Awaited<ReturnType<typeof getWorkspaceEntitlementsAsService>>;
   windowExpiresAt: string;
 };
 
@@ -78,6 +83,7 @@ export async function buildChannelAccess(
     throw new Error("Channel identity points at a missing workspace");
   }
 
+  const entitlements = await getWorkspaceEntitlementsAsService(identity.workspace_id);
   const now = Date.now();
   const restricted =
     Boolean(platformAdmin) ||
@@ -109,9 +115,25 @@ export async function buildChannelAccess(
     restricted,
     activeMember,
     readAllowed: activeMember && can(role, "transactions:read") && subscriptionReadable,
-    writeAllowed: activeMember && can(role, "transactions:create") && subscriptionWritable,
+    writeAllowed:
+      activeMember &&
+      can(role, "transactions:create") &&
+      subscriptionWritable &&
+      entitlements.features.manual_bookkeeping.included,
     reportAllowed: activeMember && can(role, "reports:read") && subscriptionReadable,
-    aiAllowed: activeMember && can(role, "ai:use") && subscriptionWritable,
+    aiAllowed:
+      activeMember &&
+      can(role, "ai:use") &&
+      subscriptionWritable &&
+      entitlements.features.ai_bookkeeping.included,
+    whatsappAllowed: activeMember && entitlements.features.whatsapp_integration.included,
+    ussdAllowed: activeMember && entitlements.features.ussd_integration.included,
+    weeklyReportAllowed:
+      activeMember &&
+      can(role, "reports:read") &&
+      subscriptionReadable &&
+      entitlements.features.weekly_reports.included,
+    entitlements,
     windowExpiresAt: windowFrom(identity, fallbackWindow),
   };
 }

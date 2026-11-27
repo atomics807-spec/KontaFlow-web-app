@@ -27,6 +27,12 @@ const SAFE_MESSAGES: Array<[RegExp, string]> = [
   [/Invitation has expired/i, "This invitation has expired."],
   [/This invitation belongs to a different email address/i, "This invitation belongs to a different email address."],
   [/Select a valid cash, bank or mobile money account/i, "Choose a valid account."],
+  [/Monthly transaction limit reached for this plan/i, "You have reached this month's transaction limit. Upgrade your plan to keep recording."],
+  [/Plan member limit reached for this workspace/i, "You have reached this plan's member limit. Upgrade to invite more people."],
+  [/Your trial or subscription is read-only/i, "Your trial or subscription has ended. Your books are read-only until you choose a plan."],
+  [/This plan does not include manual bookkeeping/i, "This plan does not include manual bookkeeping."],
+  [/Payment amount is below the plan price/i, "The payment amount does not match the selected plan."],
+  [/Payment currency does not match the plan currency/i, "The payment currency does not match the selected plan."],
 ];
 
 export function mapSupabaseError(error: unknown, fallback: string): AppError {

@@ -5,6 +5,8 @@ export type AppErrorCode =
   | "validation_failed"
   | "conflict"
   | "rate_limited"
+  | "plan_required"
+  | "limit_reached"
   | "integration_unavailable"
   | "configuration_missing"
   | "internal_error";
@@ -16,6 +18,8 @@ const STATUS_BY_CODE: Record<AppErrorCode, number> = {
   validation_failed: 422,
   conflict: 409,
   rate_limited: 429,
+  plan_required: 402,
+  limit_reached: 402,
   integration_unavailable: 503,
   configuration_missing: 500,
   internal_error: 500,

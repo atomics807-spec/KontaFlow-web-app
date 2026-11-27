@@ -5,6 +5,7 @@ import { aiCommandIdSchema } from "@/lib/ai/schemas";
 import { confirmAiCommand } from "@/services/ai-commands";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { requireFeature } from "@/lib/entitlements/service";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const context = await getWorkspaceContext();
@@ -15,6 +16,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (!commandId.success) return NextResponse.json({ error: "invalid_command" }, { status: 422 });
 
   try {
+    await requireFeature(context.workspace.id, "ai_bookkeeping", {
+      userId: context.user.id,
+      write: true,
+    });
     const command = await confirmAiCommand(commandId.data, false);
     return NextResponse.json({ command }, { headers: { "cache-control": "no-store" } });
   } catch (error) {

@@ -8,7 +8,7 @@ import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { inviteMember, listPendingInvitations, listWorkspaceMembers, removeMember, revokeInvitation, updateMemberRole } from "@/services/workspaces";
 import { sendInvitationEmail } from "@/lib/integrations/email";
-import { planFor } from "@/lib/plans";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -39,12 +39,16 @@ export async function inviteMemberAction(_prev: FormState, formData: FormData): 
   });
   if (!parsed.success) return formError(dict.auth.emailInvalid);
 
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, entitlements] = await Promise.all([
     listWorkspaceMembers(context.workspace.id),
     listPendingInvitations(context.workspace.id),
+    getWorkspaceEntitlements(context.workspace.id, context.user.id),
   ]);
-  const seats = planFor(context.workspace.plan).seats;
-  if (members.length + invitations.length >= seats) {
+  if (!entitlements.features.team_members.included) {
+    return formError(dict.plans.lockedBody.replace("{plan}", entitlements.features.team_members.requiredPlan ?? dict.plans.growth));
+  }
+  const seats = entitlements.limits.seats;
+  if (seats !== null && members.length + invitations.length >= seats) {
     return formError(
       locale === "fr"
         ? `Votre forfait autorise ${seats} membres. Passez à un forfait supérieur pour inviter davantage de personnes.`

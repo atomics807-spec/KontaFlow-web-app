@@ -9,7 +9,7 @@ import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatDate } from "@/lib/dates";
-import { planFor } from "@/lib/plans";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { ROLE_RANK } from "@/lib/permissions";
 import { changeRoleAction, removeMemberAction, revokeInvitationAction } from "./actions";
 import type { WorkspaceRole } from "@/types/database";
@@ -29,7 +29,8 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
     context.can("members:read") ? listPendingInvitations(context.workspace.id) : Promise.resolve([]),
   ]);
 
-  const seats = planFor(context.workspace.plan).seats;
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  const seats = entitlements.limits.seats;
   const used = members.length + invitations.length;
   const canInvite = context.can("members:invite");
   const canUpdate = context.can("members:update");
@@ -46,7 +47,7 @@ export default async function TeamPage({ params }: { params: Promise<{ locale: s
 
       <div className="flex items-center gap-2 text-xs text-muted">
         <Badge tone="outline">
-          {used} / {seats} {dict.settings.members}
+          {used} / {seats ?? "∞"} {dict.settings.members}
         </Badge>
         <span>{dict.plans.current}</span>
       </div>

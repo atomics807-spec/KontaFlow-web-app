@@ -12,13 +12,16 @@ import { logger } from "@/lib/logger";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import {
   banDurationForExpiry,
+  billingSettingsSchema,
   createPlatformAdminSchema,
   expiryFromDuration,
   liftRestrictionSchema,
+  planSaveSchema,
   platformAdminStatusSchema,
   restrictUserSchema,
   workspacePlanSchema,
 } from "@/lib/validation/platform-admin";
+import { FEATURE_IDS } from "@/types/entitlements";
 import type { PlatformAdminRole } from "@/types/platform-admin";
 
 type Guard = {
@@ -45,6 +48,7 @@ function revalidateAdmin(): void {
   revalidatePath("/admin/workspaces");
   revalidatePath("/admin/admins");
   revalidatePath("/admin/audit");
+  revalidatePath("/admin/plans");
 }
 
 function failure(message: string, fieldErrors?: Record<string, string[]>): FormState {
@@ -278,4 +282,106 @@ export async function setPlatformAdminStatusAction(
 
   revalidateAdmin();
   return formSuccess(dict.admin.adminUpdated);
+}
+
+export async function savePlanAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("admin");
+  if (!context) return failure(dict.admin.noAccess);
+
+  if (!rateLimit(`platform:plan:${context.userId}`, 30, 15 * 60_000)) {
+    return failure(dict.errors.rateLimited);
+  }
+
+  const parsed = planSaveSchema.safeParse({
+    planCode: formData.get("planCode"),
+    name: formData.get("name"),
+    description: formData.get("description") ?? "",
+    priceMinor: formData.get("priceMinor"),
+    currency: formData.get("currency"),
+    billingInterval: formData.get("billingInterval") ?? "month",
+    seats: formData.get("seats"),
+    workspaceLimit: formData.get("workspaceLimit"),
+    aiMessageLimit: formData.get("aiMessageLimit"),
+    transactionLimit: formData.get("transactionLimit"),
+    integrationLimit: formData.get("integrationLimit"),
+    exportLimit: formData.get("exportLimit"),
+    sortOrder: formData.get("sortOrder"),
+    isActive: formData.get("isActive") ?? "true",
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const features = FEATURE_IDS.map((code) => {
+    const included = formData.get(`feature_${code}`) === "on";
+    const raw = String(formData.get(`limit_${code}`) ?? "").trim();
+    const limit = raw ? Number(raw) : null;
+    return {
+      code,
+      included,
+      limit: included && limit !== null && Number.isInteger(limit) && limit >= 0 ? limit : null,
+    };
+  });
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_save_plan", {
+    p_plan_code: parsed.data.planCode,
+    p_payload: {
+      name: parsed.data.name,
+      description: parsed.data.description,
+      priceMinor: parsed.data.priceMinor,
+      currency: parsed.data.currency,
+      billingInterval: parsed.data.billingInterval,
+      seats: parsed.data.seats,
+      workspaceLimit: parsed.data.workspaceLimit,
+      aiMessageLimit: parsed.data.aiMessageLimit,
+      transactionLimit: parsed.data.transactionLimit,
+      integrationLimit: parsed.data.integrationLimit,
+      exportLimit: parsed.data.exportLimit,
+      sortOrder: parsed.data.sortOrder,
+      isActive: parsed.data.isActive,
+      features,
+    } as never,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.plan_save_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.planUpdated);
+}
+
+export async function saveBillingSettingsAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await guard("admin");
+  if (!context) return failure(dict.admin.noAccess);
+
+  if (!rateLimit(`platform:billing:${context.userId}`, 30, 15 * 60_000)) {
+    return failure(dict.errors.rateLimited);
+  }
+
+  const parsed = billingSettingsSchema.safeParse({
+    trialDays: formData.get("trialDays"),
+    trialPlanCode: formData.get("trialPlanCode"),
+    reminderDays: formData.get("reminderDays") ?? "7,3,1",
+  });
+  if (!parsed.success) return failure(dict.admin.actionFailed, fieldErrorsFrom(parsed.error));
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("platform_admin_save_billing_settings", {
+    p_trial_days: parsed.data.trialDays,
+    p_trial_plan_code: parsed.data.trialPlanCode,
+    p_reminder_days: parsed.data.reminderDays,
+    p_ip: context.ip,
+  });
+  if (error) {
+    logger.warn("platform_admin.billing_save_failed", { code: error.code, message: error.message });
+    return failure(dict.admin.actionFailed);
+  }
+
+  revalidateAdmin();
+  return formSuccess(dict.admin.billingUpdated);
 }

@@ -138,7 +138,7 @@ export default async function AdminOverviewPage({
               ) : (
                 plans.map(([plan, count]) => (
                   <li key={plan} className="flex items-center justify-between rounded-xl bg-[#f4f2ec] px-3 py-2">
-                    <span className="text-sm font-semibold capitalize text-[#151c19]">{dict.plans[plan as keyof typeof dict.plans] ?? plan}</span>
+                    <span className="text-sm font-semibold capitalize text-[#151c19]">{dict.plans[plan as "starter" | "growth" | "scale"] ?? plan}</span>
                     <span className="text-sm font-extrabold text-[#151c19]">{count.toLocaleString(intlLocale(locale))}</span>
                   </li>
                 ))

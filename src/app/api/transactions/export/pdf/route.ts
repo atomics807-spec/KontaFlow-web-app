@@ -6,6 +6,8 @@ import { renderTransactionsPdf } from "@/services/transactions-pdf";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { logger } from "@/lib/logger";
+import { consumeExportAllowance } from "@/lib/entitlements/service";
+import { isAppError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,7 @@ export async function GET(request: Request) {
   const locale = resolveLocale(url.searchParams.get("locale") ?? context.workspace.locale);
 
   try {
+    await consumeExportAllowance(context.workspace.id, context.user.id, "advanced_exports");
     const [rows, dict] = await Promise.all([
       listTransactions(context.workspace.id, { kind, search, from, to, limit: 5000 }),
       getDictionary(locale),
@@ -55,6 +58,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (isAppError(error)) {
+      return NextResponse.json({ error: error.code, message: error.publicMessage }, { status: error.status });
+    }
     logger.error("transactions.pdf_failed", { error });
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }

@@ -9,6 +9,8 @@ import { archiveContact, createContact } from "@/services/workspaces";
 import { contactSchema } from "@/lib/validation/schemas";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 
 export async function createContactAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
@@ -16,6 +18,15 @@ export async function createContactAction(_prev: FormState, formData: FormData):
   const context = await getWorkspaceContext();
   if (!context) return formError(dict.errors.unauthorized);
   if (!can(context.role, "contacts:manage")) return formError(dict.errors.forbidden);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.customer_supplier_management.included) {
+    return formError(
+      interpolate(dict.plans.lockedBody, {
+        plan: entitlements.features.customer_supplier_management.requiredPlan ?? dict.plans.growth,
+      }),
+    );
+  }
+  if (!entitlements.writable) return formError(dict.plans.readOnly);
 
   const parsed = contactSchema.safeParse({
     name: formData.get("name"),
@@ -45,6 +56,8 @@ export async function archiveContactAction(formData: FormData): Promise<void> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
   const context = await getWorkspaceContext();
   if (!context || !can(context.role, "contacts:manage")) return;
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.customer_supplier_management.included || !entitlements.writable) return;
   const contactId = String(formData.get("contactId") ?? "");
   if (!contactId) return;
   await archiveContact(contactId);

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getWorkspaceContext } from "@/lib/supabase/auth";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { interpolate } from "@/lib/i18n/interpolate";
 import { can } from "@/lib/permissions";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
@@ -151,6 +153,15 @@ export async function createBudgetAction(_prev: FormState, formData: FormData): 
   const context = await getWorkspaceContext();
   if (!context) return formError(dict.errors.unauthorized);
   if (!can(context.role, "budgets:manage")) return formError(dict.errors.forbidden);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.budget_management.included) {
+    return formError(
+      interpolate(dict.plans.lockedBody, {
+        plan: entitlements.features.budget_management.requiredPlan ?? dict.plans.growth,
+      }),
+    );
+  }
+  if (!entitlements.writable) return formError(dict.plans.readOnly);
 
   const parsed = budgetSchema.safeParse({
     name: formData.get("name"),
@@ -182,6 +193,8 @@ export async function archiveBudgetAction(formData: FormData): Promise<void> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
   const context = await getWorkspaceContext();
   if (!context || !can(context.role, "budgets:manage")) return;
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.budget_management.included || !entitlements.writable) return;
   const budgetId = String(formData.get("budgetId") ?? "");
   if (!budgetId) return;
   await archiveBudget(context.workspace.id, budgetId);
@@ -194,6 +207,15 @@ export async function createGoalAction(_prev: FormState, formData: FormData): Pr
   const context = await getWorkspaceContext();
   if (!context) return formError(dict.errors.unauthorized);
   if (!can(context.role, "budgets:manage")) return formError(dict.errors.forbidden);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.budget_management.included) {
+    return formError(
+      interpolate(dict.plans.lockedBody, {
+        plan: entitlements.features.budget_management.requiredPlan ?? dict.plans.growth,
+      }),
+    );
+  }
+  if (!entitlements.writable) return formError(dict.plans.readOnly);
 
   const parsed = goalSchema.safeParse({
     name: formData.get("name"),
@@ -223,6 +245,15 @@ export async function updateGoalAction(_prev: FormState, formData: FormData): Pr
   const context = await getWorkspaceContext();
   if (!context) return formError(dict.errors.unauthorized);
   if (!can(context.role, "budgets:manage")) return formError(dict.errors.forbidden);
+  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  if (!entitlements.features.budget_management.included) {
+    return formError(
+      interpolate(dict.plans.lockedBody, {
+        plan: entitlements.features.budget_management.requiredPlan ?? dict.plans.growth,
+      }),
+    );
+  }
+  if (!entitlements.writable) return formError(dict.plans.readOnly);
 
   const parsed = goalProgressSchema.safeParse({
     goalId: formData.get("goalId"),

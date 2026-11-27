@@ -6,6 +6,7 @@ import { resolveLocale } from "@/lib/i18n/config";
 import { runAssistant } from "@/lib/ai/assistant";
 import { aiRequestSchema } from "@/lib/ai/schemas";
 import { findAiCommandByRequest } from "@/services/ai-commands";
+import { requireFeature } from "@/lib/entitlements/service";
 import { AppError, isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
@@ -27,6 +28,10 @@ export async function POST(request: Request) {
   }
 
   try {
+    await requireFeature(context.workspace.id, "ai_bookkeeping", {
+      userId: user.id,
+      write: true,
+    });
     const existing = await findAiCommandByRequest(context.workspace.id, parsed.data.requestId);
     if (existing) {
       return NextResponse.json(

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
-import { getPublicEnv, getServerEnv } from "../env";
+import { getServerEnv, getSupabaseServerUrl } from "../env";
 import { AppError } from "../errors";
 import type { Database } from "@/types/database";
 
@@ -11,7 +11,6 @@ import type { Database } from "@/types/database";
  * explicitly resolved workspace_id.
  */
 export function createAdminClient() {
-  const env = getPublicEnv();
   const { SUPABASE_SERVICE_ROLE_KEY } = getServerEnv();
 
   if (!SUPABASE_SERVICE_ROLE_KEY) {
@@ -21,7 +20,7 @@ export function createAdminClient() {
     );
   }
 
-  return createClient<Database>(env.NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient<Database>(getSupabaseServerUrl(), SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }

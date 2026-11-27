@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
-import { getPublicEnv } from "@/lib/env";
+import { getPublicEnv, getSupabaseServerUrl } from "@/lib/env";
 import { isLocale } from "@/lib/i18n/config";
 import { safeNextPath } from "@/lib/action-utils";
 import { logger } from "@/lib/logger";
@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
   if (!code && !tokenHash) return failure("missing_token");
 
   const pendingCookies: { name: string; value: string; options?: CookieOptions }[] = [];
-  const { NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY } = getPublicEnv();
+  const { NEXT_PUBLIC_SUPABASE_ANON_KEY } = getPublicEnv();
 
-  const supabase = createServerClient<Database>(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+  const supabase = createServerClient<Database>(getSupabaseServerUrl(), NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

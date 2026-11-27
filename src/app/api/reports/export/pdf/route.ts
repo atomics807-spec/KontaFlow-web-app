@@ -7,6 +7,8 @@ import { renderReportPdf } from "@/services/report-pdf";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { logger } from "@/lib/logger";
+import { consumeExportAllowance } from "@/lib/entitlements/service";
+import { isAppError } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export async function GET(request: Request) {
   const locale = resolveLocale(requestedLocale ?? context.workspace.locale);
 
   try {
+    await consumeExportAllowance(context.workspace.id, user.id, "advanced_exports");
     const [report, dict] = await Promise.all([getReport(context.workspace.id, from, to), getDictionary(locale)]);
     const pdf = await renderReportPdf({
       report,
@@ -56,6 +59,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (isAppError(error)) {
+      return NextResponse.json({ error: error.code, message: error.publicMessage }, { status: error.status });
+    }
     logger.error("reports.pdf_failed", { error });
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }

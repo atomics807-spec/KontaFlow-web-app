@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { transactionSchema, toTransactionPayload, workspaceSchema } from "@/lib/validation/schemas";
 import { rateLimit, resetRateLimits } from "@/lib/rate-limit";
-import { planFor, PLAN_DEFINITIONS } from "@/lib/plans";
+import { isWorkspacePlan, PLAN_CODES } from "@/lib/plans";
 import { addDays, monthBounds, todayInZone } from "@/lib/dates";
+import { billingSettingsSchema, planSaveSchema } from "@/lib/validation/platform-admin";
 
 const UUIDS = {
   category: "11111111-1111-4111-8111-111111111111",
@@ -79,18 +80,56 @@ describe("workspace validation", () => {
 });
 
 describe("plans", () => {
-  it("falls back to the starter plan for unknown values", () => {
-    expect(planFor(null).id).toBe("starter");
-    expect(planFor("enterprise").id).toBe("starter");
-    expect(planFor("scale").aiMessagesPerMonth).toBeGreaterThan(planFor("growth").aiMessagesPerMonth);
+  it("recognises only configured plan codes", () => {
+    expect(PLAN_CODES).toEqual(["starter", "growth", "scale"]);
+    expect(isWorkspacePlan("growth")).toBe(true);
+    expect(isWorkspacePlan("enterprise")).toBe(false);
+    expect(isWorkspacePlan(null)).toBe(false);
+  });
+});
+
+describe("plan configuration validation", () => {
+  const basePlan = {
+    planCode: "growth",
+    name: "Growth",
+    description: "For growing businesses",
+    priceMinor: "9900",
+    currency: "xaf",
+    billingInterval: "month",
+    seats: "8",
+    workspaceLimit: "",
+    aiMessageLimit: "0",
+    transactionLimit: "5000",
+    integrationLimit: "",
+    exportLimit: "",
+    sortOrder: "2",
+    isActive: "true",
+  };
+
+  it("turns blank optional limits into unlimited rather than zero", () => {
+    const parsed = planSaveSchema.parse(basePlan);
+    expect(parsed.workspaceLimit).toBeNull();
+    expect(parsed.integrationLimit).toBeNull();
+    expect(parsed.exportLimit).toBeNull();
+    expect(parsed.currency).toBe("XAF");
   });
 
-  it("prices plans in whole XAF minor units and keeps starter free", () => {
-    for (const definition of Object.values(PLAN_DEFINITIONS)) {
-      expect(Number.isInteger(definition.priceMinor)).toBe(true);
-      expect(definition.priceMinor).toBeGreaterThanOrEqual(0);
-    }
-    expect(PLAN_DEFINITIONS.starter.priceMinor).toBe(0);
+  it("accepts a zero AI allowance but rejects a negative one", () => {
+    expect(planSaveSchema.parse(basePlan).aiMessageLimit).toBe(0);
+    expect(planSaveSchema.safeParse({ ...basePlan, aiMessageLimit: "-1" }).success).toBe(false);
+  });
+
+  it("rejects a non-positive transaction limit", () => {
+    expect(planSaveSchema.safeParse({ ...basePlan, transactionLimit: "0" }).success).toBe(false);
+  });
+
+  it("normalises trial reminder days", () => {
+    const parsed = billingSettingsSchema.parse({
+      trialDays: "14",
+      trialPlanCode: "growth",
+      reminderDays: "7, 3,7,1",
+    });
+    expect(parsed.reminderDays).toEqual([7, 3, 1]);
   });
 });
 

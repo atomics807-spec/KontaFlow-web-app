@@ -4,6 +4,8 @@ import { can } from "@/lib/permissions";
 import { exportTransactionRecordsCsv } from "@/services/reports";
 import { resolveLocale } from "@/lib/i18n/config";
 import { logger } from "@/lib/logger";
+import { consumeExportAllowance } from "@/lib/entitlements/service";
+import { isAppError } from "@/lib/errors";
 
 const KINDS = ["income", "expense", "transfer", "all"] as const;
 
@@ -27,6 +29,7 @@ export async function GET(request: Request) {
   const locale = resolveLocale(url.searchParams.get("locale") ?? context.workspace.locale);
 
   try {
+    await consumeExportAllowance(context.workspace.id, context.user.id, "data_exports");
     const csv = await exportTransactionRecordsCsv(context.workspace.id, { kind, search, from, to }, locale);
     return new NextResponse(`\uFEFF${csv}`, {
       headers: {
@@ -36,6 +39,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (isAppError(error)) {
+      return NextResponse.json({ error: error.code, message: error.publicMessage }, { status: error.status });
+    }
     logger.error("transactions.export_failed", { error });
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }

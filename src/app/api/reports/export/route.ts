@@ -5,6 +5,8 @@ import { can } from "@/lib/permissions";
 import { exportTransactionsCsv } from "@/services/reports";
 import { resolveLocale } from "@/lib/i18n/config";
 import { logger } from "@/lib/logger";
+import { consumeExportAllowance } from "@/lib/entitlements/service";
+import { isAppError } from "@/lib/errors";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -29,6 +31,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    await consumeExportAllowance(context.workspace.id, user.id, "data_exports");
     const csv = await exportTransactionsCsv(
       context.workspace.id,
       from,
@@ -43,6 +46,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (isAppError(error)) {
+      return NextResponse.json({ error: error.code, message: error.publicMessage }, { status: error.status });
+    }
     logger.error("reports.export_failed", { error });
     return NextResponse.json({ error: "export_failed" }, { status: 500 });
   }

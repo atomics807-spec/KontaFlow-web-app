@@ -314,7 +314,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * `public/sw.js` must keep `/api/*`, `/auth/*` and authenticated documents out
   of runtime caches. Bump `VERSION` on every behaviour change; the app prompts
   before activating a waiting worker.
-* `/en|fr|pcm/offline` and `/offline.html` are the navigation fallbacks.
+* `/en|fr|pcm/offline` and `/offline.html` are the navigation fallbacks. The
+  offline page owns its own online/visibility/service-worker listeners so a
+  queued entry syncs as soon as connectivity returns, without requiring the
+  user to reopen the dashboard.
+* `SUPABASE_INTERNAL_URL` is optional and server-only. Local preview containers
+  use it with `NEXT_PUBLIC_SUPABASE_URL=<preview-origin>/api/supabase`, which
+  `src/app/api/supabase/[...path]/route.ts` forwards to the local stack. Hosted
+  deployments leave it empty and point `NEXT_PUBLIC_SUPABASE_URL` directly at
+  Supabase.
 * `DataSaverProvider` follows `saveData`/`prefers-reduced-data` and offers a
   manual toggle in the app shell. Keep low-data behavior in presentational
   components, not in financial calculations.
@@ -342,3 +350,21 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Menu categories come from `listUssdCategories`; `Stock purchases` is shown
   as `Inventory` and `Other expenses` as `Other` for short USSD menus.
 * Full setup and provider checklist: `docs/integrations/ussd.md`.
+
+## Plans, entitlements and trials
+
+* Plans are database configuration (`subscription_plans`, `plan_features`), not
+  TypeScript constants. Read access through `getWorkspaceEntitlements`; never
+  gate a feature from `workspaces.plan` in the browser.
+* Feature keys are listed in `src/types/entitlements.ts`. Server code calls
+  `requireFeature`/`assertFeature`; API handlers return HTTP 402 through the
+  `plan_required` error code. Pages use `PlanGate`.
+* Writes are also enforced in Postgres: `app.assert_transaction_limit` on every
+  transaction insert (including service-role channels), seat checks on
+  invitations, and workspace limits in `create_workspace`.
+* A new workspace claims at most one trial per person/email/phone
+  (`trial_grants`). Trials use `trial_plan_id`; expiry is `past_due` and
+  read-only. `/api/cron/trial-reminders` sends the configured reminder days.
+* Platform admins configure plans and trial settings at `/{locale}/admin/plans`.
+  The RPCs require `super_admin` or `admin`; keep the explicit null-role guard.
+* Apply `20260101000037_phase13_entitlements.sql` before deploying this code.

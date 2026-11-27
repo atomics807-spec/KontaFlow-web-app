@@ -35,9 +35,17 @@ import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
+import { interpolate } from "@/lib/i18n/interpolate";
 import type { WorkspacePlan } from "@/types/database";
 
 export type ShellWorkspace = { id: string; name: string; currency: string; plan: WorkspacePlan };
+
+export type ShellBilling = {
+  readOnly: boolean;
+  trialActive: boolean;
+  trialDays: number | null;
+  planName: string;
+};
 
 type ShellProps = {
   workspaces: ShellWorkspace[];
@@ -45,10 +53,11 @@ type ShellProps = {
   role: string;
   user: { name: string; email: string };
   canRecord: boolean;
+  billing?: ShellBilling;
   children: React.ReactNode;
 };
 
-export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord, children }: ShellProps) {
+export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord, billing, children }: ShellProps) {
   const { locale, dict } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -248,6 +257,21 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
         </header>
 
         <main id="main" className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+          {billing && (billing.readOnly || (billing.trialActive && (billing.trialDays ?? 99) <= 3)) ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-mango-300/70 bg-mango-50 px-4 py-3 text-sm text-heading">
+              <p className="font-medium">
+                {billing.readOnly
+                  ? dict.plans.readOnly
+                  : interpolate(dict.plans.trialActive, {
+                      days: billing.trialDays ?? 0,
+                      plan: billing.planName,
+                    })}
+              </p>
+              <Link href={`/${locale}/billing`} className={buttonVariants({ size: "sm" })}>
+                {dict.plans.upgrade}
+              </Link>
+            </div>
+          ) : null}
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
