@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { OfflineIdentityProvider } from "@/components/offline/offline-identity-provider";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
+import { createClient } from "@/lib/supabase/server";
+import { resolveWorkspaceLogoUrls } from "@/lib/workspaces/logo";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { countUnreadNotifications, listNotifications } from "@/services/notifications";
@@ -19,10 +21,15 @@ export default async function DashboardLayout({
 }) {
   const locale = resolveLocale((await params).locale);
   const context = await requireWorkspaceContext(locale);
-  const [entitlements, notifications, unreadNotifications] = await Promise.all([
+  const supabase = await createClient();
+  const [entitlements, notifications, unreadNotifications, logoUrls] = await Promise.all([
     getWorkspaceEntitlements(context.workspace.id, context.user.id),
     listNotifications(context.workspace.id, context.user.id, 12).catch(() => []),
     countUnreadNotifications(context.workspace.id, context.user.id).catch(() => 0),
+    resolveWorkspaceLogoUrls(
+      supabase,
+      context.memberships.map((membership) => membership.workspace),
+    ).catch((): Record<string, string | null> => ({})),
   ]);
 
   return (
@@ -43,6 +50,7 @@ export default async function DashboardLayout({
           name: membership.workspace.name,
           currency: membership.workspace.currency,
           plan: membership.workspace.plan,
+          logoUrl: logoUrls[membership.workspaceId] ?? null,
         }))}
         activeWorkspaceId={context.workspace.id}
         role={context.role}

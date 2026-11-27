@@ -83,8 +83,16 @@ credentials, the provider is hidden from checkout and the API returns a
 configuration error. `PAYMENT_PROVIDER` is an optional allow-list: `none`
 offers every fully configured provider, while `mtn-momo`, `orange-money` or
 `aggregator` narrows checkout to one. `stripe` is reserved and currently
-disables mobile-money checkout. There is no mock-success path in production
-code.
+disables mobile-money checkout. Real provider adapters never simulate success.
+
+### Sandbox demo checkout
+
+Local previews and demos can set `PAYMENT_MODE=sandbox` and
+`PAYMENT_PROVIDER=demo`. This enables an explicit sandbox adapter that approves
+the payment immediately so a reviewer can exercise plan activation, payment
+history and entitlements without operator credentials. It moves no money,
+accepts no webhooks and cannot be enabled when `PAYMENT_MODE` is `production` or
+`disabled`; those combinations fall back to the normal credential checks.
 
 See `.env.example` for the full list. Never commit real keys, merchant keys,
 OAuth secrets or callback tokens.
@@ -149,10 +157,11 @@ cancel at period end; a full reversal marks it `past_due`.
 ## Tests
 
 Unit tests cover amount/phone helpers, HMAC/token verification, provider
-allow-listing and checkout validation (including rejection of client-supplied
-amounts). Database tests cover RLS, service-only tables, idempotency,
-amount/currency/reference validation and activation. No test uses a
-mock-success adapter in place of the real code path.
+allow-listing, checkout validation (including rejection of client-supplied
+amounts) and the sandbox demo gate. Database tests cover RLS, service-only
+tables, idempotency, amount/currency/reference validation and activation. Real
+provider tests always use the provider adapter; only the explicit demo mode
+short-circuits approval.
 
 ## Operational checklist
 

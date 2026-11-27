@@ -158,6 +158,7 @@ export function PaymentCheckout({
           refundedAmountMinor: 0,
           createdAt: new Date().toISOString(),
         });
+        if (body.payment.status === "succeeded") router.refresh();
       }
       if (body.payment.checkoutUrl) {
         window.location.assign(body.payment.checkoutUrl);

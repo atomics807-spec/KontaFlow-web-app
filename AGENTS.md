@@ -414,6 +414,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   provider credentials or full callback bodies.
 * `PAYMENT_MODE=disabled` hides checkout. `PAYMENT_PROVIDER=none` offers every
   fully configured provider; set it to one id to narrow checkout.
+* `PAYMENT_MODE=sandbox` with `PAYMENT_PROVIDER=demo` enables the explicit
+  preview checkout in `src/lib/payments/providers/sandbox.ts`. It approves
+  immediately, uses the normal `confirm_payment` path and moves no money. The
+  gate never enables it for production or disabled mode; never ship it as a
+  real provider.
 * `/api/cron/payment-reconciliation` is the fallback for missed callbacks and
   runs in bounded batches. Keep the `CRON_SECRET` bearer check.
 * Refunds are platform-admin only (`/api/admin/payments/[id]/refund`); the

@@ -39,7 +39,13 @@ import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { NotificationRow, WorkspacePlan } from "@/types/database";
 
-export type ShellWorkspace = { id: string; name: string; currency: string; plan: WorkspacePlan };
+export type ShellWorkspace = {
+  id: string;
+  name: string;
+  currency: string;
+  plan: WorkspacePlan;
+  logoUrl: string | null;
+};
 
 export type ShellBilling = {
   readOnly: boolean;
@@ -157,7 +163,14 @@ export function AppShell({
         </Link>
       </div>
 
-      <div className="mt-5">{workspaceSwitcher}</div>
+      <div className="mt-5 flex items-center gap-2">
+        <Avatar
+          name={active?.name ?? "K"}
+          src={active?.logoUrl}
+          className="h-10 w-10 rounded-xl ring-1 ring-white/15"
+        />
+        <div className="min-w-0 flex-1">{workspaceSwitcher}</div>
+      </div>
 
       <div className="mt-4 flex items-center gap-2 px-1">
         <Badge tone="outline" className="border-white/15 text-jade-100/80">
@@ -246,8 +259,18 @@ export function AppShell({
             <Link href={`/${locale}/dashboard`} className="lg:hidden" aria-label={dict.common.appName}>
               <LogoMark className="h-8 w-8" />
             </Link>
+            {active?.logoUrl ? (
+              <Avatar
+                name={active.name}
+                src={active.logoUrl}
+                className="h-8 w-8 rounded-lg lg:hidden"
+              />
+            ) : null}
 
             <div className="hidden min-w-0 items-center gap-2 lg:flex">
+              {active?.logoUrl ? (
+                <Avatar name={active.name} src={active.logoUrl} className="h-8 w-8 rounded-lg" />
+              ) : null}
               <span className="truncate text-sm font-bold text-heading">{active?.name}</span>
               <span className="text-xs text-muted">·</span>
               <span className="text-xs text-muted">{dict.dashboard.thisMonthLabel}</span>

@@ -1,12 +1,15 @@
+/* eslint-disable @next/next/no-img-element */
 import { cn } from "@/lib/utils";
 import { initials } from "@/lib/utils";
 
 export function Avatar({
   name,
+  src,
   className,
   tone = "jade",
 }: {
   name: string;
+  src?: string | null;
   className?: string;
   tone?: "jade" | "forest" | "mango";
 }) {
@@ -15,6 +18,18 @@ export function Avatar({
     forest: "bg-forest text-white",
     mango: "bg-warn-soft text-warn",
   } as const;
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        loading="lazy"
+        className={cn("h-9 w-9 shrink-0 rounded-full object-cover", className)}
+      />
+    );
+  }
 
   return (
     <span

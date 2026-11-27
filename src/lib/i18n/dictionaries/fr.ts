@@ -992,6 +992,7 @@ export const fr: Dictionary = {
     secure: "Paiement sécurisé. KontaFlow ne voit jamais votre code PIN.",
     notConfigured: "Le paiement mobile n'est pas encore configuré.",
     noProviders: "Les paiements Mobile Money ne sont pas encore configurés. Contactez le support.",
+    sandboxNotice: "Le paiement sandbox est actif. Choisir une formule l'active immédiatement pour les tests ; aucun argent n'est débité.",
     pending: "En attente de la confirmation de l'opérateur...",
     instructions: "Suivez les instructions de l'opérateur.",
     openProvider: "Ouvrir la page de paiement",

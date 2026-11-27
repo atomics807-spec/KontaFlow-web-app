@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerEnv } from "@/lib/env";
+import { isDemoPaymentEnabled } from "./demo";
 import type { PaymentProviderId } from "./types";
 import { PAYMENT_PROVIDER_LABELS } from "./types";
 
@@ -15,6 +16,16 @@ export type ProviderAvailability = {
 
 export function paymentMode(): PaymentMode {
   return getServerEnv().PAYMENT_MODE;
+}
+
+/**
+ * Sandbox checkout is an explicit test provider. It is only available in
+ * sandbox mode and never activates a plan when PAYMENT_MODE is production or
+ * disabled.
+ */
+export function demoPaymentEnabled(): boolean {
+  const env = getServerEnv();
+  return isDemoPaymentEnabled(env.PAYMENT_MODE, env.PAYMENT_PROVIDER);
 }
 
 export function mtnConfig() {
@@ -97,6 +108,8 @@ function selectedProviders(): PaymentProviderId[] {
       return ["orange_money"];
     case "aggregator":
       return ["aggregator"];
+    case "demo":
+      return ["aggregator"];
     case "stripe":
       return [];
     default:
@@ -106,6 +119,7 @@ function selectedProviders(): PaymentProviderId[] {
 
 export function isProviderConfigured(provider: PaymentProviderId): boolean {
   if (!selectedProviders().includes(provider)) return false;
+  if (demoPaymentEnabled() && provider === "aggregator") return true;
   if (provider === "mtn_momo") return Boolean(mtnConfig());
   if (provider === "orange_money") return Boolean(orangeConfig());
   return Boolean(aggregatorConfig());
@@ -113,10 +127,11 @@ export function isProviderConfigured(provider: PaymentProviderId): boolean {
 
 export function availablePaymentProviders(): ProviderAvailability[] {
   const mode = paymentMode();
+  const demo = demoPaymentEnabled();
   return (["mtn_momo", "orange_money", "aggregator"] as const)
     .map((id) => ({
       id,
-      label: PAYMENT_PROVIDER_LABELS[id],
+      label: demo && id === "aggregator" ? "Demo mobile money (sandbox)" : PAYMENT_PROVIDER_LABELS[id],
       configured: isProviderConfigured(id),
       mode,
     }))

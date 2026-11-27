@@ -1036,6 +1036,7 @@ export const en = {
     secure: "Secure payment. KontaFlow never sees your PIN.",
     notConfigured: "Mobile money is not configured yet.",
     noProviders: "Mobile Money payments are not configured yet. Contact support.",
+    sandboxNotice: "Sandbox checkout is active. Choosing a plan activates it immediately for testing; no money is moved.",
     pending: "Waiting for the operator to confirm the payment...",
     instructions: "Follow the operator instructions.",
     openProvider: "Open the payment page",

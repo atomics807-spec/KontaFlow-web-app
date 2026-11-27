@@ -328,6 +328,29 @@ export async function initiateSubscriptionPayment(input: {
       logger.error("payments.mark_initiated_failed", { code: initiated.error.code, paymentId: intent.payment_id });
     }
 
+    if (result.status === "succeeded") {
+      const settled = await confirm(await reloadPayment(intent.payment_id), {
+        status: "succeeded",
+        providerReference: result.providerReference,
+        providerStatus: result.providerStatus,
+        amountMinor: BigInt(plan.price_minor),
+        currency: plan.currency,
+        paidAt: new Date().toISOString(),
+      });
+      return {
+        paymentId: intent.payment_id,
+        merchantReference,
+        provider: input.provider,
+        planCode: input.planCode,
+        amountMinor: Number(plan.price_minor),
+        currency: plan.currency,
+        status: settled.status,
+        checkoutUrl: null,
+        instructions: result.instructions,
+        expiresAt,
+      };
+    }
+
     return {
       paymentId: intent.payment_id,
       merchantReference,

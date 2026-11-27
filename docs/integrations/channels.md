@@ -152,12 +152,13 @@ missing key never blocks a business action. Used for workspace invitations
 ## Payments
 
 `PAYMENT_PROVIDER` selects the intended adapter (`none`, `mtn-momo`,
-`orange-money`, `stripe`) and the schema already stores subscriptions, payment
-transactions and usage. **No charge is executed today**; billing pages show the
-plan catalogue, current plan, usage and payment history, and offer a contact
-link when `EMAIL_REPLY_TO` is configured. Wiring a provider means implementing
-`createCheckout`/`handleWebhook` behind the same interface and verifying its
-signature exactly like the WhatsApp adapter.
+`orange-money`, `aggregator`, `demo`) and the schema stores subscriptions,
+payment transactions and usage. Billing pages show the plan catalogue, current
+plan, usage and payment history. Real checkout requires matching provider
+credentials and `PAYMENT_MODE=sandbox|production`; `PAYMENT_PROVIDER=demo` is a
+sandbox-only preview adapter that approves immediately and moves no money.
+Provider adapters implement checkout and status verification behind the same
+interface; callback signatures are verified like the WhatsApp adapter.
 
 ## Offline sync
 

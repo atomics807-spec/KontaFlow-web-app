@@ -56,7 +56,7 @@ const serverSchema = z.object({
   WHATSAPP_VERIFICATION_TEMPLATE_LANG: z.string().default("en_US"),
   WHATSAPP_REPORT_TEMPLATE_NAME: optionalSecret,
   WHATSAPP_REPORT_TEMPLATE_LANG: z.string().default("en_US"),
-  PAYMENT_PROVIDER: z.enum(["none", "mtn-momo", "orange-money", "aggregator", "stripe"]).default("none"),
+  PAYMENT_PROVIDER: z.enum(["none", "mtn-momo", "orange-money", "aggregator", "stripe", "demo"]).default("none"),
   PAYMENT_MODE: z.enum(["disabled", "sandbox", "production"]).default("disabled"),
   PAYMENT_API_BASE_URL: optionalSecret,
   PAYMENT_API_KEY: optionalSecret,

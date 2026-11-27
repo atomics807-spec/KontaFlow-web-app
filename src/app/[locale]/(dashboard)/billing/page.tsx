@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Check, CreditCard, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Alert } from "@/components/ui/alert";
 import { PaymentCheckout, PaymentReturnPoller } from "@/components/billing/payment-checkout";
 import { getSubscription } from "@/services/workspaces";
 import { listPaymentHistory } from "@/services/payments";
@@ -15,6 +16,7 @@ import { formatMoney, moneyLocale } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { getServerEnv } from "@/lib/env";
 import { can } from "@/lib/permissions";
+import { demoPaymentEnabled } from "@/lib/payments/config";
 import { getConfiguredPaymentProviders } from "@/lib/payments/registry";
 import { PAYMENT_PROVIDER_LABELS, type PaymentProviderId } from "@/lib/payments/types";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,10 @@ export default async function BillingPage({
         </h1>
         <p className="mt-1 text-sm text-muted">{dict.settings.currentPlan}</p>
       </header>
+
+      {demoPaymentEnabled() ? (
+        <Alert tone="info">{dict.plans.sandboxNotice}</Alert>
+      ) : null}
 
       {paymentReturnId && canPay ? (
         <Card className="p-5 sm:p-6">

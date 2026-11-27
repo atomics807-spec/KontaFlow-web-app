@@ -988,6 +988,7 @@ export const pcm: Dictionary = {
     secure: "Payment de safe. KontaFlow no de ever see your PIN.",
     notConfigured: "Mobile money payment no set yet.",
     noProviders: "Mobile money payment no set yet. Talk to support.",
+    sandboxNotice: "Sandbox checkout dey on. If you pick plan, e go activate sharp sharp for testing; no money no go move.",
     pending: "We de wait for operator confirmation...",
     instructions: "Follow di operator instructions.",
     openProvider: "Open payment page",
