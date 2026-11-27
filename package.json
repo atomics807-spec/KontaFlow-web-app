@@ -2,7 +2,7 @@
   "name": "kontaflow",
   "version": "0.1.0",
   "private": true,
-  "description": "KontaFlow — multi-tenant bookkeeping and AI business intelligence for African businesses.",
+  "description": "KontaFlow \u2014 multi-tenant bookkeeping and AI business intelligence for African businesses.",
   "engines": {
     "node": ">=20.9.0"
   },
@@ -18,7 +18,9 @@
     "db:push": "tsx scripts/push-migrations.ts",
     "i18n:pull": "tsx scripts/tolgee-pull.ts",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
@@ -41,6 +43,7 @@
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.19",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

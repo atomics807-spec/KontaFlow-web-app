@@ -8,6 +8,7 @@ npm run dev                 # Next.js dev server
 npm run typecheck           # tsc --noEmit (must be clean)
 npm test                    # vitest unit tests
 npm run test:db             # rebuilds kontaflow_test and runs DB integrity assertions
+npm run test:e2e            # production build + Playwright desktop/mobile journeys
 npm run lint
 npm run build
 npm run db:push             # applies pending supabase/migrations via SUPABASE_DB_URL
@@ -483,5 +484,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (188), `npm run test:db` (349),
-  `npm run lint`, `npm run build`.
+* Validation: `npm run typecheck`, `npm test` (214), `npm run test:db` (362),
+  `npm run test:e2e` (16), `npm run lint`, `npm run build`.

@@ -413,6 +413,131 @@ async function main(): Promise<void> {
     );
     ok("staff cannot manage categories", staffCategory?.code === "42501", staffCategory);
 
+    console.log("\nStorage tenant boundaries");
+    const receiptA = await commitAs(client, alice, async (c) =>
+      scalar(
+        c,
+        `insert into storage.objects (bucket_id, name, owner)
+         values ('kontaflow-receipts', $1, $2) returning id`,
+        [`${idA}/transaction-a/receipt.png`, ALICE],
+      ),
+    );
+    ok("a member can upload a receipt into their workspace folder", Boolean(receiptA));
+
+    const receiptB = await commitAs(client, bob, async (c) =>
+      scalar(
+        c,
+        `insert into storage.objects (bucket_id, name, owner)
+         values ('kontaflow-receipts', $1, $2) returning id`,
+        [`${idB}/transaction-b/receipt.png`, BOB],
+      ),
+    );
+    ok("another tenant can upload into its own folder", Boolean(receiptB));
+
+    eq(
+      "tenant B cannot list tenant A receipts",
+      await asRole(client, "authenticated", bob, (c) =>
+        scalar(c, `select count(*) from storage.objects where name like $1`, [`${idA}/%`]),
+      ),
+      0,
+    );
+    eq(
+      "tenant A cannot list tenant B receipts",
+      await asRole(client, "authenticated", alice, (c) =>
+        scalar(c, `select count(*) from storage.objects where name like $1`, [`${idB}/%`]),
+      ),
+      0,
+    );
+
+    const crossUpload = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `insert into storage.objects (bucket_id, name, owner)
+       values ('kontaflow-receipts', $1, $2)`,
+      [`${idA}/transaction-a/planted.png`, BOB],
+    );
+    ok("tenant B cannot upload into tenant A folder", crossUpload?.code === "42501", crossUpload);
+
+    const malformedUpload = await expectError(
+      client,
+      "authenticated",
+      alice,
+      `insert into storage.objects (bucket_id, name, owner)
+       values ('kontaflow-receipts', 'not-a-workspace/receipt.png', $1)`,
+      [ALICE],
+    );
+    ok("malformed workspace folders fail closed", malformedUpload?.code === "42501", malformedUpload);
+
+    const staffReceipt = await commitAs(client, charlie, async (c) =>
+      scalar(
+        c,
+        `insert into storage.objects (bucket_id, name, owner)
+         values ('kontaflow-receipts', $1, $2) returning id`,
+        [`${idB}/transaction-b/staff.png`, CHARLIE],
+      ),
+    );
+    ok("staff can upload finance documents", Boolean(staffReceipt));
+
+    const staffCrossUpload = await expectError(
+      client,
+      "authenticated",
+      charlie,
+      `insert into storage.objects (bucket_id, name, owner)
+       values ('kontaflow-receipts', $1, $2)`,
+      [`${idA}/transaction-a/staff.png`, CHARLIE],
+    );
+    ok("staff cannot upload into another tenant", staffCrossUpload?.code === "42501", staffCrossUpload);
+
+    const foreignDelete = await asRole(
+      client,
+      "authenticated",
+      alice,
+      (c) => c.query(`delete from storage.objects where id = $1`, [staffReceipt]),
+      true,
+    );
+    ok("an outsider cannot delete another tenant's document", foreignDelete.rowCount === 0);
+
+    const ownerDelete = await asRole(
+      client,
+      "authenticated",
+      bob,
+      (c) => c.query(`delete from storage.objects where id = $1`, [staffReceipt]),
+      true,
+    );
+    ok("a workspace owner can remove a member's document", ownerDelete.rowCount === 1);
+
+    const profileImage = await commitAs(client, alice, async (c) =>
+      scalar(
+        c,
+        `insert into storage.objects (bucket_id, name, owner)
+         values ('kontaflow-profile-images', $1, $2) returning id`,
+        [`${ALICE}/avatar.png`, ALICE],
+      ),
+    );
+    ok("a user can upload their own profile image", Boolean(profileImage));
+
+    const foreignProfile = await expectError(
+      client,
+      "authenticated",
+      bob,
+      `insert into storage.objects (bucket_id, name, owner)
+       values ('kontaflow-profile-images', $1, $2)`,
+      [`${ALICE}/planted.png`, BOB],
+    );
+    ok("a user cannot write into another profile folder", foreignProfile?.code === "42501", foreignProfile);
+
+    eq(
+      "workspace logos no longer accept SVG",
+      await scalar(
+        client,
+        `select count(*) from storage.buckets
+          where id = 'kontaflow-workspace-logos'
+            and allowed_mime_types && array['image/svg+xml']`,
+      ),
+      0,
+    );
+
     eq(
       "owner cannot demote themselves when sole owner",
       String(

@@ -37,6 +37,7 @@ the local inbox from `supabase start`), create a business, and start recording.
 npm run typecheck
 npm test
 npm run test:db      # needs Postgres reachable via SUPABASE_DB_URL
+npm run test:e2e     # builds, starts production Next.js on :3000 and runs Playwright
 npm run lint
 npm run build
 ```

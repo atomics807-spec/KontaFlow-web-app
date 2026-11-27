@@ -51,9 +51,9 @@ export function OfflineIdentityProvider({
     };
 
     const start = async () => {
-      await purgeOtherOfflineUsers(identity.userId);
+      await purgeOtherOfflineUsers(identity.userId).catch(() => undefined);
       await saveOfflineSession(identity);
-      await cleanupSyncedOutbox();
+      await cleanupSyncedOutbox().catch(() => undefined);
       if (cancelled) return;
       await refreshOfflineBootstrap(identity);
       if (cancelled) return;

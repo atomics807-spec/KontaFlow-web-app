@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AppError } from "@/lib/errors";
+import { assertFeature, assertLimit, featureRequiredMessage, hasFeature, subscriptionAccess } from "@/lib/entitlements/guards";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type {
@@ -17,8 +18,6 @@ import {
   type WorkspaceEntitlements,
 } from "@/types/entitlements";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 type LoadOptions = {
   userId?: string;
   serviceRole?: boolean;
@@ -27,14 +26,6 @@ type LoadOptions = {
 function monthStart(): string {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-}
-
-function trialActive(subscription: SubscriptionRow | null): boolean {
-  return Boolean(
-    subscription?.status === "trialing" &&
-      subscription.trial_ends_at &&
-      new Date(subscription.trial_ends_at).getTime() > Date.now(),
-  );
 }
 
 function planMap(plans: SubscriptionPlanRow[]): Map<string, SubscriptionPlanRow> {
@@ -148,13 +139,13 @@ async function loadWorkspaceEntitlements(
   const subscription = (subscriptionResult.data as SubscriptionRow | null) ?? null;
   const plansById = planMap(plans);
   const grantsByPlan = featuresByPlan(plans, features, grants);
-  const activeTrial = trialActive(subscription);
+  const access = subscriptionAccess(subscription);
   const basePlan = subscription
     ? plansById.get(subscription.plan_id ?? "") ??
       plans.find((plan) => plan.code === subscription.plan)
     : plans.find((plan) => plan.code === (workspaceRow.plan as WorkspacePlan));
   const trialPlan = subscription?.trial_plan_id ? plansById.get(subscription.trial_plan_id) : null;
-  const effectivePlan = activeTrial && trialPlan ? trialPlan : basePlan;
+  const effectivePlan = access.activeTrial && trialPlan ? trialPlan : basePlan;
   if (!effectivePlan) throw new AppError("internal_error", "This workspace has no active plan.");
 
   const effectiveGrants = grantsByPlan.get(effectivePlan.id) ?? new Map<string, PlanFeatureRow>();
@@ -174,22 +165,7 @@ async function loadWorkspaceEntitlements(
     };
   }
 
-  const expiredTrial = Boolean(
-    subscription?.status === "trialing" &&
-      subscription.trial_ends_at &&
-      new Date(subscription.trial_ends_at).getTime() <= Date.now(),
-  );
-  const readOnly =
-    !subscription ||
-    expiredTrial ||
-    ["past_due", "canceled", "paused"].includes(subscription.status);
-  const subscriptionReadable =
-    !subscription ||
-    ["active", "trialing", "past_due", "canceled"].includes(subscription.status);
   const trialEndsAt = subscription?.trial_ends_at ?? null;
-  const daysRemaining = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / DAY_MS))
-    : null;
   const aiMessagesThisMonth = (aiUsageResult.data ?? []).reduce(
     (sum, row) => sum + Number(row.quantity ?? 0),
     0,
@@ -209,15 +185,15 @@ async function loadWorkspaceEntitlements(
     priceMinor: effectivePlan.price_minor,
     currency: effectivePlan.currency,
     status: subscription?.status ?? "none",
-    subscriptionReadable,
-    writable: Boolean(subscription) && !readOnly,
-    readOnly,
+    subscriptionReadable: access.subscriptionReadable,
+    writable: access.writable,
+    readOnly: access.readOnly,
     trial: {
-      active: activeTrial,
-      expired: expiredTrial,
+      active: access.activeTrial,
+      expired: access.expiredTrial,
       endsAt: trialEndsAt,
       startedAt: subscription?.trial_started_at ?? null,
-      daysRemaining,
+      daysRemaining: access.daysRemaining,
       planCode: trialPlan?.code ?? null,
       planName: trialPlan?.name ?? null,
     },
@@ -240,63 +216,7 @@ async function loadWorkspaceEntitlements(
   };
 }
 
-export function hasFeature(entitlements: WorkspaceEntitlements, feature: FeatureId): boolean {
-  return entitlements.features[feature].included;
-}
-
-export function featureRequiredMessage(entitlements: WorkspaceEntitlements, feature: FeatureId): string {
-  const required = entitlements.features[feature].requiredPlan;
-  return required
-    ? `This feature requires the ${required} plan. Upgrade in Billing to continue.`
-    : "This feature is not included in your plan. Upgrade in Billing to continue.";
-}
-
-export function assertFeature(
-  entitlements: WorkspaceEntitlements,
-  feature: FeatureId,
-  options?: { write?: boolean },
-): void {
-  if (!hasFeature(entitlements, feature)) {
-    throw new AppError("plan_required", featureRequiredMessage(entitlements, feature));
-  }
-  if (options?.write && !entitlements.writable) {
-    throw new AppError(
-      "plan_required",
-      "Your trial or subscription has ended. Your books are read-only until you choose a plan.",
-    );
-  }
-}
-
-export function assertLimit(
-  entitlements: WorkspaceEntitlements,
-  key: "seats" | "aiMessagesPerMonth" | "transactionsPerMonth" | "integrations" | "exportsPerMonth",
-  amount = 1,
-): void {
-  const limit = entitlements.limits[key];
-  if (limit === null) return;
-  const usage =
-    key === "seats"
-      ? entitlements.usage.activeMembers
-      : key === "aiMessagesPerMonth"
-        ? entitlements.usage.aiMessagesThisMonth
-        : key === "transactionsPerMonth"
-          ? entitlements.usage.transactionsThisMonth
-          : key === "integrations"
-            ? entitlements.usage.integrations
-            : entitlements.usage.exportsThisMonth;
-  if (usage + amount > limit) {
-    throw new AppError(
-      "limit_reached",
-      key === "seats"
-        ? "Your plan member limit has been reached. Upgrade to invite more people."
-        : key === "integrations"
-          ? "Your plan integration limit has been reached. Upgrade to connect another channel."
-          : key === "aiMessagesPerMonth"
-            ? "Your monthly AI message allowance has been reached. Upgrade to keep using the assistant."
-            : "Your plan limit has been reached. Upgrade to continue.",
-    );
-  }
-}
+export { assertFeature, assertLimit, featureRequiredMessage, hasFeature };
 
 export async function consumeExportAllowance(
   workspaceId: string,

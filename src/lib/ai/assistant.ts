@@ -233,10 +233,7 @@ export async function runAssistant(params: {
           const toolCallKey = `${step}:${callIndex}`;
           const result =
             mode === "interactive" && interactiveContext
-              ? await executeInteractiveTool(call.function.name, args, {
-                  ...interactiveContext,
-                  toolCallKey,
-                })
+              ? await executeInteractiveTool(call.function.name, args, interactiveContext)
               : await executeTool(call.function.name, args, { ...baseContext, toolCallKey });
           toolsUsed.push(call.function.name);
 

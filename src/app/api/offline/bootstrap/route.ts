@@ -38,6 +38,15 @@ export async function GET(request: Request) {
   return NextResponse.json(
     {
       workspaceId: context.workspace.id,
+      identity: {
+        userId: user.id,
+        workspaceId: context.workspace.id,
+        workspaceName: context.workspace.name,
+        currency: context.workspace.currency,
+        timezone: context.workspace.timezone,
+        role: context.role,
+        locale,
+      },
       accounts: options.accounts.map((row) => ({
         id: row.id,
         name: row.name,

@@ -9,7 +9,12 @@ let client: OpenAI | null = null;
 export function getAiClient(): OpenAI | null {
   const env = getServerEnv();
   if (!env.OPENAI_API_KEY) return null;
-  client ??= new OpenAI({ apiKey: env.OPENAI_API_KEY, maxRetries: 1, timeout: 30_000 });
+  client ??= new OpenAI({
+    apiKey: env.OPENAI_API_KEY,
+    baseURL: env.OPENAI_BASE_URL,
+    maxRetries: 1,
+    timeout: 30_000,
+  });
   return client;
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input } from "@/components/ui/input";
@@ -44,15 +44,14 @@ export function PhoneVerificationForm({ next, phone }: { next: string; phone: st
   const { locale, dict } = useI18n();
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
-  const sendWithCooldown = useCallback(
-    async (prev: typeof initialFormState, formData: FormData) => {
-      const result = await sendPhoneCodeAction(prev, formData);
+  const [sendState, sendAction, sending] = useActionState(
+    async (previous: typeof initialFormState, formData: FormData) => {
+      const result = await sendPhoneCodeAction(previous, formData);
       if (result.status === "success") setCooldownUntil(Date.now() + 60_000);
       return result;
     },
-    [],
+    initialFormState,
   );
-  const [sendState, sendAction, sending] = useActionState(sendWithCooldown, initialFormState);
   const [verifyState, verifyAction] = useActionState(verifyPhoneCodeAction, initialFormState);
 
   useEffect(() => {

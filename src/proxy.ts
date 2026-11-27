@@ -9,7 +9,7 @@ import {
 } from "@/lib/i18n/config";
 import { carryCookies, refreshSession } from "@/lib/supabase/proxy";
 
-const AUTH_PAGES = ["/login", "/signup", "/forgot-password", "/reset-password"];
+const AUTH_PAGES = ["/login", "/signup", "/forgot-password"];
 const PROTECTED_PAGES = [
   "/dashboard",
   "/transactions",

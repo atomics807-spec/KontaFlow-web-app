@@ -13,7 +13,7 @@ import { OfflineOutboxPanel } from "@/components/offline/offline-outbox-panel";
 import { getCachedOptions, getOfflineSession, newClientId, type CachedAccount, type CachedCategory, type OfflineSession } from "@/lib/offline/db";
 import { enqueueTransaction, getOutboxItem, type NewOutboxItem } from "@/lib/offline/outbox";
 import { requestBackgroundSync, syncOutbox } from "@/lib/offline/sync";
-import { refreshOfflineBootstrap } from "@/lib/offline/bootstrap";
+import { bootstrapOffline, refreshOfflineBootstrap } from "@/lib/offline/bootstrap";
 import { parseMoneyToMinor } from "@/lib/money";
 import { todayInZone } from "@/lib/dates";
 import type { TransactionKind } from "@/types/database";
@@ -45,23 +45,35 @@ export function OfflineCapture() {
 
   useEffect(() => {
     let active = true;
-    void getOfflineSession()
-      .then(async (current) => {
-        if (!active) return;
+
+    const loadOptions = async (current: OfflineSession) => {
+      const cached = await getCachedOptions(current.userId, current.workspaceId);
+      if (!active) return;
+      setAccounts(cached.accounts);
+      setCategories(cached.categories);
+    };
+
+    void (async () => {
+      const current = await getOfflineSession().catch(() => null);
+      if (!active) return;
+      if (current) {
         setSession(current);
-        if (!current) return;
-        const cached = await getCachedOptions(current.userId, current.workspaceId);
-        if (!active) return;
-        setAccounts(cached.accounts);
-        setCategories(cached.categories);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+        await loadOptions(current);
+        return;
+      }
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      const created = await bootstrapOffline(locale).catch(() => null);
+      if (!active || !created) return;
+      setSession(created);
+      await loadOptions(created);
+    })().finally(() => {
+      if (active) setLoading(false);
+    });
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     if (!session) return;
@@ -72,6 +84,11 @@ export function OfflineCapture() {
       await syncOutbox(session).catch(() => undefined);
       if (cancelled) return;
       await refreshOfflineBootstrap(session).catch(() => undefined);
+      if (cancelled) return;
+      const cached = await getCachedOptions(session.userId, session.workspaceId);
+      if (cancelled) return;
+      setAccounts(cached.accounts);
+      setCategories(cached.categories);
     };
 
     const onOnline = () => {

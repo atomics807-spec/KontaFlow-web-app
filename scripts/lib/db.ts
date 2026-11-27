@@ -89,6 +89,44 @@ export async function bootstrapLocalAuth(client: Client): Promise<void> {
     grant usage on schema auth to anon, authenticated, service_role;
     grant execute on function auth.jwt(), auth.uid(), auth.email(), auth.role()
       to anon, authenticated, service_role;
+
+    create schema if not exists storage;
+
+    create table if not exists storage.buckets (
+      id text primary key,
+      name text not null,
+      public boolean not null default false,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
+
+    create table if not exists storage.objects (
+      id uuid primary key default gen_random_uuid(),
+      bucket_id text not null references storage.buckets(id),
+      name text not null,
+      owner uuid,
+      metadata jsonb,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      last_accessed_at timestamptz
+    );
+
+    alter table storage.objects enable row level security;
+
+    create or replace function storage.foldername(p_name text)
+    returns text[]
+    language sql
+    immutable
+    as $$
+      select case
+        when position('/' in p_name) = 0 then array[]::text[]
+        else string_to_array(regexp_replace(p_name, '/[^/]*$', ''), '/')
+      end;
+    $$;
+
+    grant usage on schema storage to anon, authenticated, service_role;
+    grant select on storage.buckets to authenticated, service_role;
+    grant select, insert, update, delete on storage.objects to authenticated, service_role;
   `);
 }
 

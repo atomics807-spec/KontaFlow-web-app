@@ -24,6 +24,7 @@ function serverActionOrigins(): string[] {
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   poweredByHeader: false,
   compress: true,
   images: {
