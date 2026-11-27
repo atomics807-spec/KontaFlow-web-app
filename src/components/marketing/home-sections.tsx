@@ -106,9 +106,6 @@ export function ProblemSection({ copy }: { copy: HomeCopy }) {
                 className="object-cover"
               />
               <div aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgba(10,51,39,0.05),rgba(10,51,39,0.7))]" />
-              <figcaption className="absolute bottom-4 left-4 right-4 text-xs text-white/75">
-                {copy.problem.imageCaption}
-              </figcaption>
             </figure>
           </Reveal>
           <div className="grid gap-3">

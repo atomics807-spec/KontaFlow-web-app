@@ -65,7 +65,6 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
               className="object-cover"
             />
             <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,51,39,0.95),rgba(10,51,39,0.1))]" />
-            <p className="absolute bottom-4 right-4 text-[0.6rem] text-white/55">{content.common.illustrativePhoto}</p>
           </div>
         </div>
       </header>

@@ -144,9 +144,6 @@ export function PageHero({
             aria-hidden
             className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(0deg,rgba(10,51,39,0.92),transparent)]"
           />
-          <p className="absolute bottom-4 right-4 max-w-[15rem] text-right text-[0.62rem] leading-snug text-white/65">
-            {page.imageCaption}
-          </p>
         </div>
       </div>
     </section>
