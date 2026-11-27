@@ -10,6 +10,9 @@ import { resolveLocale } from "@/lib/i18n/config";
 import { getPlanCatalogue } from "@/services/plans";
 import { formatMoney, moneyLocale } from "@/lib/money";
 import { marketingMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
+import { softwareApplicationSchema } from "@/lib/structured-data";
+import { getCurrency } from "@/lib/currency";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const locale = resolveLocale((await params).locale);
@@ -57,9 +60,29 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
     : pricing.tiers;
   const faqItems = content.home.faq.items.slice(0, 6);
   const refundTitle = content.legal.find((doc) => doc.slug === "refunds")?.title ?? content.legal[0].title;
+  const offers = catalogue
+    .filter((plan) => plan.priceMinor > 0)
+    .map((plan) => {
+      const decimals = getCurrency(plan.currency).decimals;
+      const price = (plan.priceMinor / 10 ** decimals).toFixed(decimals).replace(/\.0+$/, "");
+      return {
+        name: plan.name,
+        price,
+        priceCurrency: plan.currency,
+        description: plan.description,
+      };
+    });
 
   return (
     <>
+      <JsonLd
+        data={softwareApplicationSchema({
+          locale,
+          description: content.home.metaDescription,
+          offers,
+          featureList: pricing.included,
+        })}
+      />
       <PageHero
         page={{
           eyebrow: pricing.eyebrow,
@@ -74,6 +97,9 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
         primaryLabel={content.common.startTrial}
         secondaryHref={`/${locale}/contact`}
         secondaryLabel={content.common.talkToUs}
+        breadcrumbs={[{ label: dict.marketing.navPricing }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
       <section className="py-16 sm:py-20">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">

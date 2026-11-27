@@ -50,6 +50,9 @@ export default async function SecurityPage({ params }: { params: Promise<{ local
         primaryLabel={dict.marketing.contact}
         secondaryHref={`/${locale}/legal/privacy`}
         secondaryLabel={dict.marketing.privacy}
+        breadcrumbs={[{ label: dict.marketing.navSecurity }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
 
       <section className="py-16 sm:py-20">

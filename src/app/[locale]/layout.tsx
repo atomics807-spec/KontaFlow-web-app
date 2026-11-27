@@ -8,7 +8,7 @@ import { DataSaverProvider } from "@/components/pwa/data-saver-provider";
 import { PwaLifecycle } from "@/components/pwa/pwa-lifecycle";
 import { ToastProvider } from "@/components/ui/toast";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
-import { LOCALES, LOCALE_META, isLocale, type Locale } from "@/lib/i18n/config";
+import { LOCALES, LOCALE_META, isLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { getPublicEnv } from "@/lib/env";
 import "../globals.css";
@@ -80,11 +80,20 @@ export async function generateMetadata({
       description: dict.marketing.heroSubtitle,
       images: [`${appUrl}/images/marketing/og-default.webp`],
     },
-    alternates: {
-      canonical: `${appUrl}/${locale}`,
-      languages: Object.fromEntries(LOCALES.map((code) => [LOCALE_META[code as Locale].htmlLang, `${appUrl}/${code}`])),
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
     },
-    robots: { index: true, follow: true },
+    ...(process.env.GOOGLE_SITE_VERIFICATION
+      ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+      : {}),
   };
 }
 

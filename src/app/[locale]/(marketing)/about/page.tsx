@@ -26,6 +26,9 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
       locale={locale}
       primaryHref={`/${locale}/signup`}
       primaryLabel={content.common.startTrial}
+      breadcrumbs={[{ label: dict.marketing.navAbout }]}
+      breadcrumbLabel={content.common.breadcrumb}
+      homeLabel={content.common.home}
       secondaryHref={`/${locale}/features`}
       secondaryLabel={dict.marketing.navFeatures}
     />

@@ -33,6 +33,9 @@ export default async function HowItWorksPage({ params }: { params: Promise<{ loc
         primaryLabel={content.common.startTrial}
         secondaryHref={`/${locale}/features`}
         secondaryLabel={dict.marketing.navFeatures}
+        breadcrumbs={[{ label: dict.marketing.navHow }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
 
       <section className="py-16 sm:py-20">

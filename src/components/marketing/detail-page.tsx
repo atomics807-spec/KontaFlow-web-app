@@ -1,5 +1,6 @@
 import type { SimplePageCopy } from "@/lib/content/types";
 import type { Locale } from "@/lib/i18n/config";
+import type { BreadcrumbItem } from "@/lib/structured-data";
 import { CtaBand, PageHero, ProseSections } from "./site";
 
 export function DetailPage({
@@ -9,6 +10,9 @@ export function DetailPage({
   primaryLabel,
   secondaryHref,
   secondaryLabel,
+  breadcrumbs,
+  breadcrumbLabel,
+  homeLabel,
 }: {
   page: SimplePageCopy;
   locale: Locale;
@@ -16,6 +20,9 @@ export function DetailPage({
   primaryLabel: string;
   secondaryHref: string;
   secondaryLabel: string;
+  breadcrumbs?: BreadcrumbItem[];
+  breadcrumbLabel?: string;
+  homeLabel?: string;
 }) {
   return (
     <>
@@ -26,6 +33,9 @@ export function DetailPage({
         primaryLabel={primaryLabel}
         secondaryHref={secondaryHref}
         secondaryLabel={secondaryLabel}
+        breadcrumbs={breadcrumbs}
+        breadcrumbLabel={breadcrumbLabel}
+        homeLabel={homeLabel}
       />
       <section className="py-16 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">

@@ -26,6 +26,9 @@ export default async function ServicesPage({ params }: { params: Promise<{ local
       locale={locale}
       primaryHref={`/${locale}/contact`}
       primaryLabel={content.common.talkToUs}
+      breadcrumbs={[{ label: dict.marketing.navServices }]}
+      breadcrumbLabel={content.common.breadcrumb}
+      homeLabel={content.common.home}
       secondaryHref={`/${locale}/pricing`}
       secondaryLabel={dict.marketing.navPricing}
     />

@@ -7,7 +7,9 @@ import { Reveal } from "@/components/motion/reveal";
 import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
-import { marketingMetadata } from "@/lib/seo";
+import { marketingMetadata, SITE_URL, localizedUrl } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
+import { LOCALE_META } from "@/lib/i18n/config";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const locale = resolveLocale((await params).locale);
@@ -45,21 +47,31 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ContactPage",
+    "@id": `${localizedUrl(locale, "/contact")}#contact`,
+    url: localizedUrl(locale, "/contact"),
     name: copy.title,
     description: copy.subtitle,
-    inLanguage: locale,
+    inLanguage: LOCALE_META[locale].htmlLang,
     mainEntity: {
       "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
       name: "KontaFlow",
       email: copy.email,
       telephone: CONTACT_DETAILS.phoneCalls,
-      areaServed: "CM",
+      areaServed: { "@type": "Country", name: "Cameroon" },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: copy.email,
+        telephone: CONTACT_DETAILS.phoneCalls,
+        availableLanguage: ["English", "French", "Cameroonian Pidgin"],
+      },
     },
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <PageHero
         page={{
           eyebrow: copy.eyebrow,
@@ -74,6 +86,9 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
         primaryLabel={labels.formTitle}
         secondaryHref={`/${locale}/pricing`}
         secondaryLabel={dict.marketing.navPricing}
+        breadcrumbs={[{ label: dict.marketing.contact }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
 
       <section id="contact-form" className="scroll-mt-24 py-16 sm:py-20">

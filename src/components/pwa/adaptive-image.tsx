@@ -15,6 +15,7 @@ export function AdaptiveImage({ quality, priority, loading, alt = "", ...props }
       alt={alt}
       quality={lowData ? 40 : (quality ?? 75)}
       priority={lowData ? false : priority}
+      fetchPriority={lowData ? "low" : priority ? "high" : undefined}
       loading={lowData ? "lazy" : loading}
     />
   );

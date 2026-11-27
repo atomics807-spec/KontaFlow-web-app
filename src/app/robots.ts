@@ -1,6 +1,35 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const PRIVATE_PATHS = [
+  "/api/",
+  "/auth/",
+  "/*/dashboard",
+  "/*/transactions",
+  "/*/reports",
+  "/*/contacts",
+  "/*/accounts",
+  "/*/invoices",
+  "/*/debts",
+  "/*/budgets",
+  "/*/insights",
+  "/*/finance",
+  "/*/assistant",
+  "/*/settings",
+  "/*/team",
+  "/*/billing",
+  "/*/onboarding",
+  "/*/invite/",
+  "/*/offline",
+  "/*/account-restricted",
+  "/*/admin",
+  "/*/login",
+  "/*/signup",
+  "/*/forgot-password",
+  "/*/reset-password",
+  "/*/verify-email",
+  "/*/verify-phone",
+];
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -8,10 +37,10 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/auth/", "/*/dashboard", "/*/transactions", "/*/reports", "/*/settings", "/*/assistant"],
+        disallow: PRIVATE_PATHS,
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
-    host: BASE_URL,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

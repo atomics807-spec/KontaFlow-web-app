@@ -7,6 +7,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Les règles d'utilisation de KontaFlow, vos responsabilités et les limites du service.",
     updated: "En vigueur le 1er janvier 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Ces conditions régissent votre utilisation de KontaFlow. En créant un compte ou en utilisant le service, vous les acceptez. Si vous ne les acceptez pas, n'utilisez pas le service.",
     sections: [
@@ -79,6 +80,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Les données personnelles collectées par KontaFlow, leur utilisation, leur conservation et vos choix.",
     updated: "En vigueur le 1er janvier 2026 · version 2026-01-01",
+    updatedAt: "2026-01-01",
     intro:
       "Cette politique explique comment KontaFlow traite les données personnelles dans l'application web, l'USSD, WhatsApp et l'assistant IA. Elle s'applique aux titulaires de compte, aux membres d'un espace et aux personnes qui nous contactent.",
     sections: [
@@ -151,6 +153,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Les cookies et stockages locaux utilisés par KontaFlow, leur utilité et leur contrôle.",
     updated: "En vigueur le 1er janvier 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Les cookies et stockages similaires permettent de mémoriser votre session, votre langue et vos préférences. Cette politique décrit ce que nous utilisons aujourd'hui.",
     sections: [
@@ -194,6 +197,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Comment KontaFlow traite les données d'un espace, y compris la sécurité, les sous-traitants et les incidents.",
     updated: "En vigueur le 1er janvier 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Cette page résume la relation de traitement lorsqu'une entreprise utilise KontaFlow pour tenir ses livres. Elle s'adresse aux propriétaires d'espaces, comptables et équipes d'achat.",
     sections: [
@@ -245,6 +249,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Le fonctionnement de l'essai, des offres payantes, de la résiliation et des demandes de remboursement.",
     updated: "En vigueur le 1er janvier 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Cette politique explique ce qui se passe lorsque vous arrêtez une offre, changez d'offre ou pensez qu'un débit est erroné. Elle ne réduit pas les droits accordés par la loi applicable aux consommateurs.",
     sections: [
@@ -289,6 +294,7 @@ export const legalFr: LegalDoc[] = [
     description:
       "Les règles de conduite et de contenu qui protègent KontaFlow, ses utilisateurs et leurs données.",
     updated: "En vigueur le 1er janvier 2026",
+    updatedAt: "2026-01-01",
     intro:
       "KontaFlow traite des dossiers financiers et des données personnelles. Cette politique fixe le standard minimal d'utilisation. Elle s'applique à chaque membre d'un espace et à toute personne agissant pour lui.",
     sections: [

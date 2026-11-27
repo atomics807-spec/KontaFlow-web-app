@@ -4,6 +4,8 @@ import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
 import { marketingMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
+import { webPageSchema } from "@/lib/structured-data";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const locale = resolveLocale((await params).locale);
@@ -22,21 +24,16 @@ export default async function FaqPage({ params }: { params: Promise<{ locale: st
   const [content, dict] = await Promise.all([getSiteContent(locale), getDictionary(locale)]);
   const page = content.faq;
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: page.groups.flatMap((group) =>
-      group.items.map((item) => ({
-        "@type": "Question",
-        name: item.question,
-        acceptedAnswer: { "@type": "Answer", text: item.answer },
-      })),
-    ),
-  };
+  const jsonLd = webPageSchema({
+    locale,
+    path: "/faq",
+    name: page.metaTitle,
+    description: page.metaDescription,
+  });
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <PageHero
         page={{ ...page, imageCaption: content.common.illustrativePhoto }}
         locale={locale}
@@ -44,6 +41,9 @@ export default async function FaqPage({ params }: { params: Promise<{ locale: st
         primaryLabel={content.common.talkToUs}
         secondaryHref={`/${locale}/pricing`}
         secondaryLabel={dict.marketing.navPricing}
+        breadcrumbs={[{ label: dict.marketing.navFaq }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
       <section className="py-16 sm:py-20">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">

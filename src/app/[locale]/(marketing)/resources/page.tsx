@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Clock } from "lucide-react";
 import { CtaBand, PageHero, SectionHeading } from "@/components/marketing/site";
 import { Reveal } from "@/components/motion/reveal";
-import { getSiteContent } from "@/lib/content";
+import { getSiteContent, listPublishedArticles } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
 import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { marketingMetadata } from "@/lib/seo";
@@ -31,7 +31,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
   const locale = resolveLocale((await params).locale);
   const [content, dict] = await Promise.all([getSiteContent(locale), getDictionary(locale)]);
   const blog = content.blog;
-  const [featured, ...rest] = blog.articles;
+  const [featured, ...rest] = listPublishedArticles(content);
 
   return (
     <>
@@ -49,6 +49,9 @@ export default async function ResourcesPage({ params }: { params: Promise<{ loca
         primaryLabel={content.common.startTrial}
         secondaryHref={`/${locale}/faq`}
         secondaryLabel={dict.marketing.navFaq}
+        breadcrumbs={[{ label: content.common.resources }]}
+        breadcrumbLabel={content.common.breadcrumb}
+        homeLabel={content.common.home}
       />
 
       {featured ? (

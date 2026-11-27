@@ -6,7 +6,7 @@ import { safeNextPath } from "@/lib/action-utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const dict = await getDictionary(resolveLocale((await params).locale));
-  return { title: dict.auth.signUpTitle, robots: { index: true, follow: true } };
+  return { title: dict.auth.signUpTitle, robots: { index: false, follow: false } };
 }
 
 export default async function SignupPage({

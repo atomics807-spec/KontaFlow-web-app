@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
@@ -90,17 +89,12 @@ export function MarketingHeader() {
         </div>
       </div>
 
-      <AnimatePresence initial={false}>
-        {open ? (
-          <motion.div
-            id="mobile-menu"
-            onClick={() => setOpen(false)}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-line bg-page px-4 pb-5 pt-3 xl:hidden"
-          >
+      {open ? (
+        <div
+          id="mobile-menu"
+          onClick={() => setOpen(false)}
+          className="animate-rise max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-line bg-page px-4 pb-5 pt-3 xl:hidden"
+        >
             <nav aria-label={dict.common.mobileNavigation} className="grid grid-cols-2 gap-1">
               {links.map((link) => (
                 <Link
@@ -132,9 +126,8 @@ export function MarketingHeader() {
                 </Link>
               </div>
             </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+        </div>
+      ) : null}
     </header>
   );
 }

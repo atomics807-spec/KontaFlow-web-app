@@ -6,6 +6,9 @@ import { ArrowLeft, ArrowRight, Mail, ShieldCheck } from "lucide-react";
 import { findLegalDoc, getSiteContent } from "@/lib/content";
 import { resolveLocale } from "@/lib/i18n/config";
 import { marketingMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
+import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
+import { webPageSchema } from "@/lib/structured-data";
 
 export async function generateStaticParams() {
   const content = await getSiteContent("en");
@@ -40,11 +43,26 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
 
   return (
     <>
+      <JsonLd
+        data={webPageSchema({
+          locale,
+          path: `/legal/${doc.slug}`,
+          name: doc.title,
+          description: doc.description,
+          dateModified: doc.updatedAt,
+        })}
+      />
       <header className="relative overflow-hidden border-b border-white/10 bg-forest text-white">
         <div aria-hidden className="pointer-events-none absolute inset-0 grid-lines opacity-[0.06]" />
         <div className="relative mx-auto grid w-full max-w-7xl lg:grid-cols-[1.2fr_0.8fr]">
           <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-            <BreadcrumbsLight locale={locale} homeLabel={content.common.home} breadcrumbLabel={content.common.breadcrumb} items={[{ label: content.common.legalNav }, { label: doc.title }]} />
+            <Breadcrumbs
+              locale={locale}
+              homeLabel={content.common.home}
+              label={content.common.breadcrumb}
+              tone="dark"
+              items={[{ label: content.common.legalNav }, { label: doc.title }]}
+            />
             <p className="mt-8 text-[0.68rem] font-bold uppercase tracking-[0.16em] text-mango-400">
               {content.common.legalNav}
             </p>
@@ -143,41 +161,5 @@ export default async function LegalPage({ params }: { params: Promise<{ locale: 
         </article>
       </div>
     </>
-  );
-}
-
-function BreadcrumbsLight({
-  locale,
-  homeLabel,
-  breadcrumbLabel,
-  items,
-}: {
-  locale: string;
-  homeLabel: string;
-  breadcrumbLabel: string;
-  items: { label: string; path?: string }[];
-}) {
-  return (
-    <nav aria-label={breadcrumbLabel} className="text-xs text-jade-100/60">
-      <ol className="flex flex-wrap items-center gap-2">
-        <li>
-          <Link href={`/${locale}`} className="hover:text-white">
-            {homeLabel}
-          </Link>
-        </li>
-        {items.map((item) => (
-          <li key={item.label} className="flex items-center gap-2">
-            <span aria-hidden>/</span>
-            {item.path ? (
-              <Link href={`/${locale}${item.path}`} className="hover:text-white">
-                {item.label}
-              </Link>
-            ) : (
-              <span className="text-jade-100/90">{item.label}</span>
-            )}
-          </li>
-        ))}
-      </ol>
-    </nav>
   );
 }

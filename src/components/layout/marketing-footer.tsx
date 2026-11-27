@@ -27,6 +27,8 @@ export function MarketingFooter() {
       links: [
         { label: dict.marketing.navAbout, href: `/${locale}/about` },
         { label: dict.marketing.navResources, href: `/${locale}/resources` },
+        { label: dict.marketing.navCompare, href: `/${locale}/compare` },
+        { label: dict.marketing.navGlossary, href: `/${locale}/glossary` },
         { label: dict.marketing.navFaq, href: `/${locale}/faq` },
         { label: dict.marketing.contact, href: `/${locale}/contact` },
         { label: dict.marketing.photoCredits, href: `/${locale}/photo-credits` },

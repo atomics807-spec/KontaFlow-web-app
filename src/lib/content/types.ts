@@ -1,3 +1,5 @@
+import type { Locale } from "@/lib/i18n/config";
+
 export type CardCopy = { title: string; body: string };
 
 export type FaqItem = { question: string; answer: string };
@@ -204,7 +206,13 @@ export type Article = {
   title: string;
   description: string;
   category: string;
+  author: string;
   publishedAt: string;
+  updatedAt: string;
+  status: "published" | "draft";
+  locale: Locale;
+  tags: string[];
+  canonicalPath?: string;
   readingMinutes: number;
   image: string;
   imageAlt: string;
@@ -235,6 +243,7 @@ export type LegalDoc = {
   title: string;
   description: string;
   updated: string;
+  updatedAt?: string;
   intro: string;
   sections: { heading: string; paragraphs: string[]; bullets?: string[] }[];
 };
@@ -291,6 +300,7 @@ export type SiteContent = {
     home: string;
     resources: string;
     takeaway: string;
+    updated: string;
     editorial: string;
     source: string;
   };

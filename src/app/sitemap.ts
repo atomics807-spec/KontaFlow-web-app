@@ -1,8 +1,7 @@
 import type { MetadataRoute } from "next";
-import { LOCALES } from "@/lib/i18n/config";
-import { getSiteContent } from "@/lib/content";
-
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+import { LOCALES, LOCALE_META } from "@/lib/i18n/config";
+import { articleCanonicalPath, getSiteContent, listPublishedArticles } from "@/lib/content";
+import { SITE_URL } from "@/lib/seo";
 
 type PageEntry = {
   path: string;
@@ -11,49 +10,54 @@ type PageEntry = {
   lastModified?: Date;
 };
 
+function languageAlternates(path: string): Record<string, string> {
+  return {
+    ...Object.fromEntries(LOCALES.map((code) => [LOCALE_META[code].htmlLang, `${SITE_URL}/${code}${path}`])),
+    "x-default": `${SITE_URL}/en${path}`,
+  };
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const content = await getSiteContent("en");
   const now = new Date();
+  const publishedArticles = listPublishedArticles(content, now);
+  const latestArticle = publishedArticles[0]?.updatedAt;
 
   const pages: PageEntry[] = [
     { path: "", priority: 1, changeFrequency: "weekly" },
     { path: "/features", priority: 0.9, changeFrequency: "monthly" },
     { path: "/pricing", priority: 0.9, changeFrequency: "monthly" },
     { path: "/how-it-works", priority: 0.8, changeFrequency: "monthly" },
-    { path: "/resources", priority: 0.8, changeFrequency: "weekly" },
+    { path: "/compare", priority: 0.8, changeFrequency: "monthly" },
+    { path: "/resources", priority: 0.8, changeFrequency: "weekly", lastModified: latestArticle ? new Date(latestArticle) : undefined },
+    { path: "/glossary", priority: 0.7, changeFrequency: "monthly" },
     { path: "/about", priority: 0.7, changeFrequency: "monthly" },
     { path: "/services", priority: 0.7, changeFrequency: "monthly" },
     { path: "/contact", priority: 0.7, changeFrequency: "yearly" },
     { path: "/faq", priority: 0.6, changeFrequency: "monthly" },
     { path: "/security", priority: 0.6, changeFrequency: "monthly" },
-    { path: "/login", priority: 0.5, changeFrequency: "yearly" },
-    { path: "/signup", priority: 0.8, changeFrequency: "yearly" },
     { path: "/photo-credits", priority: 0.3, changeFrequency: "yearly" },
     ...content.legal.map((doc) => ({
       path: `/legal/${doc.slug}`,
       priority: 0.4,
       changeFrequency: "yearly" as const,
+      lastModified: doc.updatedAt ? new Date(doc.updatedAt) : undefined,
     })),
-    ...content.blog.articles.map((article) => ({
-      path: `/resources/${article.slug}`,
+    ...publishedArticles.map((article) => ({
+      path: articleCanonicalPath(article),
       priority: 0.6,
-      changeFrequency: "yearly" as const,
-      lastModified: new Date(`${article.publishedAt}T12:00:00Z`),
+      changeFrequency: "monthly" as const,
+      lastModified: new Date(article.updatedAt),
     })),
   ];
 
   return pages.flatMap((page) =>
     LOCALES.map((locale) => ({
-      url: `${BASE_URL}/${locale}${page.path}`,
+      url: `${SITE_URL}/${locale}${page.path}`,
       lastModified: page.lastModified ?? now,
       changeFrequency: page.changeFrequency,
       priority: page.priority,
-      alternates: {
-        languages: {
-          ...Object.fromEntries(LOCALES.map((code) => [code, `${BASE_URL}/${code}${page.path}`])),
-          "x-default": `${BASE_URL}/en${page.path}`,
-        },
-      },
+      alternates: { languages: languageAlternates(page.path) },
     })),
   );
 }

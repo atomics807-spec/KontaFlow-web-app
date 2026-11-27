@@ -11,6 +11,8 @@ import type { Locale } from "@/lib/i18n/config";
 import { buttonVariants } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/reveal";
 import { cn } from "@/lib/utils";
+import { Breadcrumbs } from "./breadcrumbs";
+import type { BreadcrumbItem } from "@/lib/structured-data";
 
 export function Eyebrow({ children, dark = false }: { children: React.ReactNode; dark?: boolean }) {
   return (
@@ -77,10 +79,14 @@ export function SectionHeading({
 
 export function PageHero({
   page,
+  locale,
   primaryHref,
   primaryLabel,
   secondaryHref,
   secondaryLabel,
+  breadcrumbs,
+  breadcrumbLabel,
+  homeLabel,
 }: {
   page: HeroCopy;
   locale: Locale;
@@ -88,6 +94,9 @@ export function PageHero({
   primaryLabel: string;
   secondaryHref?: string;
   secondaryLabel?: string;
+  breadcrumbs?: BreadcrumbItem[];
+  breadcrumbLabel?: string;
+  homeLabel?: string;
 }) {
   return (
     <section className="relative overflow-hidden border-b border-white/10 bg-forest text-white">
@@ -97,6 +106,17 @@ export function PageHero({
       />
       <div className="relative mx-auto grid w-full max-w-7xl items-stretch lg:grid-cols-[1.04fr_0.96fr]">
         <div className="px-4 pb-12 pt-12 sm:px-6 lg:px-8 lg:pb-16 lg:pt-16">
+          {breadcrumbs && breadcrumbLabel && homeLabel ? (
+            <div className="mb-8">
+              <Breadcrumbs
+                locale={locale}
+                label={breadcrumbLabel}
+                homeLabel={homeLabel}
+                items={breadcrumbs}
+                tone="dark"
+              />
+            </div>
+          ) : null}
           <Reveal>
             <Eyebrow dark>{page.eyebrow}</Eyebrow>
             <h1 className="mt-6 max-w-2xl text-balance text-[2.35rem] font-extrabold leading-[1.06] tracking-tight sm:text-5xl">

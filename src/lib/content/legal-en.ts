@@ -6,6 +6,7 @@ export const legalEn: LegalDoc[] = [
     title: "Terms of Service",
     description: "The rules for using KontaFlow, your responsibilities and the limits of the service.",
     updated: "Effective 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "These terms govern your use of KontaFlow. By creating an account or using the service, you agree to them. If you do not agree, do not use the service.",
     sections: [
@@ -77,6 +78,7 @@ export const legalEn: LegalDoc[] = [
     title: "Privacy Policy",
     description: "What personal data KontaFlow collects, why, how long it is kept and the choices you have.",
     updated: "Effective 1 January 2026 · version 2026-01-01",
+    updatedAt: "2026-01-01",
     intro:
       "This policy explains how KontaFlow handles personal data across the web app, USSD, WhatsApp and the AI assistant. It applies to account holders, workspace members and people who contact us.",
     sections: [
@@ -148,6 +150,7 @@ export const legalEn: LegalDoc[] = [
     title: "Cookie Policy",
     description: "The cookies and local storage KontaFlow uses, why they are needed and how to control them.",
     updated: "Effective 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Cookies and similar storage help the service remember your session, language and preferences. This policy explains what we use today.",
     sections: [
@@ -191,6 +194,7 @@ export const legalEn: LegalDoc[] = [
     description:
       "How KontaFlow processes business data on behalf of a workspace, including security, subprocessors and breach response.",
     updated: "Effective 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "This page summarises the processing relationship when a business uses KontaFlow to keep its books. It is written for workspace owners, accountants and procurement teams.",
     sections: [
@@ -241,6 +245,7 @@ export const legalEn: LegalDoc[] = [
     title: "Refund and Cancellation Policy",
     description: "How trial, paid plans, cancellation and refund requests work at KontaFlow.",
     updated: "Effective 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "This policy explains what happens when you stop a plan, change a plan or believe a charge is wrong. It does not reduce rights you have under applicable consumer law.",
     sections: [
@@ -284,6 +289,7 @@ export const legalEn: LegalDoc[] = [
     title: "Acceptable Use Policy",
     description: "The conduct and content rules that keep KontaFlow safe for businesses, their teams and their data.",
     updated: "Effective 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "KontaFlow handles financial records and personal data. This policy sets the minimum standard for using the service. It applies to every workspace member and anyone acting for them.",
     sections: [

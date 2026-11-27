@@ -442,3 +442,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Support access is time-boxed (1–72 hours), requires a written justification, cannot be self-approved, and is audited. The snapshot RPC increments `access_count` and refuses expired or revoked grants.
 * `amend_transaction(p_transaction_id, p_payload, p_reason)` is the only correction path. It validates the workspace, records the replacement and voids the original inside one database transaction, linking them through `metadata.amends_transaction_id`. Never edit posted ledger rows in place.
 * The dashboard quick-entry form reuses `record_transaction` with a per-submission `client_generated_id`; the AI command box calls `/api/ai/chat` with `requireConfirmation: true`, so it never posts without review.
+
+## SEO, AEO and GEO
+
+* Public marketing pages live under `src/app/[locale]/(marketing)` and must stay server-rendered. Never place tenant data or authenticated views in these routes.
+* All public metadata goes through `marketingMetadata` in `src/lib/seo.ts`. It owns the canonical URL, `en`/`fr`/`pcm` hreflang links, `x-default`, Open Graph and Twitter fields. Do not add a global canonical in the root layout: it would override every child page.
+* Pidgin pages append ` · Pidgin` to the display title because the `pcm` copy currently reuses English headlines. Keep titles unique across the 66 sitemap URLs.
+* Private route groups export `robots: { index: false, follow: false, nocache: true }`. `src/app/robots.ts` also disallows app, auth and API paths. Login and signup are intentionally `noindex` and absent from the sitemap.
+* `src/app/sitemap.ts` is the source of truth for indexable URLs. It includes only public marketing pages, legal documents and articles returned by `listPublishedArticles`. Drafts, future-dated articles, redirect aliases (`/product`, `/channels`, `/overview`) and private routes must not be added.
+* Articles require `author`, `publishedAt`, `updatedAt`, `status`, `locale`, `canonicalPath` and `tags`. Use `articleCanonicalPath` for links and sitemap entries. Article pages return `notFound()` for drafts, future posts and unknown slugs.
+* Structured data is rendered only through `JsonLd` from `src/components/seo/json-ld.tsx`, which escapes `<` before injecting JSON. Helpers live in `src/lib/structured-data.ts`: `Organization`, `WebSite`, `WebPage`, `BreadcrumbList`, `SoftwareApplication`, `Article` and `DefinedTermSet`.
+* Do not emit `FAQPage` for ordinary marketing FAQs. Google restricts FAQ rich results to authoritative government and health sites. The public FAQ remains visible content; it is not marked up as `FAQPage`.
+* AEO/GEO hubs are `/[locale]/compare` and `/[locale]/glossary`. Their copy lives in `src/lib/content/aeo.ts`; keep definitions short, factual and internally linked.
+* Validation: `npx vitest run tests/seo.test.ts`, `npx structured-data-testing-tool --url <page>`, and Lighthouse. The local production baseline is SEO 100, best practices 100, accessibility 96 and performance 88 on mobile; LCP is dominated by the cold Next image optimizer, so measure on the deployed CDN before making ranking or speed claims.

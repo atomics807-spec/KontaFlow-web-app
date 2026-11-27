@@ -6,6 +6,7 @@ export const legalPcm: LegalDoc[] = [
     title: "Rules wey yu dey follow",
     description: "How yu fit use KontaFlow, wetin na your work and wetin di service fit do.",
     updated: "E start 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Dis rules dey control how yu use KontaFlow. If yu open account or use di service, yu agree wit dem. If yu no agree, no use di service.",
     sections: [
@@ -65,6 +66,7 @@ export const legalPcm: LegalDoc[] = [
     title: "How we handle your data",
     description: "Wetin personal data KontaFlow dey collect, why, how long we keep am and wetin yu fit choose.",
     updated: "E start 1 January 2026 · version 2026-01-01",
+    updatedAt: "2026-01-01",
     intro:
       "Dis policy explain how KontaFlow dey handle personal data for web app, USSD, WhatsApp and AI assistant. E cover account holders, workspace members and people wey contact us.",
     sections: [
@@ -130,6 +132,7 @@ export const legalPcm: LegalDoc[] = [
     title: "Cookie Policy",
     description: "Cookies and local storage wey KontaFlow dey use, why and how yu fit control dem.",
     updated: "E start 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Cookie and similar storage dey help di service remember your session, language and preference. Dis policy show wetin we use today.",
     sections: [
@@ -171,6 +174,7 @@ export const legalPcm: LegalDoc[] = [
     title: "How we process business data",
     description: "How KontaFlow dey process workspace data, security, subprocessors and incident response.",
     updated: "E start 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Dis page summarise di processing relationship when business use KontaFlow to keep books. E dey for workspace owners, accountants and procurement teams.",
     sections: [
@@ -215,6 +219,7 @@ export const legalPcm: LegalDoc[] = [
     title: "Refund and cancellation",
     description: "How trial, paid plan, cancellation and refund dey work for KontaFlow.",
     updated: "E start 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "Dis policy explain wetin happen when yu stop plan, change plan or think say charge no correct. E no reduce your consumer rights under law.",
     sections: [
@@ -258,6 +263,7 @@ export const legalPcm: LegalDoc[] = [
     title: "Acceptable use",
     description: "Rules wey keep KontaFlow safe for business, team and data.",
     updated: "E start 1 January 2026",
+    updatedAt: "2026-01-01",
     intro:
       "KontaFlow dey handle financial records and personal data. Dis policy set di minimum standard. E apply to every workspace member and anybody wey dey act for dem.",
     sections: [

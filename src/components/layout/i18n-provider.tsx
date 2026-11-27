@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { TolgeeProvider, useTranslate } from "@tolgee/react";
-import { createClient } from "@/lib/supabase/client";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { Locale } from "@/lib/i18n/config";
 import { en, type Dictionary } from "@/lib/i18n/dictionaries/en";
@@ -70,11 +69,6 @@ export function useI18n(): I18nValue {
   const value = useContext(I18nContext);
   if (!value) throw new Error("useI18n must be used inside <I18nProvider>");
   return value;
-}
-
-/** Client-side Supabase accessor for forms that must talk to Auth directly. */
-export function useSupabase() {
-  return useMemo(() => createClient(), []);
 }
 
 export function fill(

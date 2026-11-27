@@ -1,9 +1,14 @@
+import type { Metadata } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { OfflineIdentityProvider } from "@/components/offline/offline-identity-provider";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { countUnreadNotifications, listNotifications } from "@/services/notifications";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function DashboardLayout({
   children,

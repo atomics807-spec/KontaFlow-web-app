@@ -22,6 +22,8 @@ import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale } from "@/lib/i18n/config";
 import { marketingMetadata } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
+import { softwareApplicationSchema } from "@/lib/structured-data";
 
 export async function generateMetadata({
   params,
@@ -60,36 +62,18 @@ export default async function LandingPage({ params }: { params: Promise<{ locale
     saved: dict.common.synced,
   };
 
-  const jsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      name: "KontaFlow",
-      applicationCategory: "FinanceApplication",
-      operatingSystem: "Web, Android, iOS",
-      inLanguage: ["en", "fr", "pcm"],
-      description: content.home.metaDescription,
-      offers: [
-        { "@type": "Offer", price: "0", priceCurrency: "XAF", name: "Starter" },
-        { "@type": "Offer", price: "9900", priceCurrency: "XAF", name: "Growth" },
-        { "@type": "Offer", price: "29900", priceCurrency: "XAF", name: "Scale" },
-      ],
-      areaServed: ["CM", "CI", "SN", "GA", "NG"],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: content.home.faq.items.map((item) => ({
-        "@type": "Question",
-        name: item.question,
-        acceptedAnswer: { "@type": "Answer", text: item.answer },
-      })),
-    },
-  ];
+  const jsonLd = softwareApplicationSchema({
+    locale,
+    description: content.home.metaDescription,
+    featureList: [
+      ...content.home.hero.channels,
+      ...content.home.solution.cards.map((card) => card.title),
+    ],
+  });
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <JsonLd data={jsonLd} />
       <HomeHero locale={locale} copy={content.home} labels={labels} />
       <PositioningSection copy={content.home} />
       <ProblemSection copy={content.home} />
