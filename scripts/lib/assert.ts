@@ -30,8 +30,9 @@ export async function asRole<T>(
   await client.query("begin");
   try {
     await client.query(`set local role ${role}`);
+    const jwtClaims = claims ?? (role === "service_role" ? { role: "service_role" } : null);
     await client.query("select set_config('request.jwt.claims', $1, true)", [
-      claims ? JSON.stringify(claims) : "",
+      jwtClaims ? JSON.stringify(jwtClaims) : "",
     ]);
     const result = await fn(client);
     await client.query(commit ? "commit" : "rollback");

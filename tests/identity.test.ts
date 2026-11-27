@@ -7,6 +7,7 @@ import { passwordSchema } from "@/lib/validation/schemas";
 const messages = {
   firstNameRequired: "first name",
   lastNameRequired: "last name",
+  businessNameRequired: "business name",
   phoneInvalid: "phone",
   privacyRequired: "privacy",
   passwordMismatch: "mismatch",
@@ -16,6 +17,7 @@ function validSignup(overrides: Record<string, unknown> = {}) {
   return {
     firstName: "Awa",
     lastName: "Nkeng",
+    businessName: "Nkeng Fresh Foods",
     email: "Awa@Example.CM",
     country: "CM",
     phone: "6 71 23 45 67",
@@ -100,6 +102,11 @@ describe("signup schema", () => {
 
   it("treats whitespace-only names as missing", () => {
     expect(signupSchema(messages).safeParse(validSignup({ firstName: "   " })).success).toBe(false);
+  });
+
+  it("requires a business name at signup", () => {
+    expect(signupSchema(messages).safeParse(validSignup({ businessName: " " })).success).toBe(false);
+    expect(signupSchema(messages).safeParse(validSignup({ businessName: "A" })).success).toBe(false);
   });
 });
 

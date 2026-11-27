@@ -16,8 +16,13 @@ All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 | `/api/reports/export/pdf` | GET | Supabase session | Localized PDF report for a period (`from`, `to`, `locale`) |
 | `/api/ussd` | POST | Required `USSD_CALLBACK_TOKEN` | Africa's Talking USSD menu; returns plain-text `CON`/`END` |
 | `/api/whatsapp` | GET/POST | Verify token / HMAC | Meta webhook handshake and inbound messages |
-| `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails the previous day's close to workspace owners |
+| `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails daily closes at 21:00 local time, plus the weekly report on Sundays |
 | `/api/cron/trial-reminders` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Expires trials and sends configured reminder emails |
+| `/api/cron/payment-reconciliation` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Polls pending mobile-money payments and settles them |
+| `/api/payments` | POST | Supabase session + `billing:manage` | Starts an MTN MoMo, Orange Money or aggregator payment for a paid plan; body `{ planCode, provider, payerMsisdn?, idempotencyKey? }` |
+| `/api/payments/[id]` | GET | Supabase session + `billing:manage` | Polls and reconciles one payment; returns a public status, never provider secrets |
+| `/api/webhooks/payments/[provider]` | POST/PUT | Provider callback token/HMAC | Deduplicates and reconciles a mobile-money callback; the callback body is not trusted as proof |
+| `/api/admin/payments/[id]/refund` | POST | Platform admin/super-admin | Records a provider refund or a chargeback reversal |
 
 ### Error shape
 
@@ -71,7 +76,13 @@ Called through the Supabase client; all are `SECURITY DEFINER` with
 | `platform_admin_plan_catalogue()` / `platform_admin_billing_settings()` | platform admin | Plan console reads |
 | `platform_admin_save_plan(code, payload, ip)` / `platform_admin_save_billing_settings(days, plan, reminders, ip)` | platform admin | Audited plan and trial configuration |
 | `expire_trials()` | `service_role` only | Moves ended trials to `past_due` (read-only) |
-| `activate_paid_subscription(...)` | `service_role` only | Verified payment activates a plan and clears the trial |
+| `create_payment_intent(...)` | `service_role` only | Validates plan/price/provider, enforces idempotency and stores a pending payment |
+| `mark_payment_initiated(...)` | `service_role` only | Stores the provider reference and moves the payment to `processing` |
+| `confirm_payment(...)` | `service_role` only | Re-checks provider reference, amount, currency and plan price, then activates the subscription |
+| `fail_payment(...)` | `service_role` only | Moves a pending payment to `failed`/`expired`; never downgrades a successful payment |
+| `refund_payment(...)` | `service_role` only | Records a refund/reversal, enforces the cumulative cap and updates the subscription |
+| `touch_payment(...)` | `service_role` only | Records a provider status check without changing the lifecycle state |
+| `activate_paid_subscription(...)` | `service_role` only | Legacy verified-payment activation path retained for existing operations |
 
 ## Offline payload
 

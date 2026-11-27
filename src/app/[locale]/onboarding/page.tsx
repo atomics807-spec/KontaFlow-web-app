@@ -22,6 +22,9 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
   const context = await getWorkspaceContext();
   if (context) redirect(`/${locale}/dashboard`);
 
+  const businessName =
+    typeof user.user_metadata?.business_name === "string" ? user.user_metadata.business_name : "";
+
   return (
     <div className="min-h-dvh bg-page">
       <div
@@ -42,6 +45,7 @@ export default async function OnboardingPage({ params }: { params: Promise<{ loc
             email={user.email ?? ""}
             defaultCountry={profile?.country_code ?? "CM"}
             defaultLocale={profile?.locale ?? locale}
+            defaultName={businessName}
             defaultPhone={profile?.phone ?? ""}
           />
         </div>

@@ -33,7 +33,7 @@ export const legalPcm: LegalDoc[] = [
       {
         heading: "4. Plans and payment",
         paragraphs: [
-          "Starter dey free. New workspace start with seven-day trial. Paid plans get di price wey dey di pricing page and we arrange dem with yu.",
+          "Starter na 14-day trial wey cost nothing. When e end, di workspace go read-only until yu choose paid plan. Paid plans get di price wey dey di pricing page and we arrange dem with yu.",
           "Price dey in FCFA and tax fit apply. We go explain di amount and billing period before we turn on paid plan. Cancellation and refund dey inside di Refund and Cancellation Policy.",
         ],
       },
@@ -219,9 +219,9 @@ export const legalPcm: LegalDoc[] = [
       "Dis policy explain wetin happen when yu stop plan, change plan or think say charge no correct. E no reduce your consumer rights under law.",
     sections: [
       {
-        heading: "1. Free plan and trial",
+        heading: "1. Starter trial",
         paragraphs: [
-          "Starter cost 0 FCFA. New workspace still start with seven-day trial. Yu no need pay to start and trial no go automatically charge card.",
+          "Starter na 14-day trial for 0 FCFA. Yu no need pay to start and trial no go automatically charge card. When di trial end, di workspace go read-only until we turn on paid plan.",
         ],
       },
       {

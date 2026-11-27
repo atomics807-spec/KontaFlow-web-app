@@ -10,7 +10,7 @@
 insert into public.subscription_plans
   (code, name, description, price_minor, currency, billing_interval, seats_included, workspace_limit, ai_message_limit, sort_order)
 values
-  ('starter', 'Starter', 'For solo traders getting organised.', 0, 'XAF', 'month', 2, 1, 50, 1),
+  ('starter', 'Starter', 'A 14-day starter trial for small businesses beginning digital bookkeeping.', 0, 'XAF', 'month', 2, 1, 50, 1),
   ('growth', 'Growth', 'For shops and small teams with daily volume.', 9900, 'XAF', 'month', 8, 2, 500, 2),
   ('scale', 'Scale', 'For multi-branch businesses and accountants.', 29900, 'XAF', 'month', 25, null, 5000, 3)
 on conflict (code) do update

@@ -6,6 +6,7 @@ import { normalizePhone } from "@/lib/validation/phone";
 export type SignupMessages = {
   firstNameRequired: string;
   lastNameRequired: string;
+  businessNameRequired: string;
   phoneInvalid: string;
   privacyRequired: string;
   passwordMismatch: string;
@@ -23,6 +24,12 @@ export function signupSchema(messages: SignupMessages) {
     .object({
       firstName: personName.min(1, messages.firstNameRequired),
       lastName: personName.min(1, messages.lastNameRequired),
+      businessName: z
+        .string()
+        .trim()
+        .min(2, messages.businessNameRequired)
+        .max(120)
+        .regex(/^[^\u0000-\u001f\u007f]+$/u, messages.businessNameRequired),
       email: emailSchema,
       country: z
         .string()

@@ -368,3 +368,44 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Platform admins configure plans and trial settings at `/{locale}/admin/plans`.
   The RPCs require `super_admin` or `admin`; keep the explicit null-role guard.
 * Apply `20260101000037_phase13_entitlements.sql` before deploying this code.
+
+## Mobile-money payments
+
+* Apply `20260101000038_phase14_payment_status.sql` and
+  `20260101000039_phase14_payments.sql` before deploying.
+* `payment_transactions` is owner/admin readable but authenticated clients have
+  no insert/update/delete grant. `payment_refunds` and `payment_webhooks` are
+  service-role only. Never add a browser policy for them.
+* Checkout starts at `POST /api/payments` (`billing:manage`). The plan price,
+  currency and merchant reference are resolved on the server; never accept an
+  amount from the browser.
+* A provider callback is only a hint. Verify the per-payment token/HMAC, store
+  the event in `payment_webhooks`, then call the provider status endpoint.
+  Only `confirm_payment` may activate a plan.
+* The callback token is stored as a SHA-256 hash. Do not log raw tokens,
+  provider credentials or full callback bodies.
+* `PAYMENT_MODE=disabled` hides checkout. `PAYMENT_PROVIDER=none` offers every
+  fully configured provider; set it to one id to narrow checkout.
+* `/api/cron/payment-reconciliation` is the fallback for missed callbacks and
+  runs in bounded batches. Keep the `CRON_SECRET` bearer check.
+* Refunds are platform-admin only (`/api/admin/payments/[id]/refund`); the
+  database caps cumulative refunds at the paid amount. MTN/Orange adapters
+  report refunds as unsupported until the merchant contract confirms them.
+* Full setup, provider contracts and the state machine:
+  `docs/integrations/payments.md`.
+
+## Trials and scheduled reports
+
+* Apply `20260101000040_phase15_plan_reporting.sql` before deploying.
+* Starter is a 14-day trial, not a free plan. It keeps the Starter
+  allowances and features during the trial. When the trial ends the workspace
+  is read-only until a paid plan is active.
+* `/api/cron/daily-digest` runs hourly. It sends each active workspace its
+  report at 21:00 local time, plus the weekly report on Sundays. Starter,
+  Growth and Scale all have the `daily_reports`/`weekly_reports` features;
+  expired trials stop receiving reports because the workspace is read-only.
+* `report_deliveries` is the idempotency and audit table. It is service-role
+  only (RLS enabled, no authenticated policy). A failed delivery is retried on
+  the next hourly run; a stale `sending` reservation is cleared after two hours.
+* The cron calls `has_workspace_feature` as `service_role`; that function
+  allows the service role but keeps the membership check for tenant users.

@@ -7,7 +7,6 @@ import type {
   ChannelIdentityRow,
   ContactRow,
   MemberStatus,
-  PaymentTransactionRow,
   SubscriptionRow,
   WorkspaceInvitationRow,
   WorkspaceRole,
@@ -239,16 +238,4 @@ export async function listChannelIdentities(workspaceId: string): Promise<Channe
     .order("created_at", { ascending: true });
   if (error) throw assertNoError(error, "Could not load connected channels.");
   return (data ?? []) as ChannelIdentityRow[];
-}
-
-export async function listPaymentTransactions(workspaceId: string): Promise<PaymentTransactionRow[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("payment_transactions")
-    .select("*")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw assertNoError(error, "Could not load payment history.");
-  return (data ?? []) as PaymentTransactionRow[];
 }

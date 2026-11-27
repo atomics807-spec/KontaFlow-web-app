@@ -8,6 +8,7 @@ export const FEATURE_IDS = [
   "ussd_integration",
   "advanced_analytics",
   "advanced_ai_insights",
+  "daily_reports",
   "weekly_reports",
   "monthly_reports",
   "custom_reports",

@@ -143,12 +143,14 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
   const parsed = signupSchema({
     firstNameRequired: dict.auth.firstNameRequired,
     lastNameRequired: dict.auth.lastNameRequired,
+    businessNameRequired: dict.auth.businessNameRequired,
     phoneInvalid: dict.auth.phoneInvalid,
     privacyRequired: dict.auth.privacyRequired,
     passwordMismatch: dict.auth.passwordMismatch,
   }).safeParse({
     firstName: formData.get("firstName"),
     lastName: formData.get("lastName"),
+    businessName: formData.get("businessName"),
     email: formData.get("email"),
     country: formData.get("country"),
     phone: formData.get("phone"),
@@ -187,6 +189,7 @@ export async function signUpAction(_prev: FormState, formData: FormData): Promis
         first_name: parsed.data.firstName,
         last_name: parsed.data.lastName,
         full_name: fullName,
+        business_name: parsed.data.businessName,
         phone,
         country: parsed.data.country,
         locale: parsed.data.preferredLocale,

@@ -32,7 +32,7 @@ export const en: SiteContent = {
         "Record sales and expenses on the web, by WhatsApp, over USSD or offline. KontaFlow keeps one clean ledger and turns it into answers you can act on.",
       primary: "Start free trial",
       secondary: "Explore features",
-      note: "7-day trial · no card required · English, French and Pidgin",
+      note: "14-day Starter trial · no card required · English, French and Pidgin",
       imageAlt: "Business owner reviewing her work on a laptop and tablet in a bright office",
       overlayTitle: "One ledger. Every channel.",
       overlayBody: "A sale on WhatsApp and a payment on USSD land in the same books.",
@@ -307,22 +307,22 @@ export const en: SiteContent = {
     },
     subscription: {
       eyebrow: "Subscriptions",
-      title: "Start free. Pay when the business needs more.",
+      title: "Start with a 14-day trial. Pay when the business needs more.",
       subtitle:
-        "Every plan includes the core ledger and every recording channel. Paid plans add capacity for teams and heavier use.",
+        "Starter covers core bookkeeping, offline capture, reports and exports. Growth adds WhatsApp, AI and more capacity; Scale adds USSD, inventory and advanced controls.",
       tiers: [
         {
           name: "Starter",
           price: "0",
           period: "FCFA",
-          description: "For a solo trader getting the books in order.",
+          description: "A 14-day trial for small businesses starting digital bookkeeping.",
           features: [
             "One workspace",
-            "Unlimited transactions",
-            "Web, WhatsApp, USSD and offline",
-            "AI assistant allowance",
+            "500 transactions",
+            "Web and offline capture",
+            "Reports and CSV exports",
           ],
-          cta: "Start free",
+          cta: "Start trial",
         },
         {
           name: "Growth",
@@ -330,10 +330,10 @@ export const en: SiteContent = {
           period: "FCFA / month",
           description: "For a shop or small team with daily volume.",
           features: [
-            "More team seats and AI messages",
-            "Everything in Starter",
-            "Accountant exports",
-            "Priority support",
+            "2 workspaces and 8 seats",
+            "AI assistant and WhatsApp",
+            "Advanced analytics and budgets",
+            "Higher AI and transaction limits",
           ],
           cta: "Talk to us",
           featured: true,
@@ -344,20 +344,20 @@ export const en: SiteContent = {
           period: "FCFA / month",
           description: "For larger teams and multi-branch operations.",
           features: [
-            "Highest seat and AI allowance",
-            "Everything in Growth",
-            "Support for more complex setups",
+            "Unlimited workspaces, 25 seats",
+            "Advanced AI and analytics",
+            "USSD, inventory and invoicing",
             "Priority support",
           ],
           cta: "Talk to us",
         },
       ],
       footnote:
-        "Prices are in FCFA and billed monthly when paid billing is arranged. The Starter plan remains free. Taxes may apply.",
-      includedTitle: "Every plan includes",
+        "Prices are in FCFA and billed monthly when paid billing is arranged. Starter is a 14-day trial; Growth and Scale add WhatsApp, USSD, AI and more capacity. Taxes may apply.",
+      includedTitle: "The core platform",
       included: [
         "The double-entry ledger",
-        "Web, WhatsApp, USSD and offline capture",
+        "Web and offline capture",
         "Reports and CSV exports",
         "Email and phone verification",
       ],
@@ -373,9 +373,9 @@ export const en: SiteContent = {
             "No. The web app is the richest experience, but USSD lets you record entries and check balances from a basic phone. WhatsApp needs a smartphone or the WhatsApp desktop app.",
         },
         {
-          question: "Is the Starter plan really free?",
+          question: "How does the Starter plan work?",
           answer:
-            "Yes. Starter costs 0 FCFA and includes one workspace, unlimited transactions and every recording channel. Paid plans add capacity for teams and heavier use.",
+            "Starter is a 14-day trial at no cost with one workspace and 500 transactions. It includes core bookkeeping, reports and offline capture. Choose a paid plan to keep recording after the trial.",
         },
         {
           question: "Can my accountant access the books?",
@@ -477,7 +477,7 @@ export const en: SiteContent = {
     ],
     cta: {
       title: "See whether the workspace fits your business.",
-      body: "Start with the free plan and one real transaction. No card is required.",
+      body: "Start with the 14-day Starter trial and one real transaction. No card is required.",
       primary: "Start free",
       secondary: "Explore the features",
     },
@@ -601,7 +601,7 @@ export const en: SiteContent = {
     ],
     cta: {
       title: "Try the loop with your own numbers.",
-      body: "The free plan includes the core ledger and every recording channel.",
+      body: "Starter gives you 14 days of bookkeeping, reports and offline capture.",
       primary: "Start free",
       secondary: "See how it works",
     },
@@ -711,7 +711,7 @@ export const en: SiteContent = {
         title: "Create the workspace",
         body: "Name the business, choose currency and timezone, and confirm the financial year.",
         detail:
-          "KontaFlow provisions the chart of accounts, the owner membership and a seven-day trial on the Starter plan.",
+          "KontaFlow provisions the chart of accounts, the owner membership and a 14-day Starter trial.",
       },
       {
         title: "Record what moves",
@@ -799,7 +799,7 @@ export const en: SiteContent = {
           {
             question: "Do I need a card to start?",
             answer:
-              "No. The Starter plan is free and the workspace begins with a seven-day trial. Paid plans are arranged with the team when you need more capacity.",
+              "No. Starter is a 14-day trial with no card. Paid plans are arranged with the team when you need more capacity.",
           },
           {
             question: "Can I import existing records?",

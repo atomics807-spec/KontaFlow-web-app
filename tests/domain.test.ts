@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { transactionSchema, toTransactionPayload, workspaceSchema } from "@/lib/validation/schemas";
 import { rateLimit, resetRateLimits } from "@/lib/rate-limit";
 import { isWorkspacePlan, PLAN_CODES } from "@/lib/plans";
-import { addDays, monthBounds, todayInZone } from "@/lib/dates";
+import { addDays, hourInZone, monthBounds, todayInZone, weekdayInZone } from "@/lib/dates";
 import { billingSettingsSchema, planSaveSchema } from "@/lib/validation/platform-admin";
 
 const UUIDS = {
@@ -143,6 +143,15 @@ describe("dates", () => {
   it("adds days across month boundaries", () => {
     expect(addDays("2026-03-01", -1)).toBe("2026-02-28");
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("resolves the local report hour and weekday", () => {
+    const evening = new Date("2026-03-15T20:00:00Z");
+    expect(hourInZone("Africa/Douala", evening)).toBe(21);
+    expect(weekdayInZone("Africa/Douala", evening)).toBe(0);
+
+    const monday = new Date("2026-03-16T20:00:00Z");
+    expect(weekdayInZone("Africa/Douala", monday)).toBe(1);
   });
 });
 

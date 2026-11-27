@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Check, CreditCard, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
-import { getSubscription, listPaymentTransactions } from "@/services/workspaces";
+import { PaymentCheckout, PaymentReturnPoller } from "@/components/billing/payment-checkout";
+import { getSubscription } from "@/services/workspaces";
+import { listPaymentHistory } from "@/services/payments";
 import { getPlanCatalogue } from "@/services/plans";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale, intlLocale } from "@/lib/i18n/config";
@@ -13,8 +14,12 @@ import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { formatMoney, moneyLocale } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { getServerEnv } from "@/lib/env";
+import { can } from "@/lib/permissions";
+import { getConfiguredPaymentProviders } from "@/lib/payments/registry";
+import { PAYMENT_PROVIDER_LABELS, type PaymentProviderId } from "@/lib/payments/types";
 import { cn } from "@/lib/utils";
 import type { PlanCatalogueEntry } from "@/types/entitlements";
+import type { PaymentCopy } from "@/types/payments";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const dict = await getDictionary(resolveLocale((await params).locale));
@@ -43,18 +48,61 @@ function planHighlights(plan: PlanCatalogueEntry, dict: Awaited<ReturnType<typeo
   return rows.slice(0, 6);
 }
 
-export default async function BillingPage({ params }: { params: Promise<{ locale: string }> }) {
+export default async function BillingPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ payment?: string | string[] }>;
+}) {
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const { workspace } = context;
+  const requestedPayment = (await searchParams).payment;
+  const paymentReturnId = typeof requestedPayment === "string" ? requestedPayment : null;
 
+  const canPay = can(context.role, "billing:manage");
   const [entitlements, subscription, payments, plans] = await Promise.all([
     getWorkspaceEntitlements(workspace.id, context.user.id),
     getSubscription(workspace.id),
-    listPaymentTransactions(workspace.id),
+    canPay ? listPaymentHistory(workspace.id) : Promise.resolve([]),
     getPlanCatalogue(),
   ]);
+  const providers = getConfiguredPaymentProviders().map((provider) => ({
+    id: provider.id,
+    label: provider.label,
+    configured: provider.configured,
+  }));
+
+  const paymentCopy: PaymentCopy = {
+    payWith: dict.plans.payWith,
+    phone: dict.plans.phone,
+    phoneHint: dict.plans.phoneHint,
+    payButton: dict.plans.payButton,
+    starting: dict.plans.starting,
+    secure: dict.plans.secure,
+    notConfigured: dict.plans.notConfigured,
+    noProviders: dict.plans.noProviders,
+    pending: dict.plans.pending,
+    instructions: dict.plans.instructions,
+    openProvider: dict.plans.openProvider,
+    success: dict.plans.success,
+    failed: dict.plans.failed,
+    expired: dict.plans.expired,
+    retry: dict.plans.retry,
+    statusLabel: dict.plans.statusLabel,
+    reference: dict.plans.reference,
+    providerLabel: dict.plans.providerLabel,
+    statusPending: dict.plans.statusPending,
+    statusProcessing: dict.plans.statusProcessing,
+    statusSucceeded: dict.plans.statusSucceeded,
+    statusFailed: dict.plans.statusFailed,
+    statusExpired: dict.plans.statusExpired,
+    statusRefunded: dict.plans.statusRefunded,
+    statusReversed: dict.plans.statusReversed,
+    errorGeneric: dict.plans.errorGeneric,
+  };
 
   const supportEmail = getServerEnv().EMAIL_REPLY_TO;
   const trialCopy = entitlements.trial.active
@@ -75,6 +123,13 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
         </h1>
         <p className="mt-1 text-sm text-muted">{dict.settings.currentPlan}</p>
       </header>
+
+      {paymentReturnId && canPay ? (
+        <Card className="p-5 sm:p-6">
+          <h2 className="mb-2 text-sm font-bold text-heading">{dict.nav.billing}</h2>
+          <PaymentReturnPoller paymentId={paymentReturnId} copy={paymentCopy} />
+        </Card>
+      ) : null}
 
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -161,10 +216,21 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
               <div className="mt-auto pt-4">
                 {current ? (
                   <span className="text-[0.7rem] text-muted">{dict.plans.current}</span>
+                ) : canPay && plan.priceMinor > 0 ? (
+                  <PaymentCheckout
+                    planCode={plan.code}
+                    planName={plan.name}
+                    amountMinor={plan.priceMinor}
+                    currency={plan.currency}
+                    providers={providers}
+                    defaultPhone={context.profile.phone ?? workspace.phone}
+                    locale={locale}
+                    copy={paymentCopy}
+                  />
                 ) : supportEmail ? (
                   <a
                     href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Plan change: ${workspace.name} → ${plan.name}`)}`}
-                    className={buttonVariants({ variant: "secondary", size: "sm", className: "w-full justify-center" })}
+                    className="text-[0.7rem] text-muted underline"
                   >
                     {dict.plans.contactUs}
                   </a>
@@ -194,6 +260,9 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
                 <th scope="col" className="px-4 py-2 font-semibold">
                   {dict.settings.plan}
                 </th>
+                <th scope="col" className="px-4 py-2 font-semibold">
+                  {dict.plans.providerLabel}
+                </th>
                 <th scope="col" className="px-4 py-2 text-right font-semibold sm:px-5">
                   {dict.common.amount}
                 </th>
@@ -206,9 +275,13 @@ export default async function BillingPage({ params }: { params: Promise<{ locale
                     {formatDate(payment.created_at, intlLocale(locale), workspace.timezone)}
                   </td>
                   <td className="px-4 py-2.5 text-xs">
-                    <Badge tone="outline" className="text-[0.6rem]">
+                    <p className="font-semibold text-heading">{payment.plan_code ?? "—"}</p>
+                    <Badge tone="outline" className="mt-1 text-[0.6rem]">
                       {payment.status}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-muted">
+                    {PAYMENT_PROVIDER_LABELS[payment.provider as PaymentProviderId] ?? payment.provider}
                   </td>
                   <td className="kpi-value px-4 py-2.5 text-right text-xs text-heading sm:px-5">
                     {formatMoney(BigInt(payment.amount_minor), payment.currency, moneyLocale(locale, payment.currency))}

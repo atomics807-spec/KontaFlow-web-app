@@ -3,9 +3,10 @@ import "server-only";
 import { Resend } from "resend";
 import { getServerEnv } from "../env";
 import { logger } from "../logger";
-import type { Locale } from "../i18n/config";
+import { intlLocale, type Locale } from "../i18n/config";
 import { getDictionary } from "../i18n/server";
 import { interpolate } from "../i18n/interpolate";
+import { formatMoney, moneyLocale } from "../money";
 
 export type EmailMessage = {
   to: string;
@@ -122,6 +123,62 @@ export async function sendContactNotification(params: {
     html,
     text: lines.join("\n"),
   });
+}
+
+export async function sendPaymentConfirmationEmail(params: {
+  to: string;
+  workspaceName: string;
+  planName: string;
+  amountMinor: number;
+  currency: string;
+  reference: string;
+  paidAt: string;
+  locale: Locale;
+  billingUrl: string;
+}): Promise<SendResult> {
+  const dict = await getDictionary(params.locale);
+  const copy = dict.emails;
+  const amount = formatMoney(
+    BigInt(params.amountMinor),
+    params.currency,
+    moneyLocale(params.locale, params.currency),
+  );
+  const date = new Intl.DateTimeFormat(intlLocale(params.locale), {
+    dateStyle: "medium",
+    timeZone: "Africa/Douala",
+  }).format(new Date(params.paidAt));
+  const subject = interpolate(copy.paymentSubject, { workspace: params.workspaceName });
+  const text = interpolate(copy.paymentText, {
+    workspace: params.workspaceName,
+    plan: params.planName,
+    amount,
+    date,
+    reference: params.reference,
+    cta: copy.paymentCta,
+    url: params.billingUrl,
+    note: copy.paymentNote,
+  });
+  const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#0b1f1a">
+      <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0b7a5a;margin:0 0 24px">KontaFlow</p>
+      <h1 style="font-size:22px;margin:0 0 16px">${escapeHtml(interpolate(copy.paymentTitle, { plan: params.planName }))}</h1>
+      <p style="font-size:15px;line-height:1.6;color:#4b5f58;margin:0 0 16px">${escapeHtml(
+        interpolate(copy.paymentBody, {
+          workspace: params.workspaceName,
+          plan: params.planName,
+          amount,
+          date,
+          reference: params.reference,
+        }),
+      )}</p>
+      <a href="${escapeHtml(params.billingUrl)}"
+         style="display:inline-block;background:#0b7a5a;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:600">
+        ${escapeHtml(copy.paymentCta)}
+      </a>
+      <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">${escapeHtml(copy.paymentNote)}</p>
+    </div>`;
+
+  return sendEmail({ to: params.to, subject, html, text });
 }
 
 function escapeHtml(value: string): string {

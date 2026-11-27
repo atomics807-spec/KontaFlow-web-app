@@ -101,12 +101,45 @@ async function main(): Promise<void> {
       return result.rows[0]!.data;
     });
 
+    // The starter trial allows one business. Temporarily raise the fixture
+    // limit so the multi-workspace and payment tests can use a second tenant.
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(`update subscription_plans set workspace_limit = 2 where code = 'starter'`);
+        await c.query(
+          `insert into plan_features (plan_id, feature_id, included)
+           select p.id, f.id, true
+             from subscription_plans p, subscription_features f
+            where p.code = 'starter' and f.code = 'multiple_workspaces'
+           on conflict (plan_id, feature_id) do update set included = true`,
+        );
+      },
+      true,
+    );
     const workspacePcm = await commitAs(client, alice, async (c) => {
       const result = await c.query<{ data: { id: string } }>(
         `select public.create_workspace('Pidgin Shop', 'XAF', 'CM', 'Africa/Douala', null, 'pcm') as data`,
       );
       return result.rows[0]!.data;
     });
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `delete from plan_features pf
+             using subscription_features f, subscription_plans p
+            where pf.feature_id = f.id and pf.plan_id = p.id
+              and p.code = 'starter' and f.code = 'multiple_workspaces'`,
+        );
+        await c.query(`update subscription_plans set workspace_limit = 1 where code = 'starter'`);
+      },
+      true,
+    );
     eq("workspace creation accepts pcm", await scalar(client, `select locale from workspaces where id = $1`, [workspacePcm.id]), "pcm");
     eq(
       "starter categories carry pcm translations",
@@ -115,7 +148,7 @@ async function main(): Promise<void> {
     );
 
     eq(
-      "workspace plan limit blocks an extra business",
+      "starter blocks an extra business",
       (
         await expectError(
           client,
@@ -126,7 +159,7 @@ async function main(): Promise<void> {
           { commit: true },
         )
       )?.code,
-      "23514",
+      "42501",
     );
 
     const idA = workspaceA.id;
@@ -1041,6 +1074,21 @@ async function main(): Promise<void> {
       "42501",
     );
     eq(
+      "payment refunds are service-only",
+      (await expectError(client, "authenticated", alice, `select count(*) from payment_refunds`))?.code,
+      "42501",
+    );
+    eq(
+      "payment webhooks reject direct writes from authenticated users",
+      (await expectError(
+        client,
+        "authenticated",
+        alice,
+        `insert into payment_webhooks (provider, external_event_id, payload) values ('mtn_momo', 'x', '{}'::jsonb)`,
+      ))?.code,
+      "42501",
+    );
+    eq(
       "anon cannot read new tables",
       (await expectError(client, "anon", null, `select count(*) from invoices`))?.code,
       "42501",
@@ -1102,7 +1150,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries')`,
       ),
       "",
     );
@@ -1326,23 +1374,56 @@ async function main(): Promise<void> {
 
     console.log("\nPhase 13 · plans, trials and entitlements");
     eq(
-      "a new workspace starts on the configured trial plan",
+      "a new workspace starts on the starter trial plan",
       await scalar(
         client,
         `select p.code from subscriptions s join subscription_plans p on p.id = s.trial_plan_id where s.workspace_id = $1`,
         [eveWorkspace],
       ),
-      "growth",
+      "starter",
     );
     eq(
-      "trial entitlements include advanced analytics",
+      "starter is the configured trial plan",
+      await scalar(client, `select value ->> 'trial_plan_code' from platform_settings where key = 'billing'`),
+      "starter",
+    );
+    eq(
+      "the starter trial keeps the starter transaction limit",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(c, `select app.workspace_limit($1, 'transaction')::text`, [eveWorkspace]),
+      ),
+      "500",
+    );
+    eq(
+      "starter trial entitlements exclude advanced analytics",
       await commitAs(client, eve, (c) =>
         scalar(c, `select public.has_workspace_feature($1, 'advanced_analytics')::text`, [eveWorkspace]),
+      ),
+      "false",
+    );
+    eq(
+      "starter trial entitlements include daily reports",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'daily_reports')::text`, [eveWorkspace]),
       ),
       "true",
     );
     eq(
-      "trial entitlements exclude invoicing",
+      "starter trial entitlements include weekly reports",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'weekly_reports')::text`, [eveWorkspace]),
+      ),
+      "true",
+    );
+    eq(
+      "starter trial entitlements include monthly reports",
+      await commitAs(client, eve, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'monthly_reports')::text`, [eveWorkspace]),
+      ),
+      "true",
+    );
+    eq(
+      "starter trial entitlements exclude invoicing",
       await commitAs(client, eve, (c) =>
         scalar(c, `select public.has_workspace_feature($1, 'invoice_management')::text`, [eveWorkspace]),
       ),
@@ -1356,36 +1437,39 @@ async function main(): Promise<void> {
       "false",
     );
     eq(
-      "export usage consumes the plan allowance",
+      "starter trials can consume CSV exports",
       await commitAs(client, eve, (c) =>
         scalar(c, `select public.consume_quota($1, 'export', 0)::text`, [eveWorkspace]),
       ),
       "true",
     );
-    await asRole(
-      client,
-      "service_role",
-      null,
-      async (c) => {
-        await c.query(`update subscription_plans set export_limit = 0 where code = 'growth'`);
-      },
-      true,
+    eq(
+      "growth includes daily reports",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(
+          c,
+          `select pf.included::text
+             from plan_features pf
+             join subscription_features f on f.id = pf.feature_id
+             join subscription_plans p on p.id = pf.plan_id
+            where p.code = 'growth' and f.code = 'daily_reports'`,
+        ),
+      ),
+      "true",
     );
     eq(
-      "a zero export allowance blocks exports",
-      await commitAs(client, eve, (c) =>
-        scalar(c, `select public.consume_quota($1, 'export', 0)::text`, [eveWorkspace]),
+      "growth includes weekly reports",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(
+          c,
+          `select pf.included::text
+             from plan_features pf
+             join subscription_features f on f.id = pf.feature_id
+             join subscription_plans p on p.id = pf.plan_id
+            where p.code = 'growth' and f.code = 'weekly_reports'`,
+        ),
       ),
-      "false",
-    );
-    await asRole(
-      client,
-      "service_role",
-      null,
-      async (c) => {
-        await c.query(`update subscription_plans set export_limit = 200 where code = 'growth'`);
-      },
-      true,
+      "true",
     );
     await asRole(
       client,
@@ -1434,6 +1518,217 @@ async function main(): Promise<void> {
         )
       )?.code,
       "42501",
+    );
+
+    console.log("\nPhase 14 · mobile money payment lifecycle");
+    const paymentWorkspace = workspacePcm.id;
+    const growthPrice = await scalar(
+      client,
+      `select price_minor::text from subscription_plans where code = 'growth'`,
+    );
+    const paymentMerchantRef = "KF-TESTPAYMENT0001";
+    const paymentTokenHash = "a".repeat(64);
+    const paymentIdempotency = "11111111-1111-4111-8111-111111111111";
+    const paymentIntent = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{
+          data: { payment_id: string; status: string; amount_minor: string; reused: boolean };
+        }>(
+          `select public.create_payment_intent(
+             $1, 'growth', 'mtn_momo', '237671234567', $2, $3, $4, $5, now() + interval '20 minutes'
+           ) as data`,
+          [paymentWorkspace, paymentIdempotency, paymentMerchantRef, paymentTokenHash, ALICE],
+        );
+        return result.rows[0]!.data;
+      },
+      true,
+    );
+    eq("a pending payment intent is created", paymentIntent.status, "pending");
+    eq("the intent uses the catalogue price", String(paymentIntent.amount_minor), growthPrice);
+    eq(
+      "the payment intent is reused for the same idempotency key",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(
+          c,
+          `select (public.create_payment_intent(
+             $1, 'growth', 'mtn_momo', '237671234567', $2, $3, $4, $5, now() + interval '20 minutes'
+           ) ->> 'reused')`,
+          [paymentWorkspace, paymentIdempotency, paymentMerchantRef, paymentTokenHash, ALICE],
+        ),
+      ),
+      "true",
+    );
+    eq(
+      "authenticated users cannot execute payment RPCs",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `select public.create_payment_intent($1, 'growth', 'mtn_momo', null, null, 'KF-NOTALLOWED', repeat('b', 64), $2, now() + interval '20 minutes')`,
+          [paymentWorkspace, ALICE],
+        )
+      )?.code,
+      "42501",
+    );
+    eq(
+      "authenticated users cannot insert payment rows",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `insert into payment_transactions
+             (workspace_id, provider, merchant_reference, amount_minor, currency, status)
+           values ($1, 'mtn_momo', 'KF-NOTALLOWED', 100, 'XAF', 'pending')`,
+          [paymentWorkspace],
+        )
+      )?.code,
+      "42501",
+    );
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `select public.mark_payment_initiated($1, 'mtn-ref-1', null, 'PENDING', '{}'::jsonb)`,
+          [paymentIntent.payment_id],
+        );
+      },
+      true,
+    );
+    eq(
+      "a payment with a provider reference is processing",
+      await scalar(client, `select status::text from payment_transactions where id = $1`, [paymentIntent.payment_id]),
+      "processing",
+    );
+    eq(
+      "a mismatched amount cannot activate the plan",
+      (
+        await expectError(
+          client,
+          "service_role",
+          null,
+          `select public.confirm_payment($1, 'mtn-ref-1', now(), $2, 'XAF', 'SUCCESSFUL', '{}'::jsonb)`,
+          [paymentIntent.payment_id, Number(growthPrice) + 1],
+          { commit: true },
+        )
+      )?.code,
+      "23514",
+    );
+    const confirmation = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{ data: { duplicate: boolean; status: string } }>(
+          `select public.confirm_payment($1, 'mtn-ref-1', now(), $2, 'XAF', 'SUCCESSFUL', '{}'::jsonb) as data`,
+          [paymentIntent.payment_id, Number(growthPrice)],
+        );
+        return result.rows[0]!.data;
+      },
+      true,
+    );
+    eq("the verified payment activates the subscription", confirmation.status, "succeeded");
+    eq(
+      "the subscription is active on the paid plan",
+      await scalar(client, `select status::text || ':' || plan::text from subscriptions where workspace_id = $1`, [paymentWorkspace]),
+      "active:growth",
+    );
+    eq(
+      "the workspace plan follows the payment",
+      await scalar(client, `select plan::text from workspaces where id = $1`, [paymentWorkspace]),
+      "growth",
+    );
+    eq(
+      "the cron service role can check report entitlements",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(c, `select public.has_workspace_feature($1, 'daily_reports')::text`, [paymentWorkspace]),
+      ),
+      "true",
+    );
+    eq(
+      "payment success writes an audit entry",
+      await scalar(
+        client,
+        `select count(*) from audit_logs where workspace_id = $1 and action = 'payment.succeeded'`,
+        [paymentWorkspace],
+      ),
+      "1",
+    );
+    eq(
+      "payment success writes one in-app notification",
+      await scalar(
+        client,
+        `select count(*) from notifications where workspace_id = $1 and data ->> 'kind' = 'payment_succeeded'`,
+        [paymentWorkspace],
+      ),
+      "1",
+    );
+    eq(
+      "duplicate confirmation is idempotent",
+      await asRole(client, "service_role", null, (c) =>
+        scalar(
+          c,
+          `select (public.confirm_payment($1, 'mtn-ref-1', now(), $2, 'XAF', 'SUCCESSFUL', '{}'::jsonb) ->> 'duplicate')`,
+          [paymentIntent.payment_id, Number(growthPrice)],
+        ),
+      ),
+      "true",
+    );
+    eq(
+      "duplicate confirmation does not duplicate the notification",
+      await scalar(
+        client,
+        `select count(*) from notifications where workspace_id = $1 and data ->> 'kind' = 'payment_succeeded'`,
+        [paymentWorkspace],
+      ),
+      "1",
+    );
+    eq(
+      "the owner can read the confirmed payment",
+      await asRole(client, "authenticated", alice, (c) =>
+        scalar(c, `select status::text from payment_transactions where id = $1`, [paymentIntent.payment_id]),
+      ),
+      "succeeded",
+    );
+    eq(
+      "a full refund moves the payment to refunded",
+      await asRole(
+        client,
+        "service_role",
+        null,
+        (c) =>
+          scalar(
+            c,
+            `select (public.refund_payment($1, $2, 'mtn-refund-1', 'Customer request', $3, 'refund') ->> 'status')`,
+            [paymentIntent.payment_id, Number(growthPrice), ALICE],
+          ),
+        true,
+      ),
+      "refunded",
+    );
+    eq(
+      "a full refund cancels renewal at period end",
+      await scalar(
+        client,
+        `select cancel_at_period_end::text from subscriptions where workspace_id = $1`,
+        [paymentWorkspace],
+      ),
+      "true",
+    );
+    eq(
+      "the refund is recorded once",
+      await scalar(
+        client,
+        `select count(*) from payment_refunds where payment_transaction_id = $1`,
+        [paymentIntent.payment_id],
+      ),
+      "1",
     );
 
     const planEscalation = await expectError(
@@ -2478,7 +2773,7 @@ async function main(): Promise<void> {
     );
     const savedBilling = await commitAs(client, superAdmin, async (c) => {
       const result = await c.query<{ data: { trial_days: number } }>(
-        `select public.platform_admin_save_billing_settings(14, 'growth', array[7,3,1], null) as data`,
+        `select public.platform_admin_save_billing_settings(14, 'starter', array[7,3,1], null) as data`,
       );
       return result.rows[0]!.data;
     });
@@ -2489,13 +2784,18 @@ async function main(): Promise<void> {
       "14",
     );
     eq(
+      "the trial plan setting is stored",
+      await scalar(client, `select value ->> 'trial_plan_code' from platform_settings where key = 'billing'`),
+      "starter",
+    );
+    eq(
       "tenant users cannot change trial settings",
       (
         await expectError(
           client,
           "authenticated",
           alice,
-          `select public.platform_admin_save_billing_settings(14, 'growth', array[7,3,1], null)`,
+          `select public.platform_admin_save_billing_settings(14, 'starter', array[7,3,1], null)`,
           [],
           { commit: true },
         )

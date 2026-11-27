@@ -55,3 +55,20 @@ export function addDays(date: string, days: number): string {
   parsed.setUTCDate(parsed.getUTCDate() + days);
   return parsed.toISOString().slice(0, 10);
 }
+
+export function hourInZone(timeZone = DEFAULT_TIMEZONE, now = new Date()): number {
+  const hour = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    hour: "2-digit",
+    hour12: false,
+  }).format(now);
+  return Number(hour);
+}
+
+export function weekdayInZone(timeZone = DEFAULT_TIMEZONE, now = new Date()): number {
+  const label = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  }).format(now);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(label);
+}

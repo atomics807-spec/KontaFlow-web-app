@@ -40,7 +40,7 @@ export async function getBillingSettings(): Promise<BillingSettings> {
   const value = (data ?? {}) as Partial<BillingSettings>;
   return {
     trial_days: Number(value.trial_days ?? 14),
-    trial_plan_code: String(value.trial_plan_code ?? "growth"),
+    trial_plan_code: String(value.trial_plan_code ?? "starter"),
     trial_reminder_days: Array.isArray(value.trial_reminder_days)
       ? value.trial_reminder_days.map(Number).filter((day) => Number.isFinite(day))
       : [7, 3, 1],

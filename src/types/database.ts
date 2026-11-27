@@ -38,6 +38,14 @@ export type AccountSubtype =
   | "other";
 export type WorkspacePlan = "starter" | "growth" | "scale";
 export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "paused";
+export type PaymentStatus =
+  | "pending"
+  | "processing"
+  | "succeeded"
+  | "failed"
+  | "expired"
+  | "refunded"
+  | "reversed";
 export type MemberStatus = "invited" | "active" | "suspended";
 export type InvitationStatus = "pending" | "accepted" | "revoked" | "expired";
 export type AiMessageRole = "user" | "assistant" | "tool";
@@ -441,18 +449,85 @@ export type TrialReminderLogRow = {
   sent_at: string;
 };
 
+export type ReportDeliveryRow = {
+  id: string;
+  workspace_id: string;
+  kind: "daily" | "weekly";
+  report_date: string;
+  status: "sending" | "sent" | "failed" | "skipped";
+  attempts: number;
+  last_error: string | null;
+  sent_at: string | null;
+  created_at: string;
+};
+
 export type PaymentTransactionRow = {
   id: string;
   workspace_id: string;
   subscription_id: string | null;
   provider: string;
   provider_ref: string | null;
+  merchant_reference: string;
+  plan_id: string | null;
+  plan_code: string | null;
+  payer_msisdn: string | null;
+  checkout_url: string | null;
+  provider_status: string | null;
+  failure_code: string | null;
+  failure_message: string | null;
   amount_minor: number;
   currency: string;
-  status: "pending" | "succeeded" | "failed" | "refunded";
+  status: PaymentStatus;
   paid_at: string | null;
+  expires_at: string | null;
+  initiated_at: string | null;
+  completed_at: string | null;
+  last_checked_at: string | null;
+  reconciled_at: string | null;
+  refunded_amount_minor: number;
+  refunded_at: string | null;
+  reversed_at: string | null;
+  idempotency_key: string | null;
+  webhook_token_hash: string | null;
   metadata: Json;
   created_at: string;
+  updated_at: string;
+};
+
+export type PaymentRefundRow = {
+  id: string;
+  workspace_id: string;
+  payment_transaction_id: string;
+  amount_minor: number;
+  currency: string;
+  status: "pending" | "succeeded" | "failed";
+  kind: "refund" | "reversal";
+  provider_ref: string | null;
+  reason: string | null;
+  requested_by: string | null;
+  requested_at: string;
+  completed_at: string | null;
+  metadata: Json;
+  created_at: string;
+};
+
+export type PaymentWebhookRow = {
+  id: string;
+  provider: string;
+  external_event_id: string;
+  event_type: string | null;
+  workspace_id: string | null;
+  payment_transaction_id: string | null;
+  payload: Json;
+  signature_ok: boolean;
+  status: "received" | "processed" | "ignored" | "failed";
+  error: string | null;
+  payload_hash: string | null;
+  verified_at: string | null;
+  attempts: number;
+  last_error: string | null;
+  received_at: string;
+  processed_at: string | null;
 };
 
 export type UsageEventRow = {
@@ -853,7 +928,10 @@ export type Database = {
       platform_settings: TableDefinition<PlatformSettingRow>;
       trial_grants: TableDefinition<TrialGrantRow>;
       trial_reminder_log: TableDefinition<TrialReminderLogRow>;
+      report_deliveries: TableDefinition<ReportDeliveryRow>;
       payment_transactions: TableDefinition<PaymentTransactionRow>;
+      payment_refunds: TableDefinition<PaymentRefundRow>;
+      payment_webhooks: TableDefinition<PaymentWebhookRow>;
       usage_events: TableDefinition<UsageEventRow>;
       channel_identities: TableDefinition<ChannelIdentityRow>;
       notifications: TableDefinition<NotificationRow>;
@@ -1030,6 +1108,66 @@ export type Database = {
           p_currency: string;
         };
         Returns: Json;
+      };
+      create_payment_intent: {
+        Args: {
+          p_workspace_id: string;
+          p_plan_code: string;
+          p_provider: string;
+          p_payer_msisdn: string | null;
+          p_idempotency_key: string | null;
+          p_merchant_reference: string;
+          p_webhook_token_hash: string;
+          p_actor_id: string | null;
+          p_expires_at: string;
+        };
+        Returns: Json;
+      };
+      mark_payment_initiated: {
+        Args: {
+          p_payment_id: string;
+          p_provider_ref: string;
+          p_checkout_url: string | null;
+          p_provider_status: string | null;
+          p_metadata?: Json;
+        };
+        Returns: Json;
+      };
+      fail_payment: {
+        Args: {
+          p_payment_id: string;
+          p_code: string;
+          p_message: string;
+          p_status?: string;
+        };
+        Returns: Json;
+      };
+      confirm_payment: {
+        Args: {
+          p_payment_id: string;
+          p_provider_ref: string;
+          p_paid_at: string;
+          p_amount_minor: number;
+          p_currency: string;
+          p_provider_status: string;
+          p_metadata?: Json;
+        };
+        Returns: Json;
+      };
+      refund_payment: {
+        Args: {
+          p_payment_id: string;
+          p_amount_minor: number;
+          p_provider_ref: string | null;
+          p_reason: string | null;
+          p_actor_id: string | null;
+          p_kind?: string;
+        };
+        Returns: Json;
+      };
+      touch_payment: {
+        Args: { p_payment_id: string; p_provider_status: string | null };
+        Returns: undefined;
       };
       expire_trials: {
         Args: Record<string, never>;

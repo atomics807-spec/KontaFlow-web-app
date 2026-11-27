@@ -78,8 +78,17 @@ export async function bootstrapLocalAuth(client: Client): Promise<void> {
       select nullif(auth.jwt() ->> 'email', '');
     $$;
 
+    create or replace function auth.role()
+    returns text
+    language sql
+    stable
+    as $$
+      select coalesce(nullif(auth.jwt() ->> 'role', ''), 'anon');
+    $$;
+
     grant usage on schema auth to anon, authenticated, service_role;
-    grant execute on function auth.jwt(), auth.uid(), auth.email() to anon, authenticated, service_role;
+    grant execute on function auth.jwt(), auth.uid(), auth.email(), auth.role()
+      to anon, authenticated, service_role;
   `);
 }
 

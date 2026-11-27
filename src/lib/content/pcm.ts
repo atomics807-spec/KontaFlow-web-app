@@ -32,7 +32,7 @@ export const pcm: SiteContent = {
         "Record sale and expense for web, WhatsApp, USSD or offline. KontaFlow keep one clean book and turn am into answer wey yu fit use.",
       primary: "Start free trial",
       secondary: "See di features",
-      note: "7-day trial · no card · English, French and Pidgin",
+      note: "14-day Starter trial · no card · English, French and Pidgin",
       imageAlt: "Business owner dey check her work on laptop and tablet inside bright office",
       overlayTitle: "One book. Every channel.",
       overlayBody: "Sale for WhatsApp and payment for USSD dey land for di same book.",
@@ -304,22 +304,22 @@ export const pcm: SiteContent = {
     },
     subscription: {
       eyebrow: "Subscription",
-      title: "Start free. Pay when business need more.",
+      title: "Start with 14-day trial. Pay when business need more.",
       subtitle:
-        "Every plan get core ledger and every recording channel. Paid plan add capacity for team and heavy use.",
+        "Starter cover core bookkeeping, offline entry, report and export. Growth add WhatsApp, AI and more capacity; Scale add USSD, inventory and advanced control.",
       tiers: [
         {
           name: "Starter",
           price: "0",
           period: "FCFA",
-          description: "For solo trader wey wan put book for order.",
+          description: "14-day trial for small business wey dey start digital bookkeeping.",
           features: [
             "One workspace",
-            "Unlimited transaction",
-            "Web, WhatsApp, USSD and offline",
-            "AI assistant allowance",
+            "500 transactions",
+            "Web and offline entry",
+            "Report and CSV export",
           ],
-          cta: "Start free",
+          cta: "Start trial",
         },
         {
           name: "Growth",
@@ -327,10 +327,10 @@ export const pcm: SiteContent = {
           period: "FCFA / month",
           description: "For shop or small team with daily volume.",
           features: [
-            "More team seat and AI message",
-            "Everything for Starter",
-            "Accountant export",
-            "Priority support",
+            "2 workspaces and 8 seats",
+            "AI assistant and WhatsApp",
+            "Advanced analytics and budget",
+            "Higher AI and transaction limit",
           ],
           cta: "Talk to us",
           featured: true,
@@ -341,20 +341,20 @@ export const pcm: SiteContent = {
           period: "FCFA / month",
           description: "For bigger team and multi-branch operation.",
           features: [
-            "Highest seat and AI allowance",
-            "Everything for Growth",
-            "Support for complex setup",
+            "Unlimited workspaces, 25 seats",
+            "Advanced AI and analytics",
+            "USSD, inventory and invoicing",
             "Priority support",
           ],
           cta: "Talk to us",
         },
       ],
       footnote:
-        "Price dey in FCFA and dem dey bill monthly when paid billing dey arranged. Starter remain free. Tax fit apply.",
-      includedTitle: "Every plan get",
+        "Price dey in FCFA and dem dey bill monthly when paid billing dey arranged. Starter na 14-day trial; Growth and Scale add WhatsApp, USSD, AI and more capacity. Tax fit apply.",
+      includedTitle: "Di core platform",
       included: [
         "Di double-entry ledger",
-        "Web, WhatsApp, USSD and offline capture",
+        "Web and offline capture",
         "Report and CSV export",
         "Email and phone verification",
       ],
@@ -370,9 +370,9 @@ export const pcm: SiteContent = {
             "No. Web app get the full experience, but USSD make yu record entry and check balance from basic phone. WhatsApp need smartphone or WhatsApp desktop.",
         },
         {
-          question: "Starter plan really free?",
+          question: "How Starter plan dey work?",
           answer:
-            "Yes. Starter cost 0 FCFA and get one workspace, unlimited transaction and every recording channel. Paid plan add capacity for team and heavy use.",
+            "Starter na 14-day trial wey cost nothing, with one workspace and 500 transactions. E get core bookkeeping, report and offline entry. Choose paid plan to continue after di trial.",
         },
         {
           question: "My accountant fit access di book?",
@@ -473,7 +473,7 @@ export const pcm: SiteContent = {
     ],
     cta: {
       title: "See whether di workspace fit your business.",
-      body: "Start with free plan and one real transaction. No card needed.",
+      body: "Start with 14-day Starter trial and one real transaction. No card needed.",
       primary: "Start free",
       secondary: "See di features",
     },
@@ -585,7 +585,7 @@ export const pcm: SiteContent = {
     ],
     cta: {
       title: "Try di loop with your own number.",
-      body: "Free plan get core ledger and every recording channel.",
+      body: "Starter give you 14 days of bookkeeping, report and offline entry.",
       primary: "Start free",
       secondary: "See how e dey work",
     },
@@ -686,7 +686,7 @@ export const pcm: SiteContent = {
         title: "Create workspace",
         body: "Name business, choose currency and timezone, confirm financial year.",
         detail:
-          "KontaFlow set up chart of accounts, owner membership and seven-day trial on Starter.",
+          "KontaFlow set up chart of accounts, owner membership and 14-day Starter trial.",
       },
       {
         title: "Record wetin move",
@@ -774,7 +774,7 @@ export const pcm: SiteContent = {
           {
             question: "I need card to start?",
             answer:
-              "No. Starter free and workspace start with seven-day trial. Paid plan dey arrange with team when yu need more capacity.",
+              "No. Starter na 14-day trial with no card. Paid plan dey arrange with team when yu need more capacity.",
           },
           {
             question: "I fit import old record?",

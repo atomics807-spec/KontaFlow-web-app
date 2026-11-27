@@ -20,6 +20,9 @@ its tests cannot drift apart.
 | `0009_member_directory` | `get_workspace_members` |
 | `0010_channel_ingestion` | service-role entry points for USSD/WhatsApp/cron |
 | `0037_phase13_entitlements` | configurable plans, feature grants, trial lifecycle, read-only enforcement |
+| `0038_phase14_payment_status` | `processing`, `expired` and `reversed` payment states |
+| `0039_phase14_payments` | payment references, plan snapshot, expiry, idempotency, webhook token hash, refunds, service-role lifecycle RPCs, RLS/grants |
+| `0040_phase15_plan_reporting` | Starter 14-day trial, `daily_reports` and `weekly_reports` grants, service-role entitlement checks, `report_deliveries` delivery audit |
 | `0011_phase3_finance_ops` | transaction provenance/reversal columns, `business_settings`, `invoices`, `invoice_items`, `debts`, `debt_payments`, `budgets`, `financial_goals`, `inventory_items`, `financial_reports`, composite FK targets |
 | `0012_phase3_platform` | `subscription_plans`, `subscription_features`, `plan_features`, `payment_webhooks`, `ai_interactions`, `ai_suggestions`, `notification_preferences`, `privacy_consents`, `otp_verifications`, `integration_accounts`, `integration_messages`, `offline_sync_records`, `idempotency_records`, compatibility views |
 | `0013_phase3_integrity` | invoice totals/locking triggers, invoice numbering, debt repayment triggers, audit triggers, `reverse_transaction` |
@@ -62,6 +65,7 @@ domain names without duplicating data.
 | subscriptions, payment_transactions, payment_webhooks | same names |
 | ai_interactions, ai_suggestions | same names (per-turn content stays in `ai_messages`) |
 | notifications, notification_preferences | same names |
+| report_deliveries | `report_deliveries` (service-only scheduled report audit) |
 | audit_logs | `audit_logs` (append-only) |
 | privacy_consents | `privacy_consents` |
 | otp_verifications | `otp_verifications` |
@@ -146,6 +150,33 @@ create policy invoices_select_member on public.invoices
   for select to authenticated
   using (app.is_workspace_member(workspace_id));
 ```
+
+## Mobile-money payments
+
+`payment_transactions` keeps the server-generated merchant reference, provider
+reference, plan snapshot, exact amount in minor units, currency, payer MSISDN,
+checkout URL, expiry, idempotency key and a SHA-256 hash of the per-payment
+callback token. The raw callback token is never stored.
+
+Lifecycle:
+
+```
+pending -> processing -> succeeded -> refunded (full) | reversed (full)
+                      -> failed       -> succeeded (late verified callback)
+                      -> expired
+succeeded + partial refund -> succeeded with refunded_amount_minor
+```
+
+`payment_refunds` is append-only from the service role and records the provider
+reference, reason, actor, amount and kind (`refund` or `reversal`). The
+cumulative refunded amount cannot exceed the paid amount.
+
+`payment_webhooks` is the service-role callback inbox. It deduplicates on
+`(provider, external_event_id)`, stores only a sanitised payload plus a hash of
+the raw body, and has no authenticated policy. `confirm_payment`,
+`create_payment_intent`, `mark_payment_initiated`, `fail_payment`,
+`refund_payment` and `touch_payment` are service-role-only `SECURITY DEFINER`
+functions that repeat the amount, currency, reference and state checks.
 
 Rules:
 

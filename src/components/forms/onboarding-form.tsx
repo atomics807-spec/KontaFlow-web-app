@@ -48,11 +48,13 @@ export function OnboardingForm({
   email,
   defaultCountry = "CM",
   defaultLocale,
+  defaultName = "",
   defaultPhone = "",
 }: {
   email: string;
   defaultCountry?: string;
   defaultLocale: string;
+  defaultName?: string;
   defaultPhone?: string;
 }) {
   const { locale, dict } = useI18n();
@@ -87,7 +89,14 @@ export function OnboardingForm({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={dict.onboarding.businessName} htmlFor="name" error={state.fieldErrors?.name?.[0]}>
-              <Input id="name" name="name" required maxLength={120} placeholder={dict.onboarding.businessPlaceholder} />
+              <Input
+                id="name"
+                name="name"
+                required
+                maxLength={120}
+                defaultValue={defaultName}
+                placeholder={dict.onboarding.businessPlaceholder}
+              />
             </Field>
             <Field label={dict.onboarding.legalName} htmlFor="legalName" hint={dict.onboarding.legalNameHint}>
               <Input id="legalName" name="legalName" maxLength={160} placeholder="ETS Nkeng Fresh Foods" />

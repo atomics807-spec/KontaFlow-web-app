@@ -40,7 +40,7 @@ export const legalFr: LegalDoc[] = [
       {
         heading: "5. Offres, essais et paiement",
         paragraphs: [
-          "L'offre Starter est gratuite. Un nouvel espace commence par un essai de sept jours. Les offres payantes sont aux prix affichés sur la page Tarifs et sont arrangées avec l'équipe.",
+          "L'offre Starter est un essai de 14 jours sans frais. À la fin de l'essai, l'espace passe en lecture seule jusqu'au choix d'une offre payante. Les offres payantes sont aux prix affichés sur la page Tarifs et sont arrangées avec l'équipe.",
           "Les prix sont indiqués en FCFA et peuvent être soumis à des taxes. Nous expliquons le montant et la période de facturation avant l'activation d'une offre payante. La résiliation et les remboursements sont décrits dans la Politique de remboursement et de résiliation.",
         ],
       },
@@ -249,9 +249,9 @@ export const legalFr: LegalDoc[] = [
       "Cette politique explique ce qui se passe lorsque vous arrêtez une offre, changez d'offre ou pensez qu'un débit est erroné. Elle ne réduit pas les droits accordés par la loi applicable aux consommateurs.",
     sections: [
       {
-        heading: "1. Offre gratuite et essai",
+        heading: "1. Essai Starter",
         paragraphs: [
-          "L'offre Starter coûte 0 FCFA. Un nouvel espace commence aussi par un essai de sept jours. Aucun paiement n'est requis pour commencer et l'essai ne crée pas automatiquement un débit de carte.",
+          "Starter est un essai de 14 jours à 0 FCFA. Aucun paiement n'est requis pour commencer et l'essai ne crée pas automatiquement un débit de carte. À la fin de l'essai, l'espace passe en lecture seule jusqu'à l'activation d'une offre payante.",
         ],
       },
       {

@@ -128,6 +128,23 @@ export function SignupForm({ next }: { next: string }) {
           </Field>
         </div>
 
+        <Field
+          label={dict.auth.businessName}
+          htmlFor="businessName"
+          hint={dict.auth.businessNameHint}
+          error={state.fieldErrors?.businessName?.[0]}
+        >
+          <Input
+            id="businessName"
+            name="businessName"
+            autoComplete="organization"
+            required
+            maxLength={120}
+            placeholder={dict.auth.businessNamePlaceholder}
+            aria-invalid={Boolean(state.fieldErrors?.businessName)}
+          />
+        </Field>
+
         <Field label={dict.auth.email} htmlFor="email" error={state.fieldErrors?.email?.[0]}>
           <Input
             id="email"

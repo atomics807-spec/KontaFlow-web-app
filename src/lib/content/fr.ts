@@ -32,7 +32,7 @@ export const fr: SiteContent = {
         "Enregistrez ventes et dépenses sur le web, par WhatsApp, par USSD ou hors ligne. KontaFlow tient un seul livre propre et le transforme en réponses utiles.",
       primary: "Commencer l'essai gratuit",
       secondary: "Découvrir les fonctions",
-      note: "Essai de 7 jours · sans carte · anglais, français et pidgin",
+      note: "Essai Starter de 14 jours · sans carte · anglais, français et pidgin",
       imageAlt: "Une entrepreneuse consultant son travail sur un ordinateur portable et une tablette dans un bureau lumineux",
       overlayTitle: "Un seul livre. Tous les canaux.",
       overlayBody: "Une vente sur WhatsApp et un paiement par USSD arrivent dans les mêmes comptes.",
@@ -306,22 +306,22 @@ export const fr: SiteContent = {
     },
     subscription: {
       eyebrow: "Abonnements",
-      title: "Commencez gratuitement. Payez quand l'entreprise grandit.",
+      title: "Commencez par un essai de 14 jours. Payez quand l'entreprise grandit.",
       subtitle:
-        "Chaque offre inclut le livre de base et tous les canaux de saisie. Les offres payantes ajoutent de la capacité pour les équipes et les gros volumes.",
+        "Starter couvre la comptabilité de base, la saisie hors ligne, les rapports et les exports. Growth ajoute WhatsApp, l'IA et plus de capacité ; Scale ajoute l'USSD, le stock et des contrôles avancés.",
       tiers: [
         {
           name: "Starter",
           price: "0",
           period: "FCFA",
-          description: "Pour un commerçant seul qui met ses comptes en ordre.",
+          description: "Un essai de 14 jours pour les petites entreprises qui passent à la comptabilité numérique.",
           features: [
             "Un espace",
-            "Transactions illimitées",
-            "Web, WhatsApp, USSD et hors ligne",
-            "Crédit d'assistant IA",
+            "500 transactions",
+            "Saisie web et hors ligne",
+            "Rapports et exports CSV",
           ],
-          cta: "Commencer gratuitement",
+          cta: "Commencer l'essai",
         },
         {
           name: "Growth",
@@ -329,10 +329,10 @@ export const fr: SiteContent = {
           period: "FCFA / mois",
           description: "Pour une boutique ou une petite équipe au volume quotidien.",
           features: [
-            "Plus de sièges et de messages IA",
-            "Tout Starter",
-            "Exports comptables",
-            "Support prioritaire",
+            "2 espaces et 8 sièges",
+            "Assistant IA et WhatsApp",
+            "Analyses avancées et budgets",
+            "Quotas IA et transactions plus élevés",
           ],
           cta: "Parlez-nous",
           featured: true,
@@ -343,20 +343,20 @@ export const fr: SiteContent = {
           period: "FCFA / mois",
           description: "Pour les équipes plus grandes et plusieurs points de vente.",
           features: [
-            "Le plus grand quota de sièges et d'IA",
-            "Tout Growth",
-            "Accompagnement des configurations complexes",
+            "Espaces illimités, 25 sièges",
+            "IA et analyses avancées",
+            "USSD, stock et facturation",
             "Support prioritaire",
           ],
           cta: "Parlez-nous",
         },
       ],
       footnote:
-        "Prix en FCFA, facturés mensuellement lorsque la facturation payante est mise en place. L'offre Starter reste gratuite. Des taxes peuvent s'appliquer.",
-      includedTitle: "Chaque offre comprend",
+        "Prix en FCFA, facturés mensuellement lorsque la facturation payante est mise en place. Starter est un essai de 14 jours ; Growth et Scale ajoutent WhatsApp, l'USSD, l'IA et plus de capacité. Des taxes peuvent s'appliquer.",
+      includedTitle: "La plateforme de base",
       included: [
         "Le livre en partie double",
-        "Saisie web, WhatsApp, USSD et hors ligne",
+        "Saisie web et hors ligne",
         "Rapports et exports CSV",
         "Vérification e-mail et téléphone",
       ],
@@ -372,9 +372,9 @@ export const fr: SiteContent = {
             "Non. L'application web est l'expérience la plus complète, mais l'USSD permet de saisir et de consulter les soldes depuis un téléphone simple. WhatsApp nécessite un smartphone ou l'application de bureau.",
         },
         {
-          question: "L'offre Starter est-elle vraiment gratuite ?",
+          question: "Comment fonctionne l'offre Starter ?",
           answer:
-            "Oui. Starter coûte 0 FCFA et inclut un espace, des transactions illimitées et tous les canaux de saisie. Les offres payantes ajoutent de la capacité.",
+            "Starter est un essai de 14 jours sans frais, avec un espace et 500 transactions. Il inclut la comptabilité de base, les rapports et la saisie hors ligne. Choisissez une offre payante pour continuer après l'essai.",
         },
         {
           question: "Mon comptable peut-il accéder aux comptes ?",
@@ -476,7 +476,7 @@ export const fr: SiteContent = {
     ],
     cta: {
       title: "Voyez si l'espace convient à votre entreprise.",
-      body: "Commencez avec l'offre gratuite et une vraie transaction. Aucune carte requise.",
+      body: "Commencez par l'essai Starter de 14 jours et une vraie transaction. Aucune carte requise.",
       primary: "Commencer gratuitement",
       secondary: "Découvrir les fonctions",
     },
@@ -594,7 +594,7 @@ export const fr: SiteContent = {
     ],
     cta: {
       title: "Essayez la boucle avec vos propres chiffres.",
-      body: "L'offre gratuite inclut le livre de base et tous les canaux de saisie.",
+      body: "Starter vous donne 14 jours de comptabilité, de rapports et de saisie hors ligne.",
       primary: "Commencer gratuitement",
       secondary: "Voir comment ça marche",
     },
@@ -701,7 +701,7 @@ export const fr: SiteContent = {
         title: "Créer l'espace",
         body: "Nommez l'entreprise, choisissez la devise et le fuseau, puis confirmez l'exercice.",
         detail:
-          "KontaFlow prépare le plan comptable, l'adhésion propriétaire et un essai de sept jours sur Starter.",
+          "KontaFlow prépare le plan comptable, l'adhésion propriétaire et un essai Starter de 14 jours.",
       },
       {
         title: "Enregistrer les mouvements",
@@ -789,7 +789,7 @@ export const fr: SiteContent = {
           {
             question: "Faut-il une carte pour commencer ?",
             answer:
-              "Non. Starter est gratuit et l'espace commence par un essai de sept jours. Les offres payantes sont arrangées avec l'équipe quand vous avez besoin de plus de capacité.",
+              "Non. Starter est un essai de 14 jours sans carte. Les offres payantes sont arrangées avec l'équipe quand vous avez besoin de plus de capacité.",
           },
           {
             question: "Puis-je importer des dossiers existants ?",

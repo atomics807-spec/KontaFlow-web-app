@@ -110,8 +110,8 @@ async function run(request: Request): Promise<Response> {
       const dict = await getDictionary(locale);
       const copy = dict.emails;
       const planName = subscription.trial_plan_id
-        ? planById.get(subscription.trial_plan_id)?.name ?? dict.plans.growth
-        : dict.plans.growth;
+        ? planById.get(subscription.trial_plan_id)?.name ?? dict.plans.starter
+        : dict.plans.starter;
       const billingUrl = `${getPublicEnv().NEXT_PUBLIC_APP_URL}/${locale}/billing`;
       const subject = interpolate(copy.trialSubject, { workspace: workspace.name, days: daysLeft });
       const text = interpolate(copy.trialText, {

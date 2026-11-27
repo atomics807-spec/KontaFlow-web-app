@@ -6,7 +6,8 @@
 | --- | --- | --- |
 | Authenticated user of another tenant | Knows table names, can call PostgREST directly with their JWT | RLS on every tenant table; workspace id taken from membership, not the request |
 | Malicious browser extension / XSS | Reads tokens from storage | Sessions live in cookies managed by `@supabase/ssr`; strict CSP; the app never writes tokens to `localStorage` |
-| Webhook spoofer | Posts to `/api/ussd`, `/api/whatsapp` | Shared USSD token, Meta HMAC signature, fail-closed when secrets are absent |
+| Webhook spoofer | Posts to `/api/ussd`, `/api/whatsapp`, `/api/webhooks/payments/*` | Shared USSD token, Meta HMAC signature, per-payment callback token + optional HMAC, fail-closed when secrets are absent |
+| Payment callback replayer | Replays a valid callback or changes its amount | `(provider, external_event_id)` deduplication; amount/currency/reference are re-read from the provider before activation |
 | Stolen service-role key | Full database access | Server-only env, never bundled; blast radius limited by audited RPCs and an out-of-band rotation runbook |
 | Abusive user | Costs via AI or floods | Per-plan monthly quota in Postgres, per-minute limiter, 900-token output cap |
 | Prompt injection through receipts | Trick the assistant into writing bad data | Interactive AI tools can only create drafts; confirmation re-validates through audited RPCs. Direct-channel tools call `record_channel_transaction`, which re-checks actor membership and amounts |
@@ -77,10 +78,13 @@ policy. None of the policies trust a `workspace_id` from the client; they call
 | integration_messages | managers | service role | — |
 | channel_identities | own row, or owner/admin of the workspace | service role only | service role only |
 | whatsapp_messages | workspace managers (select) | service role | service role |
+| payment_transactions | workspace owner/admin (no insert/update/delete) | service role only | service role only |
+| payment_refunds | service role only | service role only | service role only |
+| payment_webhooks | service role only | service role only | service role only |
 | webhook_events | service role only | service role only | service role only |
 | subscription_plans, subscription_features, plan_features | authenticated | service role | service role |
 | subscriptions | owner/admin | owner/admin | — |
-| payment_webhooks, otp_verifications, idempotency_records, contact_messages | service role only | service role only | service role only |
+| otp_verifications, idempotency_records, contact_messages | service role only | service role only | service role only |
 
 Child rows of tenant-owned parents also carry composite foreign keys
 `(workspace_id, parent_id)`, so a row cannot point at another tenant's parent
@@ -238,6 +242,30 @@ Platform administrator accounts are provisioned out of band. No seed script,
 default password, operator email or credential is committed to the repository.
 Provisioning steps live in `docs/architecture/platform-administration.md`.
 
+## Mobile-money payments
+
+* Checkout is owner/admin only (`billing:manage`). The amount and currency come
+  from `subscription_plans`, never from the browser.
+* The merchant reference and callback token are generated with
+  `crypto.randomUUID` / `crypto.randomBytes` on the server. Only the SHA-256
+  hash of the callback token is stored.
+* A provider callback is treated as a hint. The route verifies the per-payment
+  token (and an HMAC when the provider or aggregator supplies one), stores the
+  event once, then fetches the authoritative provider status. A changed amount
+  or currency in the callback is ignored, not used to fail the payment.
+* `confirm_payment` re-checks the provider reference, amount, currency and plan
+  price inside one transaction before activating the subscription. A late
+  verified success can settle a payment previously marked failed/expired.
+* `fail_payment` never downgrades `succeeded`, `refunded` or `reversed`.
+* Refunds are platform-admin only and capped by the cumulative paid amount.
+  Provider refunds are attempted first; a chargeback can be recorded as a
+  `reversal`.
+* `payment_transactions` is readable by workspace owners/admins but cannot be
+  inserted, updated or deleted by authenticated clients. `payment_refunds` and
+  `payment_webhooks` are service-role only.
+* Provider credentials, callback tokens and raw payloads never reach the
+  browser. Logs record identifiers and status codes, not secrets.
+
 ## Logging and privacy
 
 `src/lib/logger.ts` emits structured JSON with a redaction list (tokens, keys,
@@ -248,7 +276,8 @@ action, entity and workspace — never full message bodies or credentials.
 ## Operational checklist
 
 - Rotate `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `RESEND_API_KEY`,
-  `WHATSAPP_ACCESS_TOKEN`, `CRON_SECRET`, `USSD_CALLBACK_TOKEN` on a schedule.
+  `WHATSAPP_ACCESS_TOKEN`, `CRON_SECRET`, `USSD_CALLBACK_TOKEN`, and the
+  MTN/Orange/aggregator credentials and webhook secrets on a schedule.
 - Keep Supabase network restrictions / SSL enforcement on.
 - Enable Cloudflare WAF and rate limiting in front of `/api/*`.
 - Run `npm run test:db` and `npm test` in CI before deploy.

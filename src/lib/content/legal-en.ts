@@ -39,7 +39,7 @@ export const legalEn: LegalDoc[] = [
       {
         heading: "5. Plans, trials and payment",
         paragraphs: [
-          "The Starter plan is free. New workspaces begin with a seven-day trial. Paid plans have the prices shown on the pricing page and are arranged with the team.",
+          "The Starter plan is a 14-day trial at no cost. When it ends, the workspace becomes read-only until you choose a paid plan. Paid plans have the prices shown on the pricing page and are arranged with the team.",
           "Prices are stated in FCFA and may be subject to taxes. We will explain the amount and billing period before a paid plan is activated. Cancellation and refunds are described in the Refund and Cancellation Policy.",
         ],
       },
@@ -245,9 +245,9 @@ export const legalEn: LegalDoc[] = [
       "This policy explains what happens when you stop a plan, change a plan or believe a charge is wrong. It does not reduce rights you have under applicable consumer law.",
     sections: [
       {
-        heading: "1. Free plan and trial",
+        heading: "1. Starter trial",
         paragraphs: [
-          "The Starter plan costs 0 FCFA. A new workspace also begins with a seven-day trial. No payment is required to start, and the trial does not automatically create a card charge.",
+          "Starter is a 14-day trial at 0 FCFA. No payment is required to start, and the trial does not automatically create a card charge. When the trial ends, the workspace is read-only until a paid plan is activated.",
         ],
       },
       {
