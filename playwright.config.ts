@@ -43,6 +43,7 @@ export default defineConfig({
         USSD_CALLBACK_TOKEN: "e2e-ussd-token",
         WHATSAPP_VERIFY_TOKEN: "e2e-whatsapp-token",
         WHATSAPP_APP_SECRET: "e2e-whatsapp-secret",
+        HEALTHCHECK_TOKEN: "e2e-health-token",
       },
     },
   ],

@@ -7,6 +7,10 @@ import { getDictionary } from "@/lib/i18n/server";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { logger } from "@/lib/logger";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function escapeHtml(value: string): string {

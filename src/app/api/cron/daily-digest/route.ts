@@ -16,6 +16,10 @@ import { loadScheduledReportData, type ReportWorkspace, type ScheduledReportData
 import { buildScheduledReport, type BuiltReport } from "@/lib/reports/scheduled";
 import type { Json, ReportChannel, ReportDeliveryRow, ReportFrequency, ReportKind } from "@/types/database";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 type WorkspaceRow = ReportWorkspace & {
   owner_id: string;
   locale: string;

@@ -1,4 +1,4 @@
-# Phase 19 — Quality assurance report
+# Phase 19–20 — Quality assurance and deployment readiness report
 
 Date: 2026-11-27
 Environment: local Supabase (Postgres, Auth, Mailpit), production Next.js build,
@@ -9,9 +9,9 @@ fake OpenAI server, Playwright Chromium desktop and Pixel 7 emulation.
 | Gate | Command | Result |
 | --- | --- | --- |
 | TypeScript strict | `npm run typecheck` | Pass |
-| Unit tests | `npm test` | 25 files, 214 tests passed |
+| Unit tests | `npm test` | 26 files, 217 tests passed |
 | Database and RLS integration | `npm run test:db` | 362 assertions passed |
-| End-to-end | `npm run test:e2e` | 17 tests passed (15 desktop, 2 mobile) |
+| End-to-end | `npm run test:e2e` | 21 tests passed (19 desktop, 2 mobile) |
 | Lint | `npm run lint` | Pass |
 | Production build | `npm run build` | Pass |
 
@@ -44,10 +44,29 @@ fake OpenAI server, Playwright Chromium desktop and Pixel 7 emulation.
   now set in the send action.
 * ESLint scanned Supabase's root-owned `.temp` directory; it is now ignored.
 
+## Phase 20 deployment checks
+
+* `/api/health` returns database readiness with a protected token and rejects an
+  unauthenticated request with 401.
+* Public pages keep CSP, HSTS and frame protections, and switch EN → FR → PCM.
+* An ended subscription keeps the dashboard readable but rejects a new
+  transaction; the database row count stays unchanged.
+* `npm run verify:production -- --local` passes 15 read-only checks against the
+  local database (migrations, RLS, private buckets, privileged tables/functions).
+* `opennextjs-cloudflare build` succeeds. The Worker is about 3.8 MiB gzipped,
+  so Cloudflare production needs the Workers Paid plan.
+* The separate cron Worker validates at about 0.5 KiB gzipped with the three
+  schedules configured.
+* `opennextjs-cloudflare preview` serves the real Worker locally: `/api/health`
+  returns 200 with `checks.database=ok`, and the response includes CSP, HSTS and
+  frame protections. `/en` returns 200 from the edge cache.
+
 ## Residual risks
 
 * Browser coverage is Chromium only. Add WebKit and Firefox before claiming
   Safari or Firefox support.
+* Cloudflare's Node middleware support is experimental in the OpenNext adapter;
+  re-test auth, locale redirects and headers after adapter upgrades.
 * USSD, WhatsApp and payment providers are exercised through contract-level
   fakes; run provider sandbox certification before production onboarding.
 * The performance test covers 300 transactions, not large multi-year ledgers.

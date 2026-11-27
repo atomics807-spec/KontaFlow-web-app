@@ -6,6 +6,11 @@ const optionalSecret = z
   .optional()
   .transform((value) => (value && value.length > 0 ? value : undefined));
 
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.url().optional(),
+);
+
 const publicSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.url("NEXT_PUBLIC_APP_URL must be an absolute URL"),
   NEXT_PUBLIC_SUPABASE_URL: z.url("NEXT_PUBLIC_SUPABASE_URL must be an absolute URL"),
@@ -17,13 +22,15 @@ const publicSchema = z.object({
 
 const serverSchema = z.object({
   APP_ENV: z.enum(["development", "preview", "production", "test"]).default("development"),
+  APP_VERSION: optionalSecret,
+  HEALTHCHECK_TOKEN: optionalSecret,
   DEPLOYMENT_TARGET: z.enum(["local", "node", "vercel", "cloudflare"]).default("local"),
   SUPABASE_SERVICE_ROLE_KEY: optionalSecret,
   SUPABASE_INTERNAL_URL: optionalSecret,
   SUPABASE_DB_URL: optionalSecret,
   OPENAI_API_KEY: optionalSecret,
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
-  OPENAI_BASE_URL: z.url().optional(),
+  OPENAI_BASE_URL: optionalUrl,
   AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(64).max(4096).default(900),
   AI_MONTHLY_MESSAGE_QUOTA: z.coerce.number().int().min(1).default(300),
   RESEND_API_KEY: optionalSecret,
@@ -141,6 +148,8 @@ export function getServerEnv(): ServerEnv {
 
   const parsed = serverSchema.safeParse({
     APP_ENV: process.env.APP_ENV,
+    APP_VERSION: process.env.APP_VERSION,
+    HEALTHCHECK_TOKEN: process.env.HEALTHCHECK_TOKEN,
     DEPLOYMENT_TARGET: process.env.DEPLOYMENT_TARGET,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     SUPABASE_INTERNAL_URL: process.env.SUPABASE_INTERNAL_URL,

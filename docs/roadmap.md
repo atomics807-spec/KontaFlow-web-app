@@ -28,8 +28,9 @@ verified. This page tracks what is real today and what comes next.
 | Security headers incl. CSP, HSTS, frame denial | done |
 | Phase 18 hardening: HttpOnly session cap, CSRF/origin checks, durable rate limits, upload MIME/malware gate, AI abuse controls, security events, privacy export/delete | done |
 | Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
-| Unit tests (188 assertions across money, permissions, i18n, validation, rate limits, security) | done |
-| Database integration suite (349 assertions on a fresh DB) | done |
+| Unit tests (217 tests across money, permissions, i18n, validation, rate limits, security) | done |
+| Database integration suite (362 assertions on a fresh DB) | done |
+| Deployment readiness: Vercel config, Cloudflare OpenNext + cron Worker, health endpoint, production checklist and recovery runbook | done |
 
 ## Next
 

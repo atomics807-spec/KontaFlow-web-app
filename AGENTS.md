@@ -14,6 +14,9 @@ npm run build
 npm run db:push             # applies pending supabase/migrations via SUPABASE_DB_URL
 npm run db:push -- --seed   # migrations, then supabase/seed.sql
 npm run deploy:cloudflare   # opennextjs-cloudflare build && deploy
+npm run deploy:cron:cloudflare # deploy the separate Cron Trigger Worker
+npm run verify:production   # read-only env + migrations + RLS checks
+npm run preview:cloudflare  # build and run the Worker locally
 ```
 
 Local Supabase: Docker container `supabase_db_KontaFlow-web-app`, psql as
@@ -484,5 +487,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (214), `npm run test:db` (362),
-  `npm run test:e2e` (17), `npm run lint`, `npm run build`.
+* Validation: `npm run typecheck`, `npm test` (217), `npm run test:db` (362),
+  `npm run test:e2e` (21), `npm run lint`, `npm run build`,
+  `npm run verify:production -- --local`.
+* Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own
+  Cloudflare; `workers/cron-trigger` calls the same cron routes. Platform env
+  reads belong in `src/lib/platform/deployment.ts`. See
+  `docs/deployment/production-checklist.md` before claiming production ready.

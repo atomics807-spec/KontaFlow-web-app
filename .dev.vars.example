@@ -1,0 +1,4 @@
+# Local OpenNext/Wrangler variables. Copy to .dev.vars; never commit it.
+# This file only selects the Next.js env file. Application secrets belong in
+# .env.local for `next dev`, or in Wrangler secrets for a Worker preview.
+NEXTJS_ENV=development

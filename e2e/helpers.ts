@@ -210,6 +210,15 @@ export async function setPlan(user: SeededUser, plan: "growth" | "scale"): Promi
   if (error) throw new Error(`plan_update_failed:${error.message}`);
 }
 
+export async function endSubscription(user: SeededUser): Promise<void> {
+  const past = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await admin
+    .from("subscriptions")
+    .update({ status: "canceled", trial_ends_at: past, current_period_end: past })
+    .eq("workspace_id", user.workspaceId);
+  if (error) throw new Error(`subscription_end_failed:${error.message}`);
+}
+
 export async function login(page: Page, email: string, password = PASSWORD): Promise<void> {
   await page.goto("/en/login");
   await page.getByLabel("Email").fill(email);

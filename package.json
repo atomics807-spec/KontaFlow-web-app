@@ -19,6 +19,9 @@
     "i18n:pull": "tsx scripts/tolgee-pull.ts",
     "preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy:cron:cloudflare": "wrangler deploy --config workers/cron-trigger/wrangler.jsonc",
+    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "verify:production": "tsx scripts/verify-production.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

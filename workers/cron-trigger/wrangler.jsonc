@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "kontaflow-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "triggers": {
+    "crons": ["0 * * * *", "0 8 * * *", "*/5 * * * *"]
+  },
+  "vars": {
+    "APP_URL": "https://app.kontaflow.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

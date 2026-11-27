@@ -14,8 +14,10 @@ automatic reports in English, French or Cameroon Pidgin English.
 * OpenAI Responses API with schema-constrained tool calling (server-side only)
 * Resend email, Africa's Talking USSD, Meta WhatsApp Cloud API
 * Recharts + Lucide + Motion
-* Vitest unit tests and a Postgres integration suite with tenant-isolation checks
-* Deployable to Vercel (Node) or Cloudflare Workers via OpenNext
+* Vitest unit tests, a Postgres integration suite with tenant-isolation checks,
+  and Playwright desktop/mobile journeys
+* Deployable to Vercel (Node) or Cloudflare Workers via OpenNext, with a
+  platform-neutral health endpoint and cron strategy
 
 ## Getting started
 
@@ -42,6 +44,49 @@ npm run lint
 npm run build
 ```
 
+## Deployment
+
+Both targets use the same Next.js build. Platform-specific code is isolated in
+`src/lib/platform/deployment.ts`; application code does not import a Vercel or
+Cloudflare SDK.
+
+### Vercel
+
+```bash
+npm run db:push
+npm run verify:production
+# Import the repository in Vercel; vercel.json supplies build, region and cron settings.
+```
+
+Set `APP_ENV=production`, `DEPLOYMENT_TARGET=vercel`, `NEXT_PUBLIC_APP_URL` and
+the provider secrets in Vercel. Cron routes are authenticated with
+`CRON_SECRET` and run hourly, daily and every five minutes.
+
+### Cloudflare Workers
+
+```bash
+npx wrangler r2 bucket create kontaflow-next-cache
+npm run deploy:cloudflare
+npm run deploy:cron:cloudflare
+```
+
+`wrangler.jsonc` enables `nodejs_compat`, static assets, R2 incremental cache
+and Cloudflare Images. The separate `workers/cron-trigger` Worker calls the same
+cron routes on a schedule, so the OpenNext Worker needs no platform-specific
+scheduler code.
+
+### Readiness
+
+```bash
+npm run verify:production          # read-only env + migration + RLS checks
+curl -H "Authorization: Bearer $HEALTHCHECK_TOKEN" https://app.kontaflow.com/api/health
+```
+
+The full go-live gate is in
+[docs/deployment/production-checklist.md](docs/deployment/production-checklist.md).
+External provider and DNS items are marked **operator**; they cannot be
+completed by a commit alone.
+
 ## What is implemented
 
 * Workspaces with owners, admins, accountants, managers and staff; role-aware
@@ -67,7 +112,11 @@ Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).
 | [docs/architecture/overview.md](docs/architecture/overview.md) | System design, tenant boundary, money/time rules, folder layout |
 | [docs/architecture/database.md](docs/architecture/database.md) | Schema, invariants, RLS, service-role boundary |
 | [docs/security/security.md](docs/security/security.md) | Threat model, authz layers, webhook hardening, headers |
-| [docs/deployment/deployment.md](docs/deployment/deployment.md) | Vercel and Cloudflare procedures, env matrix, smoke tests |
+| [docs/deployment/deployment.md](docs/deployment/deployment.md) | Deployment overview, env matrix, migrations, smoke tests |
+| [docs/deployment/vercel.md](docs/deployment/vercel.md) | Vercel build, domains, previews, cron and monitoring |
+| [docs/deployment/cloudflare.md](docs/deployment/cloudflare.md) | OpenNext adapter, bindings, secrets, cron Worker and limits |
+| [docs/deployment/production-checklist.md](docs/deployment/production-checklist.md) | Go/no-go checklist with evidence and operator items |
+| [docs/deployment/operations.md](docs/deployment/operations.md) | Health checks, alerts, backups, recovery and incident runbook |
 | [docs/integrations/channels.md](docs/integrations/channels.md) | USSD, WhatsApp, OpenAI, Resend, payments, offline sync |
 | [docs/integrations/ussd.md](docs/integrations/ussd.md) | Africa's Talking setup, handset verification, menu map and USSD checklist |
 | [docs/integrations/localization.md](docs/integrations/localization.md) | Locales, Pidgin convention, Tolgee overrides and formatting rules |
@@ -80,7 +129,8 @@ Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).
 src/app/[locale]      marketing, auth, dashboard, onboarding, invite
 src/app/api           ai, sync, reports export, ussd, whatsapp, cron
 src/components        ui, layout, forms, dashboard, charts, assistant
-src/lib               supabase, ai, i18n, money, permissions, validation
+src/lib               supabase, ai, i18n, money, permissions, validation, platform
+workers/cron-trigger  Cloudflare Cron Trigger Worker
 src/services          server-only data access
 supabase/migrations   schema, RLS, RPCs
 tests                 unit tests
