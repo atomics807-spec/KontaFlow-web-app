@@ -23,6 +23,7 @@ its tests cannot drift apart.
 | `0038_phase14_payment_status` | `processing`, `expired` and `reversed` payment states |
 | `0039_phase14_payments` | payment references, plan snapshot, expiry, idempotency, webhook token hash, refunds, service-role lifecycle RPCs, RLS/grants |
 | `0040_phase15_plan_reporting` | Starter 14-day trial, `daily_reports` and `weekly_reports` grants, service-role entitlement checks, `report_deliveries` delivery audit |
+| `0041_phase15_report_preferences` | Per-member `report_preferences`, `monthly_reports` entitlement, monthly/recipient/channel delivery audit, notification idempotency |
 | `0011_phase3_finance_ops` | transaction provenance/reversal columns, `business_settings`, `invoices`, `invoice_items`, `debts`, `debt_payments`, `budgets`, `financial_goals`, `inventory_items`, `financial_reports`, composite FK targets |
 | `0012_phase3_platform` | `subscription_plans`, `subscription_features`, `plan_features`, `payment_webhooks`, `ai_interactions`, `ai_suggestions`, `notification_preferences`, `privacy_consents`, `otp_verifications`, `integration_accounts`, `integration_messages`, `offline_sync_records`, `idempotency_records`, compatibility views |
 | `0013_phase3_integrity` | invoice totals/locking triggers, invoice numbering, debt repayment triggers, audit triggers, `reverse_transaction` |
@@ -65,7 +66,8 @@ domain names without duplicating data.
 | subscriptions, payment_transactions, payment_webhooks | same names |
 | ai_interactions, ai_suggestions | same names (per-turn content stays in `ai_messages`) |
 | notifications, notification_preferences | same names |
-| report_deliveries | `report_deliveries` (service-only scheduled report audit) |
+| report_preferences | `report_preferences` (per-member cadence, language and channels) |
+| report_deliveries | `report_deliveries` (per-recipient and per-channel scheduled report audit, service-written) |
 | audit_logs | `audit_logs` (append-only) |
 | privacy_consents | `privacy_consents` |
 | otp_verifications | `otp_verifications` |

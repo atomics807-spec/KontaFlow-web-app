@@ -3,6 +3,7 @@ import { OfflineIdentityProvider } from "@/components/offline/offline-identity-p
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { countUnreadNotifications, listNotifications } from "@/services/notifications";
 
 export default async function DashboardLayout({
   children,
@@ -13,7 +14,11 @@ export default async function DashboardLayout({
 }) {
   const locale = resolveLocale((await params).locale);
   const context = await requireWorkspaceContext(locale);
-  const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+  const [entitlements, notifications, unreadNotifications] = await Promise.all([
+    getWorkspaceEntitlements(context.workspace.id, context.user.id),
+    listNotifications(context.workspace.id, context.user.id, 12).catch(() => []),
+    countUnreadNotifications(context.workspace.id, context.user.id).catch(() => 0),
+  ]);
 
   return (
     <OfflineIdentityProvider
@@ -41,6 +46,9 @@ export default async function DashboardLayout({
           email: context.user.email ?? "",
         }}
         canRecord={context.can("transactions:create")}
+        notifications={notifications}
+        unreadNotifications={unreadNotifications}
+        timezone={context.workspace.timezone}
         billing={{
           readOnly: entitlements.readOnly,
           trialActive: entitlements.trial.active,

@@ -119,6 +119,30 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   ordinary meal/water instructions match instead of falling back to "Other".
 * `docs/architecture/ai-bookkeeping.md` documents the flow and limits.
 
+## Scheduled reports (Phase 15)
+
+* `report_preferences` is per member (`workspace_id`, `user_id`) and controls
+  language, cadence (`daily|weekly|monthly|off`) and channels. `daily` includes
+  weekly and monthly; `weekly` includes monthly. A trigger seeds active members.
+* `report_deliveries` is the idempotency and audit table, unique on
+  `(workspace_id, user_id, kind, report_date, channel)`. Only the service role
+  writes it; members may read their own rows and workspace managers may read
+  all rows. Never delete a delivery row to force a resend.
+* The hourly `/api/cron/daily-digest` worker sends at 21:00 workspace time:
+  daily closes for the previous day, weekly on Sunday and monthly on the last
+  day. It retries failed channels for two days with at most four attempts and
+  turns stale `sending` rows into `failed`.
+* In-app notices are deduplicated by the partial unique index
+  `notifications_report_delivery_key` on `(workspace_id, user_id,
+  data->>'report_kind', data->>'report_date')` where the channel is `in_app`.
+* Email uses a Resend idempotency key per recipient/report. WhatsApp uses the
+  free-form message inside the 24-hour service window and
+  `WHATSAPP_REPORT_TEMPLATE_NAME` outside it; the approved template needs five
+  body parameters: workspace, period, income, expenses and net.
+* Report copy is localized per recipient (`en`, `fr`, `pcm`), independent of
+  the recipient's UI locale. Use `src/lib/reports/scheduled.ts` for the report
+  model and `src/lib/reports/data.ts` for the summary/report RPC reads.
+
 ## Design system (Phase 2)
 
 * Tokens live in `src/app/globals.css`: raw brand palette in `@theme`, semantic

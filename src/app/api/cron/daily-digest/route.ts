@@ -1,188 +1,389 @@
 import { getServerEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/integrations/email";
-import { safeEqual } from "@/lib/integrations/whatsapp";
-import { addDays, hourInZone, todayInZone, weekdayInZone } from "@/lib/dates";
-import { formatMoney, moneyLocale } from "@/lib/money";
-import { resolveLocale } from "@/lib/i18n/config";
+import {
+  isCustomerServiceWindowOpen,
+  isWhatsappConfigured,
+  safeEqual,
+  sendWhatsappTemplate,
+  sendWhatsappText,
+} from "@/lib/integrations/whatsapp";
+import { addDays, hourInZone, isLastDayOfMonthInZone, todayInZone, weekdayInZone } from "@/lib/dates";
+import { resolveLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
-import { interpolate } from "@/lib/i18n/interpolate";
 import { logger } from "@/lib/logger";
+import { loadScheduledReportData, type ReportWorkspace, type ScheduledReportData } from "@/lib/reports/data";
+import { buildScheduledReport, type BuiltReport } from "@/lib/reports/scheduled";
+import type { Json, ReportChannel, ReportDeliveryRow, ReportFrequency, ReportKind } from "@/types/database";
 
-type Summary = {
-  totalIncomeMinor: string;
-  totalExpenseMinor: string;
-  netProfitMinor: string;
-  cashBalanceMinor: string;
+type WorkspaceRow = ReportWorkspace & {
+  owner_id: string;
+  locale: string;
 };
 
-type ReportKind = "daily" | "weekly";
+type Recipient = {
+  userId: string;
+  language: Locale;
+  frequency: ReportFrequency;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  whatsappEnabled: boolean;
+};
 
-type WorkspaceRow = {
-  id: string;
-  name: string;
-  owner_id: string;
-  currency: string;
-  timezone: string;
-  locale: string;
+type ChannelOutcome = {
+  status: "sent" | "failed" | "skipped";
+  error?: string;
+  providerMessageId?: string;
+  metadata?: Json;
 };
 
 const REPORT_HOUR = 21;
 const STALE_RESERVATION_MS = 2 * 60 * 60 * 1000;
+const RETRY_MIN_AGE_MS = 30 * 60 * 1000;
+const RETRY_LOOKBACK_DAYS = 2;
+const MAX_ATTEMPTS = 4;
 
-/**
- * Scheduled book-close emails for Growth and Scale.
- * The cron runs hourly; each workspace receives its report at 21:00 local time.
- * Sundays send the weekly report in addition to the daily close.
- */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+const FEATURE_BY_KIND: Record<ReportKind, string> = {
+  daily: "daily_reports",
+  weekly: "weekly_reports",
+  monthly: "monthly_reports",
+};
+
+function kindsForFrequency(frequency: ReportFrequency): ReportKind[] {
+  if (frequency === "daily") return ["daily", "weekly", "monthly"];
+  if (frequency === "weekly") return ["weekly", "monthly"];
+  if (frequency === "monthly") return ["monthly"];
+  return [];
 }
 
-async function deliverReport(
+function periodFor(kind: ReportKind, reportDate: string): { from: string; to: string } {
+  if (kind === "daily") return { from: addDays(reportDate, -1), to: addDays(reportDate, -1) };
+  if (kind === "weekly") return { from: addDays(reportDate, -6), to: reportDate };
+  return { from: `${reportDate.slice(0, 7)}-01`, to: reportDate };
+}
+
+function isDue(kind: ReportKind, localHour: number, weekday: number, lastDayOfMonth: boolean): boolean {
+  if (localHour < REPORT_HOUR) return false;
+  if (kind === "daily") return true;
+  if (kind === "weekly") return weekday === 0;
+  return lastDayOfMonth;
+}
+
+function enabledChannels(recipient: Recipient): ReportChannel[] {
+  const channels: ReportChannel[] = [];
+  if (recipient.inAppEnabled) channels.push("in_app");
+  if (recipient.emailEnabled) channels.push("email");
+  if (recipient.whatsappEnabled) channels.push("whatsapp");
+  return channels;
+}
+
+async function loadRecipients(
   admin: ReturnType<typeof createAdminClient>,
   workspace: WorkspaceRow,
-  kind: ReportKind,
-  from: string,
-  to: string,
-): Promise<"sent" | "skipped" | "failed"> {
-  const { data: summary, error: summaryError } = await admin.rpc("get_workspace_summary_as_service", {
-    p_workspace_id: workspace.id,
-    p_from: from,
-    p_to: to,
-  });
-  if (summaryError || !summary) return "skipped";
+): Promise<Recipient[]> {
+  const { data: preferences, error } = await admin
+    .from("report_preferences")
+    .select("user_id, language, frequency, email_enabled, in_app_enabled, whatsapp_enabled")
+    .eq("workspace_id", workspace.id);
+  if (error) {
+    logger.warn("cron.report_preferences_failed", { workspaceId: workspace.id, code: error.code });
+  }
 
-  const figures = summary as Summary;
-  const income = BigInt(figures.totalIncomeMinor ?? "0");
-  const expense = BigInt(figures.totalExpenseMinor ?? "0");
-  if (income === 0n && expense === 0n) return "skipped";
+  const rows = preferences ?? [];
+  const userIds = rows.map((row) => row.user_id);
+  const [{ data: members }, { data: restrictions }] = await Promise.all([
+    admin
+      .from("workspace_members")
+      .select("user_id, status")
+      .eq("workspace_id", workspace.id)
+      .eq("status", "active"),
+    userIds.length > 0
+      ? admin
+          .from("account_restrictions")
+          .select("user_id, expires_at")
+          .in("user_id", userIds)
+          .is("lifted_at", null)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
-  const { data: owner } = await admin.auth.admin.getUserById(workspace.owner_id);
-  const email = owner?.user?.email;
-  if (!email) return "skipped";
+  const active = new Set((members ?? []).map((member) => member.user_id));
+  const now = Date.now();
+  const restricted = new Set(
+    (restrictions ?? [])
+      .filter((row) => row.expires_at === null || new Date(row.expires_at).getTime() > now)
+      .map((row) => row.user_id),
+  );
 
-  const { data: ownerProfile } = await admin
-    .from("profiles")
-    .select("locale")
-    .eq("id", workspace.owner_id)
-    .maybeSingle();
-  const locale = resolveLocale(ownerProfile?.locale ?? workspace.locale);
-  const dict = await getDictionary(locale);
-  const copy = dict.emails;
-  const money = (value: bigint) => formatMoney(value, workspace.currency, moneyLocale(locale, workspace.currency));
-  const net = BigInt(figures.netProfitMinor ?? "0");
-  const cash = BigInt(figures.cashBalanceMinor ?? "0");
+  const recipients: Recipient[] = rows
+    .filter((row) => active.has(row.user_id) && !restricted.has(row.user_id))
+    .map((row) => ({
+      userId: row.user_id,
+      language: resolveLocale(row.language),
+      frequency: row.frequency,
+      emailEnabled: row.email_enabled,
+      inAppEnabled: row.in_app_enabled,
+      whatsappEnabled: row.whatsapp_enabled,
+    }));
 
-  const subject =
-    kind === "weekly"
-      ? interpolate(copy.weeklySubject, {
-          workspace: workspace.name.replace(/[\r\n]+/g, " "),
-          date: to,
-        })
-      : interpolate(copy.dailySubject, {
-          workspace: workspace.name.replace(/[\r\n]+/g, " "),
-          date: from,
-        });
+  if (recipients.length === 0 && !restricted.has(workspace.owner_id)) {
+    recipients.push({
+      userId: workspace.owner_id,
+      language: resolveLocale(workspace.locale),
+      frequency: "daily",
+      emailEnabled: true,
+      inAppEnabled: true,
+      whatsappEnabled: false,
+    });
+  }
 
-  const text =
-    kind === "weekly"
-      ? interpolate(copy.weeklyText, {
-          workspace: workspace.name,
-          from,
-          to,
-          income: money(income),
-          expense: money(expense),
-          net: money(net),
-          cash: money(cash),
-          open: copy.dailyOpen,
-        })
-      : interpolate(copy.dailyText, {
-          workspace: workspace.name,
-          date: from,
-          income: money(income),
-          expense: money(expense),
-          net: money(net),
-          cash: money(cash),
-          open: copy.dailyOpen,
-        });
-
-  const periodLabel = kind === "weekly" ? `${from} – ${to}` : from;
-  const footer = kind === "weekly" ? copy.weeklyFooter : copy.dailyFooter;
-  const html = `
-    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#0b1f1a">
-      <p style="font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#0b7a5a;margin:0 0 20px">KontaFlow</p>
-      <h1 style="font-size:20px;margin:0 0 4px">${escapeHtml(workspace.name)}</h1>
-      <p style="font-size:13px;color:#7a8a83;margin:0 0 20px">${escapeHtml(periodLabel)}</p>
-      <table style="width:100%;font-size:14px;border-collapse:collapse">
-        <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyIncome)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(income))}</td></tr>
-        <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyExpenses)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(expense))}</td></tr>
-        <tr><td style="padding:6px 0;color:#4b5f58">${escapeHtml(copy.dailyNet)}</td><td style="text-align:right;font-weight:600">${escapeHtml(money(net))}</td></tr>
-        <tr><td style="padding:6px 0;border-top:1px solid #e5dfd1;color:#4b5f58">${escapeHtml(copy.dailyCash)}</td><td style="text-align:right;font-weight:600;border-top:1px solid #e5dfd1">${escapeHtml(money(cash))}</td></tr>
-      </table>
-      <p style="font-size:12px;color:#7a8a83;margin:24px 0 0">${escapeHtml(footer)}</p>
-    </div>`;
-
-  const result = await sendEmail({ to: email, subject, html, text });
-  if (!result.sent) return "failed";
-
-  await admin.from("notifications").insert({
-    workspace_id: workspace.id,
-    user_id: workspace.owner_id,
-    channel: "email",
-    title:
-      kind === "weekly"
-        ? interpolate(copy.weeklyTitle, { from, to })
-        : interpolate(copy.dailyTitle, { date: from }),
-    body: text.slice(0, 900),
-    sent_at: new Date().toISOString(),
-  });
-  return "sent";
+  return recipients;
 }
 
-async function reserveReport(
+async function reserveDelivery(
   admin: ReturnType<typeof createAdminClient>,
-  workspaceId: string,
-  kind: ReportKind,
-  reportDate: string,
-): Promise<{ id: string | null; state: "reserved" | "duplicate" | "error"; code?: string }> {
+  params: {
+    workspaceId: string;
+    userId: string;
+    kind: ReportKind;
+    reportDate: string;
+    channel: ReportChannel;
+  },
+): Promise<{ id: string | null; state: "reserved" | "duplicate" | "exhausted" | "error"; code?: string }> {
+  const now = new Date().toISOString();
   const insert = await admin
     .from("report_deliveries")
     .insert({
-      workspace_id: workspaceId,
-      kind,
-      report_date: reportDate,
+      workspace_id: params.workspaceId,
+      user_id: params.userId,
+      kind: params.kind,
+      report_date: params.reportDate,
+      channel: params.channel,
       status: "sending",
+      attempts: 1,
+      last_attempt_at: now,
+      metadata: {},
     })
     .select("id")
     .maybeSingle();
+
   if (!insert.error) return { id: insert.data?.id ?? null, state: "reserved" };
   if (insert.error.code !== "23505") return { id: null, state: "error", code: insert.error.code };
 
-  const { data: existing } = await admin
+  const { data: existing, error: existingError } = await admin
     .from("report_deliveries")
     .select("id, status, attempts")
-    .eq("workspace_id", workspaceId)
-    .eq("kind", kind)
-    .eq("report_date", reportDate)
+    .eq("workspace_id", params.workspaceId)
+    .eq("user_id", params.userId)
+    .eq("kind", params.kind)
+    .eq("report_date", params.reportDate)
+    .eq("channel", params.channel)
     .maybeSingle();
 
-  if (existing?.status === "failed") {
-    const retried = await admin
-      .from("report_deliveries")
-      .update({ status: "sending", attempts: Number(existing.attempts ?? 1) + 1, last_error: null })
-      .eq("id", existing.id)
-      .eq("status", "failed")
-      .select("id")
-      .maybeSingle();
-    if (!retried.error && retried.data) return { id: retried.data.id, state: "reserved" };
+  if (existingError || !existing) {
+    return { id: null, state: "error", code: existingError?.code };
+  }
+  if (existing.status === "sent" || existing.status === "skipped" || existing.status === "sending") {
+    return { id: null, state: "duplicate" };
+  }
+  if (Number(existing.attempts ?? 1) >= MAX_ATTEMPTS) {
+    return { id: null, state: "exhausted" };
   }
 
-  return { id: null, state: "duplicate" };
+  const retried = await admin
+    .from("report_deliveries")
+    .update({
+      status: "sending",
+      attempts: Number(existing.attempts ?? 1) + 1,
+      last_error: null,
+      last_attempt_at: now,
+      provider_message_id: null,
+    })
+    .eq("id", existing.id)
+    .eq("status", "failed")
+    .select("id")
+    .maybeSingle();
+
+  if (retried.error || !retried.data) return { id: null, state: "duplicate" };
+  return { id: retried.data.id, state: "reserved" };
+}
+
+async function finishDelivery(
+  admin: ReturnType<typeof createAdminClient>,
+  id: string,
+  outcome: ChannelOutcome,
+): Promise<void> {
+  await admin
+    .from("report_deliveries")
+    .update({
+      status: outcome.status,
+      last_error: outcome.error ?? null,
+      sent_at: outcome.status === "sent" ? new Date().toISOString() : null,
+      provider_message_id: outcome.providerMessageId ?? null,
+      metadata: outcome.metadata ?? {},
+    })
+    .eq("id", id);
+}
+
+async function deliverInApp(
+  admin: ReturnType<typeof createAdminClient>,
+  workspace: WorkspaceRow,
+  recipient: Recipient,
+  message: BuiltReport,
+): Promise<ChannelOutcome> {
+  const { error } = await admin.from("notifications").insert({
+    workspace_id: workspace.id,
+    user_id: recipient.userId,
+    channel: "in_app",
+    title: message.title,
+    body: message.notificationBody,
+    data: message.data,
+    sent_at: new Date().toISOString(),
+  });
+  if (!error) return { status: "sent" };
+  if (error.code === "23505") return { status: "sent", metadata: { duplicate: true } };
+  return { status: "failed", error: `notification_${error.code}` };
+}
+
+async function deliverEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  workspace: WorkspaceRow,
+  recipient: Recipient,
+  kind: ReportKind,
+  reportDate: string,
+  message: BuiltReport,
+  emailCache: Map<string, string | null>,
+): Promise<ChannelOutcome> {
+  let email = emailCache.get(recipient.userId);
+  if (email === undefined) {
+    const { data } = await admin.auth.admin.getUserById(recipient.userId);
+    email = data?.user?.email ?? null;
+    emailCache.set(recipient.userId, email);
+  }
+  if (!email) return { status: "skipped", error: "no_email" };
+
+  const result = await sendEmail({
+    to: email,
+    subject: message.subject,
+    html: message.html,
+    text: message.text,
+    idempotencyKey: `${workspace.id}:${recipient.userId}:${kind}:${reportDate}:email`,
+  });
+  if (result.sent) return { status: "sent", providerMessageId: result.id };
+  if (result.reason === "not_configured") return { status: "skipped", error: "email_not_configured" };
+  return { status: "failed", error: "email_delivery_failed" };
+}
+
+async function deliverWhatsapp(
+  admin: ReturnType<typeof createAdminClient>,
+  workspace: WorkspaceRow,
+  recipient: Recipient,
+  message: BuiltReport,
+): Promise<ChannelOutcome> {
+  if (!isWhatsappConfigured()) return { status: "skipped", error: "whatsapp_not_configured" };
+
+  const { data: identity, error } = await admin
+    .from("channel_identities")
+    .select("id, address, verified_at, consent_at, opted_out_at, service_window_expires_at")
+    .eq("workspace_id", workspace.id)
+    .eq("user_id", recipient.userId)
+    .eq("channel", "whatsapp")
+    .not("verified_at", "is", null)
+    .not("consent_at", "is", null)
+    .is("opted_out_at", null)
+    .order("verified_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) return { status: "failed", error: `whatsapp_lookup_${error.code}` };
+  if (!identity) return { status: "skipped", error: "whatsapp_not_linked" };
+
+  const env = getServerEnv();
+  const result = isCustomerServiceWindowOpen(identity.service_window_expires_at)
+    ? await sendWhatsappText(identity.address, message.whatsappText, {
+        customerServiceWindowExpiresAt: identity.service_window_expires_at!,
+      })
+    : env.WHATSAPP_REPORT_TEMPLATE_NAME
+      ? await sendWhatsappTemplate(identity.address, {
+          name: env.WHATSAPP_REPORT_TEMPLATE_NAME,
+          language: env.WHATSAPP_REPORT_TEMPLATE_LANG,
+          components: [
+            {
+              type: "body",
+              parameters: message.whatsappTemplateParams.map((text) => ({ type: "text" as const, text })),
+            },
+          ],
+        })
+      : { sent: false, reason: "outside_window" as const };
+
+  if (result.sent) {
+    await admin
+      .from("channel_identities")
+      .update({ last_outbound_at: new Date().toISOString() })
+      .eq("id", identity.id);
+    return { status: "sent", providerMessageId: result.id };
+  }
+  if (result.reason === "provider_error" || result.reason === "network_error") {
+    return { status: "failed", error: `whatsapp_${result.reason}` };
+  }
+  return { status: "skipped", error: `whatsapp_${result.reason ?? "unavailable"}` };
+}
+
+async function deliverChannel(
+  admin: ReturnType<typeof createAdminClient>,
+  workspace: WorkspaceRow,
+  recipient: Recipient,
+  channel: ReportChannel,
+  kind: ReportKind,
+  reportDate: string,
+  message: BuiltReport,
+  emailCache: Map<string, string | null>,
+): Promise<ChannelOutcome> {
+  if (channel === "in_app") return deliverInApp(admin, workspace, recipient, message);
+  if (channel === "email") {
+    return deliverEmail(admin, workspace, recipient, kind, reportDate, message, emailCache);
+  }
+  return deliverWhatsapp(admin, workspace, recipient, message);
+}
+
+async function processChannel(
+  admin: ReturnType<typeof createAdminClient>,
+  workspace: WorkspaceRow,
+  recipient: Recipient,
+  channel: ReportChannel,
+  kind: ReportKind,
+  reportDate: string,
+  data: ScheduledReportData,
+  message: BuiltReport,
+  emailCache: Map<string, string | null>,
+): Promise<"sent" | "skipped" | "failed"> {
+  const reservation = await reserveDelivery(admin, {
+    workspaceId: workspace.id,
+    userId: recipient.userId,
+    kind,
+    reportDate,
+    channel,
+  });
+  if (reservation.state === "duplicate") return "skipped";
+  if (reservation.state === "exhausted") {
+    logger.warn("cron.report_attempts_exhausted", { workspaceId: workspace.id, userId: recipient.userId, kind, channel });
+    return "skipped";
+  }
+  if (reservation.state === "error" || !reservation.id) {
+    logger.warn("cron.report_reservation_failed", {
+      workspaceId: workspace.id,
+      userId: recipient.userId,
+      kind,
+      channel,
+      code: reservation.code,
+    });
+    return "failed";
+  }
+
+  const outcome = data.hasActivity
+    ? await deliverChannel(admin, workspace, recipient, channel, kind, reportDate, message, emailCache)
+    : { status: "skipped" as const, error: "no_activity" };
+
+  await finishDelivery(admin, reservation.id, outcome);
+  return outcome.status;
 }
 
 async function run(request: Request): Promise<Response> {
@@ -195,11 +396,16 @@ async function run(request: Request): Promise<Response> {
   const admin = createAdminClient();
   const now = new Date();
 
-  // A crashed process must not block the next day's report forever.
   await admin
     .from("report_deliveries")
-    .delete()
+    .update({ status: "failed", last_error: "stale_reservation" })
     .eq("status", "sending")
+    .lt("last_attempt_at", new Date(now.getTime() - STALE_RESERVATION_MS).toISOString());
+  await admin
+    .from("report_deliveries")
+    .update({ status: "failed", last_error: "stale_reservation" })
+    .eq("status", "sending")
+    .is("last_attempt_at", null)
     .lt("created_at", new Date(now.getTime() - STALE_RESERVATION_MS).toISOString());
 
   const { data: workspaces, error } = await admin
@@ -216,73 +422,152 @@ async function run(request: Request): Promise<Response> {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  const emailCache = new Map<string, string | null>();
 
   for (const workspace of (workspaces ?? []) as WorkspaceRow[]) {
     try {
-      if (hourInZone(workspace.timezone, now) !== REPORT_HOUR) {
-        skipped += 1;
-        continue;
-      }
-
+      const localHour = hourInZone(workspace.timezone, now);
       const today = todayInZone(workspace.timezone, now);
-      const kinds: ReportKind[] = weekdayInZone(workspace.timezone, now) === 0 ? ["daily", "weekly"] : ["daily"];
+      const weekday = weekdayInZone(workspace.timezone, now);
+      const lastDay = isLastDayOfMonthInZone(workspace.timezone, now);
+      const recipients = await loadRecipients(admin, workspace);
+      if (recipients.length === 0) continue;
 
-      for (const kind of kinds) {
-        const feature = kind === "weekly" ? "weekly_reports" : "daily_reports";
-        const { data: allowed, error: featureError } = await admin.rpc("has_workspace_feature", {
+      const dueKinds: ReportKind[] = (["daily", "weekly", "monthly"] as ReportKind[]).filter((kind) =>
+        isDue(kind, localHour, weekday, lastDay),
+      );
+
+      const dataCache = new Map<string, ScheduledReportData>();
+      const messageCache = new Map<string, BuiltReport>();
+      const featureCache = new Map<ReportKind, boolean>();
+      const whatsappFeature = await admin.rpc("has_workspace_feature", {
+        p_workspace_id: workspace.id,
+        p_feature_code: "whatsapp_integration",
+      });
+
+      const getData = async (kind: ReportKind, reportDate: string): Promise<ScheduledReportData> => {
+        const key = `${kind}:${reportDate}`;
+        const cached = dataCache.get(key);
+        if (cached) return cached;
+        const period = periodFor(kind, reportDate);
+        const data = await loadScheduledReportData(admin, workspace, kind, period.from, period.to, reportDate);
+        dataCache.set(key, data);
+        return data;
+      };
+
+      const getMessage = async (
+        kind: ReportKind,
+        reportDate: string,
+        locale: Locale,
+        data: ScheduledReportData,
+      ): Promise<BuiltReport> => {
+        const key = `${kind}:${reportDate}:${locale}`;
+        const cached = messageCache.get(key);
+        if (cached) return cached;
+        const message = buildScheduledReport(data, await getDictionary(locale), locale);
+        messageCache.set(key, message);
+        return message;
+      };
+
+      const featureAllowed = async (kind: ReportKind): Promise<boolean> => {
+        const cached = featureCache.get(kind);
+        if (cached !== undefined) return cached;
+        const result = await admin.rpc("has_workspace_feature", {
           p_workspace_id: workspace.id,
-          p_feature_code: feature,
+          p_feature_code: FEATURE_BY_KIND[kind],
         });
-        if (featureError) {
-          logger.warn("cron.report_feature_failed", {
-            workspaceId: workspace.id,
-            kind,
-            code: featureError.code,
-          });
-          failed += 1;
+        const allowed = !result.error && Boolean(result.data);
+        featureCache.set(kind, allowed);
+        return allowed;
+      };
+
+      for (const kind of dueKinds) {
+        if (!(await featureAllowed(kind))) {
+          skipped += recipients.length;
           continue;
         }
-        if (!allowed) {
-          skipped += 1;
-          continue;
+        for (const recipient of recipients) {
+          if (!kindsForFrequency(recipient.frequency).includes(kind)) continue;
+          const channels = enabledChannels(recipient);
+          if (channels.length === 0) continue;
+          try {
+            const data = await getData(kind, today);
+            const message = await getMessage(kind, today, recipient.language, data);
+            for (const channel of channels) {
+              if (channel === "whatsapp" && !whatsappFeature.data) {
+                skipped += 1;
+                continue;
+              }
+              const status = await processChannel(
+                admin,
+                workspace,
+                recipient,
+                channel,
+                kind,
+                today,
+                data,
+                message,
+                emailCache,
+              );
+              if (status === "sent") sent += 1;
+              else if (status === "failed") failed += 1;
+              else skipped += 1;
+            }
+          } catch (recipientError) {
+            logger.warn("cron.report_recipient_failed", {
+              workspaceId: workspace.id,
+              userId: recipient.userId,
+              kind,
+              error: recipientError,
+            });
+            failed += 1;
+          }
         }
-
-        const reservation = await reserveReport(admin, workspace.id, kind, today);
-        if (reservation.state === "duplicate") {
-          skipped += 1;
-          continue;
-        }
-        if (reservation.state === "error") {
-          logger.warn("cron.report_reservation_failed", {
-            workspaceId: workspace.id,
-            kind,
-            code: reservation.code,
-          });
-          failed += 1;
-          continue;
-        }
-
-        const from = kind === "weekly" ? addDays(today, -6) : addDays(today, -1);
-        const to = kind === "weekly" ? today : addDays(today, -1);
-        const result = await deliverReport(admin, workspace, kind, from, to);
-
-        if (reservation.id) {
-          await admin
-            .from("report_deliveries")
-            .update({
-              status: result,
-              last_error: result === "failed" ? "email_delivery_failed" : null,
-              sent_at: result === "sent" ? new Date().toISOString() : null,
-            })
-            .eq("id", reservation.id);
-        }
-
-        if (result === "sent") sent += 1;
-        else if (result === "skipped") skipped += 1;
-        else failed += 1;
       }
-    } catch (error) {
-      logger.warn("cron.workspace_failed", { workspaceId: workspace.id, error });
+
+      // Retry failed channel deliveries independently of the 21:00 window.
+      const { data: retries } = await admin
+        .from("report_deliveries")
+        .select("*")
+        .eq("workspace_id", workspace.id)
+        .eq("status", "failed")
+        .lt("attempts", MAX_ATTEMPTS)
+        .gte("report_date", addDays(today, -RETRY_LOOKBACK_DAYS))
+        .limit(100);
+
+      for (const delivery of (retries ?? []) as ReportDeliveryRow[]) {
+        if (delivery.last_attempt_at && now.getTime() - new Date(delivery.last_attempt_at).getTime() < RETRY_MIN_AGE_MS) {
+          continue;
+        }
+        const recipient = recipients.find((item) => item.userId === delivery.user_id);
+        if (!recipient || !kindsForFrequency(recipient.frequency).includes(delivery.kind)) continue;
+        if (!enabledChannels(recipient).includes(delivery.channel)) continue;
+        if (!(await featureAllowed(delivery.kind))) continue;
+        if (delivery.channel === "whatsapp" && !whatsappFeature.data) continue;
+        try {
+          const data = await getData(delivery.kind, delivery.report_date);
+          const message = await getMessage(delivery.kind, delivery.report_date, recipient.language, data);
+          const status = await processChannel(
+            admin,
+            workspace,
+            recipient,
+            delivery.channel,
+            delivery.kind,
+            delivery.report_date,
+            data,
+            message,
+            emailCache,
+          );
+          if (status === "sent") sent += 1;
+          else if (status === "failed") failed += 1;
+          else skipped += 1;
+        } catch (retryError) {
+          logger.warn("cron.report_retry_failed", { deliveryId: delivery.id, error: retryError });
+          failed += 1;
+        }
+      }
+    } catch (workspaceError) {
+      logger.warn("cron.workspace_failed", { workspaceId: workspace.id, error: workspaceError });
       failed += 1;
     }
   }

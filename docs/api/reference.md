@@ -16,7 +16,7 @@ All HTML routes are localised: `/{en|fr|pcm}/...`. Machine endpoints live under
 | `/api/reports/export/pdf` | GET | Supabase session | Localized PDF report for a period (`from`, `to`, `locale`) |
 | `/api/ussd` | POST | Required `USSD_CALLBACK_TOKEN` | Africa's Talking USSD menu; returns plain-text `CON`/`END` |
 | `/api/whatsapp` | GET/POST | Verify token / HMAC | Meta webhook handshake and inbound messages |
-| `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Emails daily closes at 21:00 local time, plus the weekly report on Sundays |
+| `/api/cron/daily-digest` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Sends each member their due daily, weekly (Sunday) and monthly (last day) reports at 21:00 workspace time by email, in-app or WhatsApp; retries failed channels |
 | `/api/cron/trial-reminders` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Expires trials and sends configured reminder emails |
 | `/api/cron/payment-reconciliation` | GET/POST | `Authorization: Bearer $CRON_SECRET` | Polls pending mobile-money payments and settles them |
 | `/api/payments` | POST | Supabase session + `billing:manage` | Starts an MTN MoMo, Orange Money or aggregator payment for a paid plan; body `{ planCode, provider, payerMsisdn?, idempotencyKey? }` |

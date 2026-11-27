@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronRight, Download, FileText, History, MessageCircle, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { BarChart3, ChevronRight, Download, FileText, History, MessageCircle, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { LinkChannelForm, WorkspaceSettingsForm } from "@/components/forms/workspace-settings-form";
 import { AiSettingsForm } from "@/components/forms/ai-settings-form";
 import { AiAdvisorSettingsForm } from "@/components/forms/ai-advisor-settings-form";
+import { ReportPreferencesForm } from "@/components/forms/report-preferences-form";
 import { getAiSettings } from "@/services/ai-commands";
 import { getAiPreferences } from "@/services/ai-preferences";
 import { listAuditLogs, listChannelIdentities } from "@/services/workspaces";
@@ -15,6 +16,8 @@ import { resolveLocale, intlLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 import { formatDateTime, addDays, formatDate, todayInZone } from "@/lib/dates";
 import { getServerEnv } from "@/lib/env";
+import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
+import { getReportPreferences, getVerifiedWhatsappAddress, listReportDeliveries } from "@/services/report-preferences";
 import { unlinkChannelAction } from "./actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -36,12 +39,17 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   const canExport = context.can("reports:export");
   const isOwner = context.role === "owner";
 
-  const [identities, audit, aiSettings, aiPreferences] = await Promise.all([
-    canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
-    canAudit ? listAuditLogs(workspace.id, 25) : Promise.resolve([]),
-    getAiSettings(workspace.id),
-    getAiPreferences(workspace.id),
-  ]);
+  const [identities, audit, aiSettings, aiPreferences, reportPreferences, whatsappAddress, reportDeliveries, entitlements] =
+    await Promise.all([
+      canIntegrate ? listChannelIdentities(workspace.id) : Promise.resolve([]),
+      canAudit ? listAuditLogs(workspace.id, 25) : Promise.resolve([]),
+      getAiSettings(workspace.id),
+      getAiPreferences(workspace.id),
+      getReportPreferences(workspace.id, context.user.id),
+      getVerifiedWhatsappAddress(workspace.id, context.user.id).catch(() => null),
+      listReportDeliveries(workspace.id, 8).catch(() => []),
+      getWorkspaceEntitlements(workspace.id, context.user.id),
+    ]);
 
   const analysisToDate = todayInZone(workspace.timezone);
   const analysisFromDate = addDays(analysisToDate, -(aiPreferences.analysisWindowDays - 1));
@@ -157,6 +165,66 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
           </div>
         </Card>
       ) : null}
+
+      <Card id="reports" className="p-5 sm:p-6">
+        <div className="flex items-start gap-2">
+          <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-accent-strong" aria-hidden />
+          <div>
+            <h2 className="text-sm font-bold text-heading">{dict.settings.reportsTitle}</h2>
+            <p className="mt-0.5 text-xs text-muted">{dict.settings.reportsSubtitle}</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <ReportPreferencesForm
+            preferences={reportPreferences}
+            whatsappLinked={Boolean(whatsappAddress)}
+            whatsappAllowed={entitlements.features.whatsapp_integration.included}
+          />
+        </div>
+
+        <div className="mt-6 border-t border-line/70 pt-4">
+          <h3 className="text-xs font-bold uppercase tracking-[0.08em] text-muted">
+            {dict.settings.reportsDeliveryLog}
+          </h3>
+          <p className="mt-1 text-xs text-muted">{dict.settings.reportsDeliveryLogHelp}</p>
+          {reportDeliveries.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">{dict.settings.reportsNoDeliveries}</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-line/70">
+              {reportDeliveries.map((delivery) => (
+                <li key={delivery.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-xs">
+                  <span className="font-semibold text-heading">
+                    {delivery.kind === "daily"
+                      ? dict.settings.reportsKindDaily
+                      : delivery.kind === "weekly"
+                        ? dict.settings.reportsKindWeekly
+                        : dict.settings.reportsKindMonthly}
+                  </span>
+                  <span className="text-muted">
+                    {formatDate(delivery.report_date, intlLocale(locale), workspace.timezone)}
+                  </span>
+                  <span className="text-muted">
+                    {delivery.channel === "email"
+                      ? dict.settings.reportsChannelEmail
+                      : delivery.channel === "whatsapp"
+                        ? dict.settings.reportsChannelWhatsapp
+                        : dict.settings.reportsChannelInApp}
+                  </span>
+                  <span className="ml-auto font-semibold">
+                    {delivery.status === "sent"
+                      ? dict.settings.reportsStatusSent
+                      : delivery.status === "failed"
+                        ? dict.settings.reportsStatusFailed
+                        : delivery.status === "skipped"
+                          ? dict.settings.reportsStatusSkipped
+                          : dict.settings.reportsStatusSending}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Card>
 
       <Card className="p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">

@@ -27,11 +27,11 @@ Set every variable from `.env.example`. Minimum for a working app:
 | `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO` | Invitations, trial reminders and scheduled reports |
 | `CONTACT_INBOX_EMAIL` | Destination for public contact form notifications (defaults to `info@kontaflow.com`) |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | Assistant; omit to disable cleanly |
-| `WHATSAPP_*` | Phone number id, access token, verify token, app secret |
+| `WHATSAPP_*` | Phone number id, access token, verify token, app secret; `WHATSAPP_REPORT_TEMPLATE_NAME` enables scheduled reports outside the 24-hour service window |
 | `USSD_SERVICE_CODE`, `USSD_CALLBACK_TOKEN`, `USSD_SESSION_TTL_SECONDS` | Africa's Talking callback |
 | `SMS_PROVIDER=africastalking` + `AFRICASTALKING_*` | Phone OTP delivery; `none` blocks onboarding, `console` is local-only |
 | `OTP_HMAC_SECRET` | Dedicated 32-byte secret for OTP hashing; do not reuse the service-role key |
-| `CRON_SECRET` | Bearer token for `/api/cron/daily-digest`, `/api/cron/trial-reminders` and `/api/cron/payment-reconciliation` |
+| `CRON_SECRET` | Bearer token for `/api/cron/daily-digest`, `/api/cron/trial-reminders` and `/api/cron/payment-reconciliation`. The digest worker runs hourly and sends reports only at 21:00 workspace time. |
 | `PAYMENT_MODE` | `disabled` (default), `sandbox` or `production`; production requires complete provider credentials |
 | `PAYMENT_PROVIDER` | Optional allow-list: `none` (all configured), `mtn-momo`, `orange-money` or `aggregator` |
 | `MTN_MOMO_*` | API user/key, subscription key, target environment and optional webhook secret |
@@ -66,11 +66,13 @@ leave `SUPABASE_INTERNAL_URL` unset.
 ```
 
 The digest job runs hourly and only processes workspaces whose local hour is
-21:00, so each tenant receives its close at the right local time. It sends the
-daily report every day and adds the weekly report on Sunday. Delivery is
-recorded in `report_deliveries`, which keeps the job idempotent and lets a
-failed email retry on the next hourly run. The job is limited to plans that
-include `daily_reports` and `weekly_reports` (Growth and Scale).
+21:00, so each tenant receives reports at the right local time. It reads each
+member's `report_preferences`: daily closes go out every day, weekly reports on
+Sunday and monthly reports on the last day of the month. Delivery is recorded
+per recipient and channel in `report_deliveries`, which keeps the job
+idempotent and lets failed channels retry for two days. The job is limited to
+plans that include `daily_reports`, `weekly_reports` and `monthly_reports`;
+Starter, Growth and Scale include all three.
 
 The trial reminder job expires finished trials, sends the configured 7/3/1-day
 emails and writes one reminder log row per workspace per interval. Vercel sends

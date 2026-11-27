@@ -242,3 +242,20 @@ export const aiAdvisorPreferencesSchema = z.object({
   advisorFocus: z.enum(["balanced", "cash_flow", "costs", "growth", "collections"]),
   advisorNote: z.string().trim().max(500).optional().or(z.literal("")),
 });
+
+export const reportPreferencesSchema = z
+  .object({
+    language: z.enum(["en", "fr", "pcm"]),
+    frequency: z.enum(["daily", "weekly", "monthly", "off"]),
+    emailEnabled: z.boolean(),
+    inAppEnabled: z.boolean(),
+    whatsappEnabled: z.boolean(),
+  })
+  .refine(
+    (value) =>
+      value.frequency === "off" ||
+      value.emailEnabled ||
+      value.inAppEnabled ||
+      value.whatsappEnabled,
+    { message: "Choose at least one delivery channel.", path: ["channels"] },
+  );

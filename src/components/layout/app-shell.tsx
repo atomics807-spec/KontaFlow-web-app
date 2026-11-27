@@ -29,6 +29,7 @@ import { SignOutButton } from "@/components/forms/sign-out-button";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DataSaverToggle } from "@/components/pwa/data-saver-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Avatar } from "@/components/ui/avatar";
 import { Drawer } from "@/components/ui/drawer";
@@ -36,7 +37,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
 import { interpolate } from "@/lib/i18n/interpolate";
-import type { WorkspacePlan } from "@/types/database";
+import type { NotificationRow, WorkspacePlan } from "@/types/database";
 
 export type ShellWorkspace = { id: string; name: string; currency: string; plan: WorkspacePlan };
 
@@ -53,11 +54,25 @@ type ShellProps = {
   role: string;
   user: { name: string; email: string };
   canRecord: boolean;
+  notifications: NotificationRow[];
+  unreadNotifications: number;
+  timezone: string;
   billing?: ShellBilling;
   children: React.ReactNode;
 };
 
-export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord, billing, children }: ShellProps) {
+export function AppShell({
+  workspaces,
+  activeWorkspaceId,
+  role,
+  user,
+  canRecord,
+  notifications,
+  unreadNotifications,
+  timezone,
+  billing,
+  children,
+}: ShellProps) {
   const { locale, dict } = useI18n();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -239,6 +254,12 @@ export function AppShell({ workspaces, activeWorkspaceId, role, user, canRecord,
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <NotificationBell
+                notifications={notifications}
+                unread={unreadNotifications}
+                locale={locale}
+                timezone={timezone}
+              />
               <SyncStatus />
               <DataSaverToggle />
               <ThemeToggle className="hidden sm:inline-flex" />

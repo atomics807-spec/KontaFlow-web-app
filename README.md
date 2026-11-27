@@ -14,7 +14,7 @@ automatic reports in English, French or Cameroon Pidgin English.
 * OpenAI Responses API with schema-constrained tool calling (server-side only)
 * Resend email, Africa's Talking USSD, Meta WhatsApp Cloud API
 * Recharts + Lucide + Motion
-* Vitest unit tests and a 56-assertion Postgres integration suite
+* Vitest unit tests and a Postgres integration suite with tenant-isolation checks
 * Deployable to Vercel (Node) or Cloudflare Workers via OpenNext
 
 ## Getting started
@@ -53,7 +53,8 @@ npm run build
 * AI assistant that reads the books and records entries through validated tools.
 * USSD menu and WhatsApp webhook writing real transactions for verified linked numbers, with role, subscription and idempotency checks.
 * Offline outbox with idempotent sync.
-* Billing page with plan catalogue, usage and payment history; daily close email.
+* Billing page with plan catalogue, usage and payment history.
+* Per-member daily, weekly and monthly reports by email, in-app notification or WhatsApp, with retries, idempotency and a delivery log.
 * PWA shell, strict security headers, audit trail, i18n EN/FR/PCM (Cameroon Pidgin).
 
 Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).

@@ -449,16 +449,38 @@ export type TrialReminderLogRow = {
   sent_at: string;
 };
 
+export type ReportKind = "daily" | "weekly" | "monthly";
+export type ReportChannel = "email" | "in_app" | "whatsapp";
+export type ReportFrequency = ReportKind | "off";
+
 export type ReportDeliveryRow = {
   id: string;
   workspace_id: string;
-  kind: "daily" | "weekly";
+  user_id: string;
+  kind: ReportKind;
   report_date: string;
+  channel: ReportChannel;
   status: "sending" | "sent" | "failed" | "skipped";
   attempts: number;
   last_error: string | null;
+  metadata: Json;
+  provider_message_id: string | null;
+  last_attempt_at: string | null;
   sent_at: string | null;
   created_at: string;
+};
+
+export type ReportPreferencesRow = {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  language: "en" | "fr" | "pcm";
+  frequency: ReportFrequency;
+  email_enabled: boolean;
+  in_app_enabled: boolean;
+  whatsapp_enabled: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type PaymentTransactionRow = {
@@ -929,6 +951,7 @@ export type Database = {
       trial_grants: TableDefinition<TrialGrantRow>;
       trial_reminder_log: TableDefinition<TrialReminderLogRow>;
       report_deliveries: TableDefinition<ReportDeliveryRow>;
+      report_preferences: TableDefinition<ReportPreferencesRow>;
       payment_transactions: TableDefinition<PaymentTransactionRow>;
       payment_refunds: TableDefinition<PaymentRefundRow>;
       payment_webhooks: TableDefinition<PaymentWebhookRow>;

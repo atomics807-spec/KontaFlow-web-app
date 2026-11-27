@@ -72,3 +72,7 @@ export function weekdayInZone(timeZone = DEFAULT_TIMEZONE, now = new Date()): nu
   }).format(now);
   return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(label);
 }
+
+export function isLastDayOfMonthInZone(timeZone = DEFAULT_TIMEZONE, now = new Date()): boolean {
+  return todayInZone(timeZone, now) === monthBounds(now, timeZone).end;
+}

@@ -3126,6 +3126,155 @@ async function main(): Promise<void> {
       true,
     );
 
+    console.log("\nPhase 15 · scheduled report preferences and deliveries");
+
+    eq(
+      "monthly reports are granted to every active plan",
+      await scalar(
+        client,
+        `select count(*) from plan_features pf
+           join subscription_plans p on p.id = pf.plan_id
+           join subscription_features f on f.id = pf.feature_id
+          where f.code = 'monthly_reports' and pf.included and p.code in ('starter', 'growth', 'scale')`,
+      ),
+      "3",
+    );
+    eq(
+      "owner report preferences are seeded",
+      await scalar(client, `select count(*) from report_preferences where workspace_id = $1 and user_id = $2`, [idA, ALICE]),
+      "1",
+    );
+    eq(
+      "owner defaults to daily email and in-app reports",
+      await scalar(
+        client,
+        `select (frequency = 'daily' and email_enabled and in_app_enabled and not whatsapp_enabled)::text
+           from report_preferences where workspace_id = $1 and user_id = $2`,
+        [idA, ALICE],
+      ),
+      "true",
+    );
+    eq(
+      "outsiders cannot read another tenant's report preferences",
+      await asRole(client, "authenticated", charlie, async (c) =>
+        scalar(c, `select count(*) from report_preferences where workspace_id = $1`, [idA]),
+      ),
+      "0",
+    );
+    eq(
+      "a member can change their own report cadence",
+      await asRole(
+        client,
+        "authenticated",
+        alice,
+        async (c) => {
+          const result = await c.query<{ frequency: string; language: string }>(
+            `update report_preferences set frequency = 'weekly', language = 'fr'
+              where workspace_id = $1 and user_id = $2
+              returning frequency, language`,
+            [idA, ALICE],
+          );
+          return `${result.rows[0]?.frequency}/${result.rows[0]?.language}`;
+        },
+        true,
+      ),
+      "weekly/fr",
+    );
+    eq(
+      "a member cannot write report preferences for somebody else",
+      (
+        await expectError(
+          client,
+          "authenticated",
+          alice,
+          `insert into report_preferences (workspace_id, user_id, language, frequency)
+           values ($1, $2, 'en', 'daily')`,
+          [idA, BOB],
+          { commit: true },
+        )
+      )?.code,
+      "42501",
+    );
+
+    const monthlyDelivery = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const result = await c.query<{ id: string }>(
+          `insert into report_deliveries
+             (workspace_id, user_id, kind, report_date, channel, status, attempts, metadata)
+           values ($1, $2, 'monthly', '2026-05-31', 'in_app', 'sent', 1, '{}'::jsonb)
+           returning id`,
+          [idA, ALICE],
+        );
+        return result.rows[0]!.id;
+      },
+      true,
+    );
+    ok("monthly report deliveries are accepted", Boolean(monthlyDelivery));
+    eq(
+      "report delivery rows are unique per recipient, kind and channel",
+      (
+        await expectError(
+          client,
+          "service_role",
+          null,
+          `insert into report_deliveries
+             (workspace_id, user_id, kind, report_date, channel, status, attempts, metadata)
+           values ($1, $2, 'monthly', '2026-05-31', 'in_app', 'sent', 1, '{}'::jsonb)`,
+          [idA, ALICE],
+          { commit: true },
+        )
+      )?.code,
+      "23505",
+    );
+    eq(
+      "a member can read their own delivery log",
+      await asRole(client, "authenticated", alice, async (c) =>
+        scalar(c, `select count(*) from report_deliveries where id = $1`, [monthlyDelivery]),
+      ),
+      "1",
+    );
+    eq(
+      "outsiders cannot read another tenant's delivery log",
+      await asRole(client, "authenticated", charlie, async (c) =>
+        scalar(c, `select count(*) from report_deliveries where id = $1`, [monthlyDelivery]),
+      ),
+      "0",
+    );
+
+    await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        await c.query(
+          `insert into notifications (workspace_id, user_id, channel, title, body, data)
+           values ($1, $2, 'in_app', 'Monthly report', 'Body',
+             '{"report_kind":"monthly","report_date":"2099-12-31"}'::jsonb)`,
+          [idA, ALICE],
+        );
+      },
+      true,
+    );
+    eq(
+      "in-app report notices are idempotent per report",
+      (
+        await expectError(
+          client,
+          "service_role",
+          null,
+          `insert into notifications (workspace_id, user_id, channel, title, body, data)
+           values ($1, $2, 'in_app', 'Monthly report', 'Body',
+             '{"report_kind":"monthly","report_date":"2099-12-31"}'::jsonb)`,
+          [idA, ALICE],
+          { commit: true },
+        )
+      )?.code,
+      "23505",
+    );
+
     console.log(`\nDatabase: ${databaseName()}/${dbName}`);
   } finally {
     await client.end();

@@ -14,6 +14,8 @@ export type EmailMessage = {
   html: string;
   text: string;
   replyTo?: string;
+  /** Provider-level idempotency key. Resend deduplicates retries with the same key. */
+  idempotencyKey?: string;
 };
 
 export type SendResult = { sent: boolean; id?: string; reason?: string };
@@ -32,16 +34,19 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
 
   try {
     const resend = new Resend(env.RESEND_API_KEY);
-    const { data, error } = await resend.emails.send({
-      from: env.EMAIL_FROM,
-      to: message.to,
-      subject: message.subject,
-      html: message.html,
-      text: message.text,
-      ...(message.replyTo ?? env.EMAIL_REPLY_TO
-        ? { replyTo: message.replyTo ?? env.EMAIL_REPLY_TO }
-        : {}),
-    });
+    const { data, error } = await resend.emails.send(
+      {
+        from: env.EMAIL_FROM,
+        to: message.to,
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+        ...(message.replyTo ?? env.EMAIL_REPLY_TO
+          ? { replyTo: message.replyTo ?? env.EMAIL_REPLY_TO }
+          : {}),
+      },
+      message.idempotencyKey ? { idempotencyKey: message.idempotencyKey } : undefined,
+    );
     if (error) throw new Error(error.message);
     return { sent: true, id: data?.id };
   } catch (error) {

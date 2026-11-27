@@ -12,7 +12,7 @@ import { linkUssdChannel } from "@/services/ussd";
 import { updateAiSettings } from "@/services/ai-commands";
 import { purgeAiHistory, updateAiPreferences } from "@/services/ai-preferences";
 import { parseMoneyToMinor } from "@/lib/money";
-import { aiAdvisorPreferencesSchema, workspaceSchema } from "@/lib/validation/schemas";
+import { aiAdvisorPreferencesSchema, reportPreferencesSchema, workspaceSchema } from "@/lib/validation/schemas";
 import { fieldErrorsFrom, formError, formSuccess, type FormState } from "@/lib/action-utils";
 import { isAppError } from "@/lib/errors";
 import { persistLocalePreference } from "@/app/[locale]/locale-actions";
@@ -21,6 +21,7 @@ import { normalizePhone } from "@/lib/validation/phone";
 import { interpolate } from "@/lib/i18n/interpolate";
 import { getWorkspaceEntitlements } from "@/lib/entitlements/service";
 import { getServerEnv } from "@/lib/env";
+import { getVerifiedWhatsappAddress, updateReportPreferences } from "@/services/report-preferences";
 
 export async function updateWorkspaceAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
@@ -38,7 +39,13 @@ export async function updateWorkspaceAction(_prev: FormState, formData: FormData
     locale: formData.get("uiLocale") ?? locale,
   });
 
-  if (!parsed.success) return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
+  if (!parsed.success) {
+    const missingChannel = parsed.error.issues.some((issue) => issue.path[0] === "channels");
+    return formError(
+      missingChannel ? dict.settings.reportsChannelRequired : dict.errors.generic,
+      fieldErrorsFrom(parsed.error),
+    );
+  }
 
   try {
     await updateWorkspace(context.workspace.id, parsed.data);
@@ -101,7 +108,13 @@ export async function updateAiAdvisorSettingsAction(_prev: FormState, formData: 
     advisorFocus: formData.get("advisorFocus"),
     advisorNote: formData.get("advisorNote") ?? "",
   });
-  if (!parsed.success) return formError(dict.errors.generic, fieldErrorsFrom(parsed.error));
+  if (!parsed.success) {
+    const missingChannel = parsed.error.issues.some((issue) => issue.path[0] === "channels");
+    return formError(
+      missingChannel ? dict.settings.reportsChannelRequired : dict.errors.generic,
+      fieldErrorsFrom(parsed.error),
+    );
+  }
 
   try {
     await updateAiPreferences({
@@ -142,6 +155,58 @@ export async function purgeAiHistoryAction(_prev: FormState, formData: FormData)
   } catch (error) {
     return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
   }
+}
+
+export async function updateReportPreferencesAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+  const dict = await getDictionary(locale);
+  const context = await getWorkspaceContext();
+  if (!context) return formError(dict.errors.unauthorized);
+
+  const parsed = reportPreferencesSchema.safeParse({
+    language: formData.get("reportLanguage"),
+    frequency: formData.get("reportFrequency"),
+    emailEnabled: formData.get("reportEmail") === "on",
+    inAppEnabled: formData.get("reportInApp") === "on",
+    whatsappEnabled: formData.get("reportWhatsapp") === "on",
+  });
+  if (!parsed.success) {
+    const missingChannel = parsed.error.issues.some((issue) => issue.path[0] === "channels");
+    return formError(
+      missingChannel ? dict.settings.reportsChannelRequired : dict.errors.generic,
+      fieldErrorsFrom(parsed.error),
+    );
+  }
+
+  if (parsed.data.whatsappEnabled) {
+    const entitlements = await getWorkspaceEntitlements(context.workspace.id, context.user.id);
+    if (!entitlements.features.whatsapp_integration.included) {
+      return formError(
+        interpolate(dict.plans.lockedBody, {
+          plan: entitlements.features.whatsapp_integration.requiredPlan ?? dict.plans.growth,
+        }),
+      );
+    }
+    const address = await getVerifiedWhatsappAddress(context.workspace.id, context.user.id);
+    if (!address) return formError(dict.settings.reportsWhatsappUnavailable);
+  }
+
+  try {
+    await updateReportPreferences({
+      workspaceId: context.workspace.id,
+      userId: context.user.id,
+      language: parsed.data.language,
+      frequency: parsed.data.frequency,
+      emailEnabled: parsed.data.emailEnabled,
+      inAppEnabled: parsed.data.inAppEnabled,
+      whatsappEnabled: parsed.data.whatsappEnabled,
+    });
+  } catch (error) {
+    return formError(isAppError(error) ? error.publicMessage : dict.errors.generic);
+  }
+
+  revalidatePath(`/${locale}/settings`);
+  return formSuccess(dict.settings.reportsSaved);
 }
 
 export async function linkChannelAction(_prev: FormState, formData: FormData): Promise<FormState> {
