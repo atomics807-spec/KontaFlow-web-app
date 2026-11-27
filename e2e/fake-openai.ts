@@ -3,8 +3,33 @@ import { createServer } from "node:http";
 const port = Number(process.env.FAKE_OPENAI_PORT ?? 4010);
 
 function completion(body: unknown) {
-  const messages = (body as { messages?: { role?: string; tool_calls?: unknown[] }[] })?.messages ?? [];
+  const messages =
+    (body as { messages?: { role?: string; content?: string | null; tool_calls?: unknown[] }[] })?.messages ?? [];
   const hasToolResult = messages.some((message) => message.role === "tool");
+  const lastUserText = [...messages].reverse().find((message) => message.role === "user")?.content ?? "";
+  const asksQuestion =
+    /\?|^(how|what|who|which|why|when|where|can|should|give|show|tell)\b/i.test(lastUserText) &&
+    !/\b(spent|record|bought|paid|sold|earned|received)\b/i.test(lastUserText);
+  if (asksQuestion && !hasToolResult) {
+    return {
+      id: "chatcmpl-preview-question",
+      object: "chat.completion",
+      created: Math.floor(Date.now() / 1000),
+      model: "gpt-4.1-mini",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content:
+              "The assistant pipeline is working. This preview uses a local AI stub, so live ledger analysis needs an OpenAI API key. Your demo books are populated and ready for questions once a live key is configured.",
+          },
+          finish_reason: "stop",
+        },
+      ],
+      usage: { prompt_tokens: 90, completion_tokens: 35, total_tokens: 125 },
+    };
+  }
   if (hasToolResult) {
     return {
       id: "chatcmpl-e2e-final",
