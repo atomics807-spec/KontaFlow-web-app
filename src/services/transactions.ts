@@ -243,3 +243,86 @@ export async function voidTransaction(transactionId: string, reason?: string): P
   });
   if (error) throw assertNoError(error, "Could not void the transaction.");
 }
+
+export type TransactionCursor = { occurredOn: string; createdAt: string; id: string };
+
+export type TransactionPage = {
+  rows: TransactionViewRow[];
+  nextCursor: string | null;
+};
+
+function encodeCursor(row: TransactionViewRow): string {
+  return Buffer.from(
+    JSON.stringify({ occurredOn: row.occurred_on, createdAt: row.created_at, id: row.id }),
+  ).toString("base64url");
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function decodeCursor(value: string): TransactionCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as TransactionCursor;
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(parsed.occurredOn) &&
+      ISO_TIMESTAMP_PATTERN.test(parsed.createdAt) &&
+      !Number.isNaN(Date.parse(parsed.createdAt)) &&
+      UUID_PATTERN.test(parsed.id)
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Keyset pagination for large tenant ledgers. Offset pagination becomes
+ * progressively slower on deep pages; this stays on the composite index.
+ */
+export async function listTransactionsPage(
+  workspaceId: string,
+  filters: TransactionFilters & { cursor?: string | null } = {},
+): Promise<TransactionPage> {
+  const supabase = await createClient();
+  const requestedLimit = Number.isFinite(filters.limit) ? Number(filters.limit) : 50;
+  const limit = Math.min(Math.max(requestedLimit, 1), 100);
+  let query = supabase
+    .from("v_transactions")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .order("occurred_on", { ascending: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit + 1);
+
+  if (filters.kind && filters.kind !== "all") query = query.eq("kind", filters.kind);
+  if (filters.status && filters.status !== "all") query = query.eq("status", filters.status);
+  if (filters.categoryId) query = query.eq("category_id", filters.categoryId);
+  if (filters.from) query = query.gte("occurred_on", filters.from);
+  if (filters.to) query = query.lte("occurred_on", filters.to);
+  if (filters.search) {
+    const term = filters.search.replace(/[%,()]/g, " ").trim();
+    if (term) query = query.or(`description.ilike.%${term}%,reference.ilike.%${term}%`);
+  }
+
+  const cursor = filters.cursor ? decodeCursor(filters.cursor) : null;
+  if (filters.cursor && !cursor) throw new AppError("validation_failed", "Invalid page cursor.");
+  if (cursor) {
+    const { occurredOn, createdAt, id } = cursor;
+    query = query.or(
+      `occurred_on.lt.${occurredOn},and(occurred_on.eq.${occurredOn},created_at.lt.${createdAt}),` +
+        `and(occurred_on.eq.${occurredOn},created_at.eq.${createdAt},id.lt.${id})`,
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) throw assertNoError(error, "Could not load transactions.");
+  const rows = (data ?? []) as TransactionViewRow[];
+  const pageRows = rows.slice(0, limit);
+  return {
+    rows: pageRows,
+    nextCursor: rows.length > limit && pageRows.length ? encodeCursor(pageRows[pageRows.length - 1]!) : null,
+  };
+}

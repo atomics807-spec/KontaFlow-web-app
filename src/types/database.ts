@@ -975,6 +975,58 @@ export type ReportResult = {
   topCustomers: { name: string; total: string }[];
 };
 
+export type JobStatus = "queued" | "processing" | "completed" | "failed" | "retrying" | "dead_lettered";
+export type JobRow = {
+  id: string;
+  workspace_id: string | null;
+  actor_id: string | null;
+  job_type: string;
+  payload: Json;
+  status: JobStatus;
+  priority: number;
+  attempts: number;
+  max_attempts: number;
+  available_at: string;
+  locked_at: string | null;
+  locked_by: string | null;
+  lease_expires_at: string | null;
+  last_error: string | null;
+  result: Json | null;
+  result_ref: string | null;
+  idempotency_key: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+};
+export type OutboxEventRow = {
+  id: string;
+  workspace_id: string | null;
+  event_type: string;
+  aggregate_type: string;
+  aggregate_id: string | null;
+  payload: Json;
+  status: "pending" | "processing" | "delivered" | "failed" | "dead_lettered";
+  attempts: number;
+  max_attempts: number;
+  available_at: string;
+  locked_at: string | null;
+  locked_by: string | null;
+  lease_expires_at: string | null;
+  delivered_at: string | null;
+  last_error: string | null;
+  idempotency_key: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type AppCacheRow = {
+  cache_key: string;
+  workspace_id: string | null;
+  value: Json;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
 type TableDefinition<Row, Insert = Partial<Row>, Update = Partial<Row>> = {
   Row: Row;
   Insert: Insert;
@@ -1009,6 +1061,22 @@ export type Database = {
         bucket_key: string;
         count: number;
         window_start: string;
+      }>;
+      workspace_daily_financials: TableDefinition<{
+        workspace_id: string;
+        business_date: string;
+        income_minor: number;
+        expense_minor: number;
+        posted_count: number;
+        updated_at: string;
+      }>;
+      job_queue: TableDefinition<JobRow>;
+      outbox_events: TableDefinition<OutboxEventRow>;
+      app_cache: TableDefinition<AppCacheRow>;
+      app_cache_locks: TableDefinition<{
+        cache_key: string;
+        owner: string;
+        expires_at: string;
       }>;
       subscription_plans: TableDefinition<SubscriptionPlanRow>;
       subscription_features: TableDefinition<SubscriptionFeatureRow>;
@@ -1103,6 +1171,89 @@ export type Database = {
       consume_security_rate_limit: {
         Args: { p_key: string; p_limit: number; p_window_seconds: number };
         Returns: boolean;
+      };
+      consume_security_rate_limit_v2: {
+        Args: { p_key: string; p_limit: number; p_window_seconds: number };
+        Returns: {
+          allowed: boolean;
+          count: number;
+          limit: number;
+          remaining: number;
+          reset_at: string;
+        };
+      };
+      enqueue_job: {
+        Args: {
+          p_job_type: string;
+          p_payload?: Json;
+          p_workspace_id?: string | null;
+          p_actor_id?: string | null;
+          p_priority?: number;
+          p_run_at?: string;
+          p_max_attempts?: number;
+          p_idempotency_key?: string | null;
+        };
+        Returns: string | null;
+      };
+      claim_jobs: {
+        Args: {
+          p_worker_id: string;
+          p_limit?: number;
+          p_job_types?: string[] | null;
+          p_lease_seconds?: number;
+        };
+        Returns: JobRow[];
+      };
+      complete_job: {
+        Args: { p_job_id: string; p_worker_id: string; p_result?: Json; p_result_ref?: string | null };
+        Returns: boolean;
+      };
+      fail_job: {
+        Args: { p_job_id: string; p_worker_id: string; p_error: string; p_retry_at?: string | null };
+        Returns: string;
+      };
+      reap_stale_jobs: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      claim_outbox_events: {
+        Args: { p_worker_id: string; p_limit?: number; p_lease_seconds?: number };
+        Returns: OutboxEventRow[];
+      };
+      reap_stale_outbox_events: {
+        Args: { p_limit?: number };
+        Returns: number;
+      };
+      complete_outbox_event: {
+        Args: { p_event_id: string; p_worker_id: string };
+        Returns: boolean;
+      };
+      fail_outbox_event: {
+        Args: { p_event_id: string; p_worker_id: string; p_error: string; p_retry_at?: string | null };
+        Returns: string;
+      };
+      get_operational_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          queue: {
+            queued: number;
+            processing: number;
+            completed: number;
+            failed: number;
+            dead_lettered: number;
+            oldest_queued_seconds: number;
+          };
+          outbox: { pending: number; processing: number; dead_lettered: number };
+          cache: { entries: number; expired: number };
+        };
+      };
+      acquire_cache_lock: {
+        Args: { p_key: string; p_owner: string; p_ttl_seconds?: number };
+        Returns: boolean;
+      };
+      release_cache_lock: {
+        Args: { p_key: string; p_owner: string };
+        Returns: undefined;
       };
       request_account_deletion: {
         Args: { p_reason?: string | null; p_workspace_id?: string | null };

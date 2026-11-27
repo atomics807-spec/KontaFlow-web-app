@@ -1386,7 +1386,7 @@ async function main(): Promise<void> {
             and not exists (
               select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname
             )
-            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries', 'email_deliveries', 'support_access_grants', 'security_rate_limits')`,
+            and c.relname not in ('ussd_sessions', 'webhook_events', 'payment_webhooks', 'payment_refunds', 'otp_verifications', 'idempotency_records', 'contact_messages', 'platform_admin_audit_log', 'platform_settings', 'trial_grants', 'trial_reminder_log', 'report_deliveries', 'email_deliveries', 'support_access_grants', 'security_rate_limits', 'workspace_daily_financials', 'job_queue', 'outbox_events', 'app_cache', 'app_cache_locks')`,
       ),
       "",
     );
@@ -3510,6 +3510,167 @@ async function main(): Promise<void> {
       )?.code,
       "23505",
     );
+
+
+    console.log("\nPhase 21 · scalability primitives");
+    eq(
+      "daily rollup income matches posted ledger",
+      await scalar(
+        client,
+        `select coalesce(sum(income_minor), 0) from workspace_daily_financials where workspace_id = $1`,
+        [idA],
+      ),
+      await scalar(
+        client,
+        `select coalesce(sum(amount_minor), 0) from transactions
+          where workspace_id = $1 and kind = 'income' and status = 'posted'`,
+        [idA],
+      ),
+    );
+    eq(
+      "daily rollup expense matches posted ledger",
+      await scalar(
+        client,
+        `select coalesce(sum(expense_minor), 0) from workspace_daily_financials where workspace_id = $1`,
+        [idA],
+      ),
+      await scalar(
+        client,
+        `select coalesce(sum(amount_minor), 0) from transactions
+          where workspace_id = $1 and kind = 'expense' and status = 'posted'`,
+        [idA],
+      ),
+    );
+
+    const queueResult = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const first = await c.query<{ id: string }>(
+          `select public.enqueue_job(
+             'test.noop', '{"source":"db-test"}'::jsonb, $1, $2, 50, now(), 2, 'db-test-job'
+           ) as id`,
+          [idA, ALICE],
+        );
+        const second = await c.query<{ id: string }>(
+          `select public.enqueue_job(
+             'test.noop', '{"source":"db-test"}'::jsonb, $1, $2, 50, now(), 2, 'db-test-job'
+           ) as id`,
+          [idA, ALICE],
+        );
+        const claimed = await c.query<{ id: string; attempts: number }>(
+          `select id, attempts from public.claim_jobs('db-test-worker', 1, array['test.noop'], 60)`,
+        );
+        const completed = await c.query<{ ok: boolean }>(
+          `select public.complete_job($1, 'db-test-worker', '{"ok":true}'::jsonb, 'result-1') as ok`,
+          [claimed.rows[0]?.id ?? null],
+        );
+        return {
+          first: first.rows[0]?.id,
+          second: second.rows[0]?.id,
+          claimed: claimed.rows[0],
+          completed: completed.rows[0]?.ok,
+        };
+      },
+      true,
+    );
+    ok("queue enqueue returns a job id", Boolean(queueResult.first));
+    eq("queue idempotency key reuses the job", queueResult.second, queueResult.first);
+    eq("queue claim increments attempts", queueResult.claimed?.attempts, 1);
+    eq("queue complete closes the job", queueResult.completed, true);
+
+    const deadLetter = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const created = await c.query<{ id: string }>(
+          `select public.enqueue_job('test.dead', '{}'::jsonb, $1, $2, 50, now(), 1, 'db-test-dead') as id`,
+          [idA, ALICE],
+        );
+        await c.query(`select public.claim_jobs('db-test-worker', 1, array['test.dead'], 60)`);
+        return c.query<{ status: string }>(
+          `select public.fail_job($1, 'db-test-worker', 'intentional', now()) as status`,
+          [created.rows[0]?.id ?? null],
+        );
+      },
+      true,
+    );
+    eq("queue dead-letters after max attempts", deadLetter.rows[0]?.status, "dead_lettered");
+
+    const outboxLease = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const claimed = await c.query<{ id: string; attempts: number }>(
+          `select id, attempts from public.claim_outbox_events('db-test-outbox', 1, 60)`,
+        );
+        const id = claimed.rows[0]?.id;
+        if (!id) return { claimed: null, reaped: null, status: null };
+        await c.query(
+          `update public.outbox_events set lease_expires_at = now() - interval '1 minute' where id = $1`,
+          [id],
+        );
+        const reaped = await c.query<{ n: number }>(`select public.reap_stale_outbox_events(10) as n`);
+        const status = await c.query<{ status: string }>(
+          `select status from public.outbox_events where id = $1`,
+          [id],
+        );
+        return { claimed: claimed.rows[0], reaped: reaped.rows[0]?.n, status: status.rows[0]?.status };
+      },
+      true,
+    );
+    eq("outbox claim increments attempts", outboxLease.claimed?.attempts, 1);
+    eq("stale outbox lease is reaped", outboxLease.reaped, 1);
+    ok("reaped outbox is retryable or dead-lettered", outboxLease.status === "failed" || outboxLease.status === "dead_lettered");
+
+    eq(
+      "transaction writes emit an outbox event",
+      await scalar(
+        client,
+        `select count(*) from outbox_events where workspace_id = $1 and event_type = 'transaction.posted'`,
+        [idA],
+      ) !== "0"
+        ? "true"
+        : "false",
+      "true",
+    );
+
+    const cacheLocks = await asRole(
+      client,
+      "service_role",
+      null,
+      async (c) => {
+        const first = await c.query<{ ok: boolean }>(
+          `select public.acquire_cache_lock('cache:test:key', 'owner-a', 15) as ok`,
+        );
+        const second = await c.query<{ ok: boolean }>(
+          `select public.acquire_cache_lock('cache:test:key', 'owner-b', 15) as ok`,
+        );
+        await c.query(`select public.release_cache_lock('cache:test:key', 'owner-a')`);
+        const third = await c.query<{ ok: boolean }>(
+          `select public.acquire_cache_lock('cache:test:key', 'owner-b', 15) as ok`,
+        );
+        return [first.rows[0]?.ok, second.rows[0]?.ok, third.rows[0]?.ok];
+      },
+      true,
+    );
+    eq("cache lock prevents concurrent fills", cacheLocks, [true, false, true]);
+
+    const rate = await asRole(
+      client,
+      "service_role",
+      null,
+      (c) =>
+        c.query<{ result: { allowed: boolean; count: number; remaining: number } }>(
+          `select public.consume_security_rate_limit_v2('phase21:test', 2, 60) as result`,
+        ),
+      true,
+    );
+    eq("rate-limit v2 returns a decision", rate.rows[0]?.result.allowed, true);
+    eq("rate-limit v2 reports remaining capacity", rate.rows[0]?.result.remaining, 1);
 
     console.log(`\nDatabase: ${databaseName()}/${dbName}`);
   } finally {

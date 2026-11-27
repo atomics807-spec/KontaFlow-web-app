@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerEnv } from "@/lib/env";
 import { hasServiceRole, createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
-import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { consumeRateLimitDetailed, rateLimitHeaders } from "@/lib/security/durable-rate-limit";
 import { getPaymentAdapter } from "@/lib/payments/registry";
 import { isPaymentProvider, type PaymentProviderId } from "@/lib/payments/types";
 import { sha256Hex } from "@/lib/payments/signature";
@@ -31,8 +31,13 @@ async function handle(request: Request, context: Context): Promise<Response> {
   }
   const provider: PaymentProviderId = rawProvider;
 
-  if (!(await consumeRateLimit(clientKey(request, provider), getServerEnv().RATE_LIMIT_WEBHOOK_PER_MINUTE, 60))) {
-    return new Response("Too many requests", { status: 429 });
+  const webhookLimit = await consumeRateLimitDetailed(
+    clientKey(request, provider),
+    getServerEnv().RATE_LIMIT_WEBHOOK_PER_MINUTE,
+    60,
+  );
+  if (!webhookLimit.allowed) {
+    return new Response("Too many requests", { status: 429, headers: rateLimitHeaders(webhookLimit) });
   }
 
   const declaredLength = Number(request.headers.get("content-length") ?? 0);

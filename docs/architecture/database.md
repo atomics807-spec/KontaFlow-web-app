@@ -270,6 +270,26 @@ that already had RLS. Exemptions are `profiles`, `account_restrictions` and the
 two platform-only tables. Read `docs/architecture/platform-administration.md`
 before adding a table that should participate in tenant isolation.
 
+## Scalability tables (migration 0044)
+
+| Table / function | Purpose |
+| --- | --- |
+| `workspace_daily_financials` | Per-workspace, per-day income/expense/net rollup maintained by a delta trigger on `transactions`; `get_dashboard_summary` reads it for period totals and the monthly series. |
+| `job_queue` | Durable background jobs with type, payload, workspace/actor, priority, attempts, lease, `available_at`, result and idempotency key. Service-role only. |
+| `outbox_events` | Transactional outbox emitted by transaction, payment and subscription triggers; delivered at least once. Service-role only. |
+| `app_cache` / `app_cache_locks` | Shared L2 JSON cache with TTL and stampede lock. Service-role only. |
+| `enqueue_job`, `claim_jobs`, `complete_job`, `fail_job`, `reap_stale_jobs` | Queue lifecycle using `FOR UPDATE SKIP LOCKED`. |
+| `claim_outbox`, `complete_outbox_event`, `fail_outbox_event` | Outbox delivery lifecycle. |
+| `cache_get`, `cache_set`, `cache_delete_workspace`, `acquire_cache_lock` | Cache primitives used by `src/lib/cache/distributed.ts`. |
+| `consume_security_rate_limit_v2` | Detailed rate-limit decision (`allowed`, `count`, `limit`, `remaining`, `reset_at`). |
+| `get_operational_stats` | Queue/outbox/cache depth for `/api/health` and `/api/metrics`. |
+
+Migration 0045 rewrites `get_dashboard_summary` to use the rollup; migration
+0046 adds `get_operational_stats`; migration 0047 adds
+`reap_stale_outbox_events` so a crashed outbox worker cannot strand deliveries
+in `processing`. The rollup is derived data and is checked
+against the posted ledger in the Phase 21 database tests.
+
 ## Running migrations
 
 ```bash
@@ -290,7 +310,7 @@ PostgreSQL allows it (`if not exists`, `on conflict`, `drop ... if exists`).
 
 ## Test coverage
 
-`npm run test:db` runs the full integration suite (349 assertions at the time of writing). The Phase 3 block covers
+`npm run test:db` runs the full integration suite (376 assertions at the time of writing). The Phase 3 block covers
 business-settings provisioning, plan catalogue linkage, invoice numbering,
 invoice totals and locking, debt repayment and overpayment, reversal mirroring
 and double-reversal protection, cross-tenant reads and writes for invoices,

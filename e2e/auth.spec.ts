@@ -32,8 +32,8 @@ test("new business completes registration, verification and bookkeeping", async 
 
   await page.goto("/en/transactions");
   await expect(page.getByRole("heading", { name: "Transactions" })).toBeVisible();
-  await expect(page.getByText("E2E cement sale")).toBeVisible();
-  await expect(page.getByText("E2E fuel")).toBeVisible();
+  await expect(page.getByText("E2E cement sale").first()).toBeVisible();
+  await expect(page.getByText("E2E fuel").first()).toBeVisible();
 
   await page.goto("/en/reports");
   await expect(page.getByRole("heading", { name: "Reports" })).toBeVisible();

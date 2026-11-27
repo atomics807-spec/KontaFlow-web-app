@@ -1,14 +1,18 @@
 import "server-only";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { assertNoError } from "@/lib/supabase/errors";
 import { todayInZone } from "@/lib/dates";
 import type { AdvisorFocus } from "@/types/ai-advisor";
-import type { AccountRow, CategoryRow, ContactRow, DebtRow, WorkspaceRow } from "@/types/database";
+import type { AccountRow, CategoryRow, ContactRow, Database, DebtRow, WorkspaceRow } from "@/types/database";
 import type { AiReferenceData } from "./command-builder";
 
-export async function loadAiReference(workspace: WorkspaceRow): Promise<AiReferenceData> {
-  const supabase = await createClient();
+export async function loadAiReference(
+  workspace: WorkspaceRow,
+  client?: SupabaseClient<Database>,
+): Promise<AiReferenceData> {
+  const supabase = client ?? (await createClient());
   const [categories, accounts, contacts, debts, settings, preferences] = await Promise.all([
     supabase
       .from("categories")

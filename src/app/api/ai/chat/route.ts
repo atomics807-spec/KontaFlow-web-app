@@ -12,8 +12,9 @@ import { logger } from "@/lib/logger";
 import { rejectCrossOrigin } from "@/lib/security/csrf";
 import { getServerEnv } from "@/lib/env";
 import { getRequestMeta } from "@/lib/security/request-meta";
-import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { consumeRateLimitDetailed, rateLimitHeaders } from "@/lib/security/durable-rate-limit";
 import { logSecurityEvent } from "@/lib/security/events";
+import { enqueueJob, getJob, queueAvailable, JOB_TYPES } from "@/lib/queue";
 
 const MAX_BODY_BYTES = 64 * 1024;
 
@@ -32,13 +33,12 @@ export async function POST(request: Request) {
   if (!can(context.role, "ai:use")) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const meta = await getRequestMeta();
-  if (
-    !(await consumeRateLimit(
-      `ai-chat:${user.id}`,
-      getServerEnv().RATE_LIMIT_AI_PER_MINUTE,
-      60,
-    ))
-  ) {
+  const aiLimit = await consumeRateLimitDetailed(
+    `ai-chat:${user.id}`,
+    getServerEnv().RATE_LIMIT_AI_PER_MINUTE,
+    60,
+  );
+  if (!aiLimit.allowed) {
     await logSecurityEvent({
       type: "ai.rate_limited",
       userId: user.id,
@@ -47,7 +47,10 @@ export async function POST(request: Request) {
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(aiLimit) },
+    );
   }
 
   const contentType = request.headers.get("content-type") ?? "";
@@ -78,7 +81,9 @@ export async function POST(request: Request) {
       userId: user.id,
       write: true,
     });
-    const existing = await findAiCommandByRequest(context.workspace.id, parsed.data.requestId);
+    const existing = await findAiCommandByRequest(context.workspace.id, parsed.data.requestId, {
+      userId: user.id,
+    });
     if (existing) {
       return NextResponse.json(
         {
@@ -89,6 +94,47 @@ export async function POST(request: Request) {
           clarification: false,
         },
         { headers: { "cache-control": "no-store" } },
+      );
+    }
+
+    if (parsed.data.async) {
+      if (!queueAvailable()) {
+        return NextResponse.json(
+          { error: "queue_unavailable", message: "The assistant queue is not configured." },
+          { status: 503, headers: { "retry-after": "30" } },
+        );
+      }
+      const jobId = await enqueueJob({
+        type: JOB_TYPES.aiBookkeeping,
+        workspaceId: context.workspace.id,
+        actorId: user.id,
+        priority: 20,
+        maxAttempts: 4,
+        idempotencyKey: `ai:${context.workspace.id}:${user.id}:${parsed.data.requestId}`,
+        payload: {
+          message: parsed.data.message,
+          requestId: parsed.data.requestId,
+          locale: parsed.data.locale ?? context.workspace.locale,
+          conversationId: parsed.data.conversationId ?? null,
+          // A queued reply is never posted without the owner seeing the draft.
+          requireConfirmation: true,
+        },
+      });
+      if (!jobId) {
+        return NextResponse.json(
+          { error: "queue_unavailable", message: "The assistant queue is not available." },
+          { status: 503, headers: { "retry-after": "30" } },
+        );
+      }
+      const job = await getJob(jobId);
+      const owned = job?.actor_id === user.id && job?.workspace_id === context.workspace.id;
+      return NextResponse.json(
+        {
+          jobId,
+          status: owned ? job.status : "queued",
+          poll: `/api/ai/jobs/${jobId}`,
+        },
+        { status: 202, headers: { "cache-control": "no-store" } },
       );
     }
 

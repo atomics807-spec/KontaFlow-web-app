@@ -102,6 +102,8 @@ completed by a commit alone.
 * Billing page with plan catalogue, usage and payment history.
 * Per-member daily, weekly and monthly reports by email, in-app notification or WhatsApp, with retries, idempotency and a delivery log.
 * PWA shell, strict security headers, audit trail, i18n EN/FR/PCM (Cameroon Pidgin).
+* Daily financial rollups, a durable queue/outbox with lease recovery, a shared
+  cache, protected metrics and keyset pagination for large ledgers.
 
 Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).
 
@@ -111,16 +113,19 @@ Known gaps and next steps: [docs/roadmap.md](docs/roadmap.md).
 | --- | --- |
 | [docs/architecture/overview.md](docs/architecture/overview.md) | System design, tenant boundary, money/time rules, folder layout |
 | [docs/architecture/database.md](docs/architecture/database.md) | Schema, invariants, RLS, service-role boundary |
+| [docs/architecture/scalability.md](docs/architecture/scalability.md) | Rollups, cache, queue/outbox, pagination, async AI and scaling limits |
 | [docs/security/security.md](docs/security/security.md) | Threat model, authz layers, webhook hardening, headers |
 | [docs/deployment/deployment.md](docs/deployment/deployment.md) | Deployment overview, env matrix, migrations, smoke tests |
 | [docs/deployment/vercel.md](docs/deployment/vercel.md) | Vercel build, domains, previews, cron and monitoring |
 | [docs/deployment/cloudflare.md](docs/deployment/cloudflare.md) | OpenNext adapter, bindings, secrets, cron Worker and limits |
 | [docs/deployment/production-checklist.md](docs/deployment/production-checklist.md) | Go/no-go checklist with evidence and operator items |
 | [docs/deployment/operations.md](docs/deployment/operations.md) | Health checks, alerts, backups, recovery and incident runbook |
+| [docs/deployment/scalability-operations.md](docs/deployment/scalability-operations.md) | Queue, outbox, cache and rollup runbooks; load testing |
 | [docs/integrations/channels.md](docs/integrations/channels.md) | USSD, WhatsApp, OpenAI, Resend, payments, offline sync |
 | [docs/integrations/ussd.md](docs/integrations/ussd.md) | Africa's Talking setup, handset verification, menu map and USSD checklist |
 | [docs/integrations/localization.md](docs/integrations/localization.md) | Locales, Pidgin convention, Tolgee overrides and formatting rules |
 | [docs/api/reference.md](docs/api/reference.md) | Routes, actions, RPCs, sync payloads |
+| [docs/testing/phase-21-scalability-report.md](docs/testing/phase-21-scalability-report.md) | Phase 21 gates, load results and residual risks |
 | [docs/roadmap.md](docs/roadmap.md) | Shipped vs next |
 
 ## Project layout

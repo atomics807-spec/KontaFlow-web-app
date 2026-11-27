@@ -45,6 +45,8 @@ export const aiRequestSchema = z.object({
   locale: z.string().optional(),
   /** Offline-queued commands must never auto-post; the person confirms the preview. */
   requireConfirmation: z.boolean().optional(),
+  /** Queue the model call and return a job id instead of holding the HTTP request. */
+  async: z.boolean().optional(),
 });
 
 export const aiCommandIdSchema = z.uuid();

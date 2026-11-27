@@ -28,6 +28,17 @@ const STATIC_FILE = /\.(?:png|jpe?g|svg|ico|webp|avif|txt|xml|webmanifest|js|css
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const incomingRequestId = request.headers.get("x-request-id");
+  const requestId =
+    incomingRequestId && /^[A-Za-z0-9._:-]{8,128}$/.test(incomingRequestId)
+      ? incomingRequestId
+      : crypto.randomUUID();
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-request-id", requestId);
+  const tag = <T extends NextResponse>(response: T): T => {
+    response.headers.set("x-request-id", requestId);
+    return response;
+  };
 
   if (
     pathname.startsWith("/api/") ||
@@ -36,7 +47,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/sw.js" ||
     STATIC_FILE.test(pathname)
   ) {
-    return NextResponse.next();
+    return tag(NextResponse.next({ request: { headers: requestHeaders } }));
   }
 
   const [first] = pathname.split("/").filter(Boolean);
@@ -46,7 +57,7 @@ export async function proxy(request: NextRequest) {
   if (first && pathLocale && !isLocale(first)) {
     const url = request.nextUrl.clone();
     url.pathname = `/${pathLocale}${pathname.slice(first.length)}`;
-    const response = NextResponse.redirect(url, 308);
+    const response = tag(NextResponse.redirect(url, 308));
     response.cookies.set(LOCALE_COOKIE, pathLocale, {
       path: "/",
       maxAge: 31536000,
@@ -63,7 +74,7 @@ export async function proxy(request: NextRequest) {
       : negotiateLocale(request.headers.get("accept-language"));
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
-    return NextResponse.redirect(url);
+    return tag(NextResponse.redirect(url));
   }
 
   const locale = pathLocale;
@@ -77,17 +88,17 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     url.search = `?next=${encodeURIComponent(`/${locale}${rest}`)}`;
-    return carryCookies(response, NextResponse.redirect(url));
+    return tag(carryCookies(response, NextResponse.redirect(url)));
   }
 
   if (userId && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/dashboard`;
     url.search = "";
-    return carryCookies(response, NextResponse.redirect(url));
+    return tag(carryCookies(response, NextResponse.redirect(url)));
   }
 
-  return response;
+  return tag(response);
 }
 
 export const config = {

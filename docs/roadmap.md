@@ -28,9 +28,16 @@ verified. This page tracks what is real today and what comes next.
 | Security headers incl. CSP, HSTS, frame denial | done |
 | Phase 18 hardening: HttpOnly session cap, CSRF/origin checks, durable rate limits, upload MIME/malware gate, AI abuse controls, security events, privacy export/delete | done |
 | Identity hardening: hashed OTPs, rate limits, column privileges, verified-tenant gate | done |
-| Unit tests (217 tests across money, permissions, i18n, validation, rate limits, security) | done |
-| Database integration suite (362 assertions on a fresh DB) | done |
+| Unit tests (223 tests across money, permissions, i18n, validation, rate limits, security, backoff, metrics) | done |
+| Database integration suite (376 assertions on a fresh DB) | done |
 | Deployment readiness: Vercel config, Cloudflare OpenNext + cron Worker, health endpoint, production checklist and recovery runbook | done |
+| Daily financial rollups and rollup-backed dashboard summary | done |
+| Durable `job_queue` + transactional `outbox_events`, lease/retry/dead-letter, queue-worker cron and container worker | done |
+| Two-layer distributed cache (L1 + Postgres) with stampede lock and outbox invalidation | done |
+| Durable rate-limit v2 with remaining/reset headers; keyset-paginated `/api/transactions` | done |
+| Operational metrics, protected `/api/metrics`, health operational detail and `x-request-id` propagation | done |
+| 100k-request load harness + k6 scenario; 100k health and 20k marketing baseline recorded | done |
+| Async AI turns through the durable queue with owner-scoped confirmation | done |
 
 ## Next
 
@@ -42,7 +49,7 @@ verified. This page tracks what is real today and what comes next.
 5. **Notifications**: in-app centre, email/SMS preferences, low-cash alerts.
 6. **Offline depth**: background sync, conflict review UI, storage for receipts
    captured offline.
-7. **Hardening**: nonce-based CSP, Sentry release tracking, load tests on reports,
-   external malware scanner in enforce mode.
+7. **Hardening**: nonce-based CSP, Sentry release tracking, report-export load
+   tests, external malware scanner in enforce mode, production game-day.
 8. **Compliance**: retention schedule, accountant audit export, DPA and
    international-transfer review for every subprocessor.

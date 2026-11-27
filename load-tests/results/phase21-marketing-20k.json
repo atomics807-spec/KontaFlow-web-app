@@ -1,0 +1,22 @@
+{
+  "target": "GET http://127.0.0.1:12000/en",
+  "requests": 20000,
+  "completed": 20000,
+  "concurrency": 100,
+  "elapsedMs": 99887,
+  "rps": 200.23,
+  "errorRate": 0,
+  "latencyMs": {
+    "min": 108,
+    "p50": 493,
+    "p95": 592,
+    "p99": 674,
+    "max": 838,
+    "avg": 499
+  },
+  "statusCounts": {
+    "200": 20000
+  },
+  "errorSamples": [],
+  "generatedAt": "2026-11-27T21:42:56.646Z"
+}

@@ -11,6 +11,7 @@ const JOBS: Record<string, string> = {
   "0 * * * *": "/api/cron/daily-digest",
   "0 8 * * *": "/api/cron/trial-reminders",
   "*/5 * * * *": "/api/cron/payment-reconciliation",
+  "* * * * *": "/api/cron/queue-worker",
 };
 
 const worker = {

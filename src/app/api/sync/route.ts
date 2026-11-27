@@ -13,10 +13,15 @@ import type { WorkspaceRole } from "@/types/database";
 import { rejectCrossOrigin } from "@/lib/security/csrf";
 import { getServerEnv } from "@/lib/env";
 import { getRequestMeta } from "@/lib/security/request-meta";
-import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { consumeRateLimitDetailed, rateLimitHeaders } from "@/lib/security/durable-rate-limit";
 import { logSecurityEvent } from "@/lib/security/events";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
+
 const MAX_BODY_BYTES = 256 * 1024;
+const MAX_ITEMS = 100;
 
 const itemSchema = z.object({
   clientGeneratedId: z.string().min(8).max(120),
@@ -43,7 +48,7 @@ const itemSchema = z.object({
     .optional(),
 });
 
-const bodySchema = z.object({ items: z.array(itemSchema).min(1).max(100) });
+const bodySchema = z.object({ items: z.array(itemSchema).min(1).max(MAX_ITEMS) });
 
 type Result = {
   clientGeneratedId: string;
@@ -67,7 +72,12 @@ export async function POST(request: Request) {
   }
 
   const meta = await getRequestMeta();
-  if (!(await consumeRateLimit(`offline-sync:${user.id}`, getServerEnv().RATE_LIMIT_SYNC_PER_MINUTE, 60))) {
+  const syncLimit = await consumeRateLimitDetailed(
+    `offline-sync:${user.id}`,
+    getServerEnv().RATE_LIMIT_SYNC_PER_MINUTE,
+    60,
+  );
+  if (!syncLimit.allowed) {
     await logSecurityEvent({
       type: "offline.sync_rate_limited",
       userId: user.id,
@@ -75,7 +85,10 @@ export async function POST(request: Request) {
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+    return NextResponse.json(
+      { error: "rate_limited" },
+      { status: 429, headers: rateLimitHeaders(syncLimit) },
+    );
   }
 
   const declaredLength = Number(request.headers.get("content-length") ?? 0);
@@ -107,15 +120,25 @@ export async function POST(request: Request) {
 
   const roles = new Map((memberships ?? []).map((m) => [m.workspace_id, m.role as WorkspaceRole]));
   const results: Result[] = [];
+  const resultByClientId = new Map<string, Result>();
+  const pushResult = (result: Result) => {
+    results.push(result);
+    resultByClientId.set(result.clientGeneratedId, result);
+  };
   const entitlementsByWorkspace = new Map<
     string,
     Awaited<ReturnType<typeof getWorkspaceEntitlements>>
   >();
 
   for (const item of parsed.data.items) {
+    const prior = resultByClientId.get(item.clientGeneratedId);
+    if (prior) {
+      pushResult({ ...prior });
+      continue;
+    }
     const role = roles.get(item.workspaceId);
     if (!role || !can(role, "transactions:create")) {
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
         code: "forbidden",
@@ -130,7 +153,7 @@ export async function POST(request: Request) {
       entitlementsByWorkspace.set(item.workspaceId, entitlements);
     }
     if (!entitlements.features.offline_bookkeeping.included) {
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
         code: "plan_required",
@@ -139,7 +162,7 @@ export async function POST(request: Request) {
       continue;
     }
     if (!entitlements.writable) {
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
         code: "plan_required",
@@ -163,7 +186,7 @@ export async function POST(request: Request) {
     });
 
     if (!validated.success) {
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
         code: "validation_failed",
@@ -186,7 +209,7 @@ export async function POST(request: Request) {
           .maybeSingle();
 
         if (existingError || !existing) {
-          results.push({
+          pushResult({
             clientGeneratedId: item.clientGeneratedId,
             status: "failed",
             code: "server_error",
@@ -203,7 +226,7 @@ export async function POST(request: Request) {
             occurredOn: validated.data.occurredOn,
           })
         ) {
-          results.push({
+          pushResult({
             clientGeneratedId: item.clientGeneratedId,
             status: "conflict",
             code: "duplicate_conflict",
@@ -215,7 +238,7 @@ export async function POST(request: Request) {
         }
       }
 
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: created.duplicate ? "duplicate" : "synced",
         transactionId: created.id,
@@ -223,7 +246,7 @@ export async function POST(request: Request) {
     } catch (error) {
       const message = isAppError(error) ? error.publicMessage : "Could not sync this entry.";
       if (!isAppError(error)) logger.error("sync.item_failed", { error });
-      results.push({
+      pushResult({
         clientGeneratedId: item.clientGeneratedId,
         status: "failed",
         code: isAppError(error) ? error.code : "server_error",

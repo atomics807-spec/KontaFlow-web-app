@@ -24,8 +24,14 @@ Cron ──────────┘        ├─ Server Components → servi
   USSD, WhatsApp and cron. They authenticate with a session, a shared secret,
   an HMAC signature or the cron bearer token — never with a client-supplied
   workspace id alone.
-* **Background work** is stateless HTTP: `/api/cron/daily-digest` runs on a
-  schedule from Vercel Cron or a Cloudflare Cron Trigger.
+* **Background work** is stateless HTTP. `/api/cron/queue-worker` drains the
+  durable `job_queue` and `outbox_events`; `/api/cron/daily-digest`,
+  `/api/cron/trial-reminders` and `/api/cron/payment-reconciliation` run their
+  own schedules. Vercel Cron or a Cloudflare Cron Trigger invokes the same
+  routes, and `npm run queue:work` can poll them from a container.
+* **Derived reads** use daily rollups (`workspace_daily_financials`) and a
+  two-layer cache (`src/lib/cache/distributed.ts`), so dashboards do not scan
+  the full ledger on every request. See [scalability.md](scalability.md).
 
 ## Tenant boundary
 
@@ -123,5 +129,7 @@ scripts                        migration runner, DB integration tests
 * Billing shows plans and usage; no card or mobile-money charge is executed yet
   (`PAYMENT_PROVIDER=none`).
 * Inventory is schema-ready but has no UI.
-* The in-process rate limiter is per instance; durable quotas live in Postgres
-  and edge limits belong in Cloudflare.
+* The in-process rate limiter is per instance; the durable Postgres bucket is
+  the shared authority, and edge limits belong in Cloudflare.
+* The queue is at-least-once. Handlers must be idempotent; see
+  [scalability.md](scalability.md) for leases, backoff and dead-lettering.

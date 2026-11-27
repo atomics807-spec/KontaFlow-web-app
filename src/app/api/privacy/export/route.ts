@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSessionUser } from "@/lib/supabase/auth";
 import { getServerEnv } from "@/lib/env";
 import { getRequestMeta } from "@/lib/security/request-meta";
-import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { consumeRateLimitDetailed, rateLimitHeaders } from "@/lib/security/durable-rate-limit";
 import { logSecurityEvent } from "@/lib/security/events";
 import { logger } from "@/lib/logger";
 
@@ -19,14 +19,13 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const meta = await getRequestMeta();
-  if (
-    !(await consumeRateLimit(
-      `privacy-export:${user.id}`,
-      getServerEnv().RATE_LIMIT_EXPORT_PER_MINUTE,
-      60,
-    ))
-  ) {
-    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  const exportLimit = await consumeRateLimitDetailed(
+    `privacy-export:${user.id}`,
+    getServerEnv().RATE_LIMIT_EXPORT_PER_MINUTE,
+    60,
+  );
+  if (!exportLimit.allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: rateLimitHeaders(exportLimit) });
   }
 
   const supabase = await createClient();

@@ -1,0 +1,22 @@
+{
+  "target": "GET http://127.0.0.1:12000/api/health",
+  "requests": 100000,
+  "completed": 100000,
+  "concurrency": 100,
+  "elapsedMs": 186245,
+  "rps": 536.93,
+  "errorRate": 0,
+  "latencyMs": {
+    "min": 50,
+    "p50": 180,
+    "p95": 228,
+    "p99": 258,
+    "max": 694,
+    "avg": 186
+  },
+  "statusCounts": {
+    "200": 100000
+  },
+  "errorSamples": [],
+  "generatedAt": "2026-11-27T21:40:55.895Z"
+}

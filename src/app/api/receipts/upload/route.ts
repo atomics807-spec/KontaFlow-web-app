@@ -4,7 +4,7 @@ import { getWorkspaceContext } from "@/lib/supabase/auth";
 import { logger } from "@/lib/logger";
 import { rejectCrossOrigin } from "@/lib/security/csrf";
 import { getRequestMeta } from "@/lib/security/request-meta";
-import { consumeRateLimit } from "@/lib/security/durable-rate-limit";
+import { consumeRateLimitDetailed, rateLimitHeaders } from "@/lib/security/durable-rate-limit";
 import {
   RECEIPT_MIMES,
   validateUploadedFile,
@@ -36,12 +36,14 @@ export async function POST(request: Request) {
   }
 
   const meta = await getRequestMeta();
-  const allowed = await consumeRateLimit(
+  const uploadLimit = await consumeRateLimitDetailed(
     `receipt-upload:${context.user.id}`,
     getServerEnv().RATE_LIMIT_UPLOAD_PER_MINUTE,
     60,
   );
-  if (!allowed) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (!uploadLimit.allowed) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429, headers: rateLimitHeaders(uploadLimit) });
+  }
 
   const declaredLength = Number(request.headers.get("content-length") ?? 0);
   if (Number.isFinite(declaredLength) && declaredLength > MAX_FORM_BYTES) {

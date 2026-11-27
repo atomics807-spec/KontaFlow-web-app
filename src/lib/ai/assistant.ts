@@ -16,7 +16,12 @@ import type { AiCommandView, Clarification } from "./types";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWorkspaceEntitlements, getWorkspaceEntitlementsAsService } from "@/lib/entitlements/service";
-import { createAiCommand, confirmAiCommand, setAiCommandReply } from "@/services/ai-commands";
+import {
+  commandRowToView,
+  createAiCommand,
+  confirmAiCommand,
+  setAiCommandReply,
+} from "@/services/ai-commands";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { todayInZone } from "@/lib/dates";
@@ -25,7 +30,7 @@ import { getServerEnv } from "@/lib/env";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import type { Locale } from "@/lib/i18n/config";
-import type { WorkspaceRow } from "@/types/database";
+import type { AiCommandRow, WorkspaceRow } from "@/types/database";
 
 export type AssistantMode = "interactive" | "direct";
 
@@ -79,11 +84,6 @@ export async function runAssistant(params: {
   const mode = params.mode ?? "interactive";
   const startedAt = Date.now();
   const dict = await getDictionary(params.locale);
-  const openai = getAiClient();
-  if (!openai) {
-    throw new AppError("integration_unavailable", dict.assistant.notConfigured);
-  }
-
   const supabase = params.serviceRole ? createAdminClient() : await createClient();
   const { workspace, userId, locale } = params;
   const entitlements = params.serviceRole
@@ -95,6 +95,31 @@ export async function runAssistant(params: {
   if (!entitlements.writable) {
     throw new AppError("plan_required", dict.assistant.quotaReached);
   }
+
+  // A retried job must not call the model or consume quota twice.
+  const { data: existingCommand } = await supabase
+    .from("ai_commands")
+    .select("*")
+    .eq("workspace_id", workspace.id)
+    .eq("user_id", userId)
+    .eq("request_id", params.requestId)
+    .maybeSingle();
+  if (existingCommand) {
+    const command = commandRowToView(existingCommand as AiCommandRow);
+    return {
+      conversationId: command.conversationId ?? params.conversationId ?? "",
+      reply: command.reply,
+      toolsUsed: [],
+      command,
+      clarification: false,
+    };
+  }
+
+  const openai = getAiClient();
+  if (!openai) {
+    throw new AppError("integration_unavailable", dict.assistant.notConfigured);
+  }
+
   const limit = entitlements.limits.aiMessagesPerMonth ?? 0;
 
   const { data: allowed, error: quotaError } = params.serviceRole
@@ -147,7 +172,7 @@ export async function runAssistant(params: {
     .limit(12);
 
   const history = ((historyRows ?? []) as HistoryRow[]).reverse();
-  const reference = mode === "interactive" ? await loadAiReference(workspace) : null;
+  const reference = mode === "interactive" ? await loadAiReference(workspace, supabase) : null;
 
   const systemPrompt =
     mode === "interactive" && reference
@@ -286,17 +311,19 @@ export async function runAssistant(params: {
         reply,
         locale,
         draft: interactiveContext.draft,
+        serviceRole: params.serviceRole,
       });
 
       if (
         params.autoPost !== false &&
+        !params.serviceRole &&
         reference?.settings.autoPost &&
         interactiveContext.draft.preview.autoPostEligible
       ) {
         try {
-          command = await confirmAiCommand(command.id, true);
+          command = await confirmAiCommand(command.id, true, params.serviceRole);
           reply = `${reply}\n\n${dict.assistant.autoPosted}\n${dict.assistant.undoHint}`;
-          await setAiCommandReply(command.id, reply).catch((error) => {
+          await setAiCommandReply(command.id, reply, params.serviceRole).catch((error) => {
             logger.warn("ai.command_reply_update_failed", { error });
           });
         } catch (error) {

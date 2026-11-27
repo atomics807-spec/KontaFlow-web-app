@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { publicCacheKey, withTenantCache } from "@/lib/cache/distributed";
 import { assertNoError } from "@/lib/supabase/errors";
 import type { PlanCatalogueEntry } from "@/types/entitlements";
 import type { SubscriptionFeatureRow } from "@/types/database";
@@ -13,10 +14,13 @@ export type BillingSettings = {
 };
 
 export async function getPlanCatalogue(): Promise<PlanCatalogueEntry[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_plan_catalogue");
-  if (error) throw assertNoError(error, "Could not load the plans.");
-  return (data ?? []) as PlanCatalogueEntry[];
+  const key = publicCacheKey("plans", "catalogue");
+  return withTenantCache(key, null, 300, async () => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("get_plan_catalogue");
+    if (error) throw assertNoError(error, "Could not load the plans.");
+    return (data ?? []) as PlanCatalogueEntry[];
+  });
 }
 
 export async function getAdminPlanCatalogue(): Promise<PlanCatalogueEntry[]> {

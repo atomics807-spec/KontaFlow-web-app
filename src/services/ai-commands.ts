@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { assertNoError } from "@/lib/supabase/errors";
 import { AppError } from "@/lib/errors";
 import { toSafeNumber } from "@/lib/money";
@@ -37,14 +38,17 @@ export function commandRowToView(row: AiCommandRow, now = new Date()): AiCommand
 export async function findAiCommandByRequest(
   workspaceId: string,
   requestId: string,
+  options: { userId?: string; serviceRole?: boolean } = {},
 ): Promise<AiCommandView | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  const supabase = options.serviceRole ? createAdminClient() : await createClient();
+  const base = supabase
     .from("ai_commands")
     .select("*")
     .eq("workspace_id", workspaceId)
-    .eq("request_id", requestId)
-    .maybeSingle();
+    .eq("request_id", requestId);
+  const { data, error } = options.userId
+    ? await base.eq("user_id", options.userId).maybeSingle()
+    : await base.maybeSingle();
   if (error) throw assertNoError(error, "Could not load the AI draft.");
   return data ? commandRowToView(data as AiCommandRow) : null;
 }
@@ -71,8 +75,9 @@ export async function createAiCommand(params: {
   reply: string;
   locale: string;
   draft: AiCommandDraft;
+  serviceRole?: boolean;
 }): Promise<AiCommandView> {
-  const supabase = await createClient();
+  const supabase = params.serviceRole ? createAdminClient() : await createClient();
   const { data, error } = await supabase
     .from("ai_commands")
     .insert({
@@ -92,7 +97,10 @@ export async function createAiCommand(params: {
 
   if (error) {
     if (error.code === "23505") {
-      const existing = await findAiCommandByRequest(params.workspaceId, params.requestId);
+      const existing = await findAiCommandByRequest(params.workspaceId, params.requestId, {
+        userId: params.userId,
+        serviceRole: params.serviceRole,
+      });
       if (existing) return existing;
     }
     throw assertNoError(error, "Could not save the AI draft.");
@@ -101,14 +109,18 @@ export async function createAiCommand(params: {
   return commandRowToView(data as AiCommandRow);
 }
 
-export async function confirmAiCommand(commandId: string, autoPosted = false): Promise<AiCommandView> {
-  const supabase = await createClient();
+export async function confirmAiCommand(
+  commandId: string,
+  autoPosted = false,
+  serviceRole = false,
+): Promise<AiCommandView> {
+  const supabase = serviceRole ? createAdminClient() : await createClient();
   const { error } = await supabase.rpc("confirm_ai_command", {
     p_command_id: commandId,
     p_auto_posted: autoPosted,
   });
   if (error) throw assertNoError(error, "Could not post the AI draft.");
-  return requireCommand(commandId);
+  return requireCommand(commandId, serviceRole);
 }
 
 export async function dismissAiCommand(commandId: string): Promise<AiCommandView> {
@@ -118,8 +130,12 @@ export async function dismissAiCommand(commandId: string): Promise<AiCommandView
   return requireCommand(commandId);
 }
 
-export async function setAiCommandReply(commandId: string, reply: string): Promise<void> {
-  const supabase = await createClient();
+export async function setAiCommandReply(
+  commandId: string,
+  reply: string,
+  serviceRole = false,
+): Promise<void> {
+  const supabase = serviceRole ? createAdminClient() : await createClient();
   const { error } = await supabase.rpc("set_ai_command_reply", {
     p_command_id: commandId,
     p_reply: reply.slice(0, 8000),
@@ -137,8 +153,8 @@ export async function undoAiCommand(commandId: string, reason?: string): Promise
   return requireCommand(commandId);
 }
 
-async function requireCommand(commandId: string): Promise<AiCommandView> {
-  const supabase = await createClient();
+async function requireCommand(commandId: string, serviceRole = false): Promise<AiCommandView> {
+  const supabase = serviceRole ? createAdminClient() : await createClient();
   const { data, error } = await supabase
     .from("ai_commands")
     .select("*")

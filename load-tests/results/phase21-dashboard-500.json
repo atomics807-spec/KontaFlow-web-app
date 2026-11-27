@@ -1,0 +1,22 @@
+{
+  "target": "GET http://127.0.0.1:12000/en/dashboard",
+  "requests": 500,
+  "completed": 500,
+  "concurrency": 20,
+  "elapsedMs": 20702,
+  "rps": 24.15,
+  "errorRate": 0,
+  "latencyMs": {
+    "min": 377,
+    "p50": 799,
+    "p95": 1025,
+    "p99": 1082,
+    "max": 1167,
+    "avg": 823
+  },
+  "statusCounts": {
+    "200": 500
+  },
+  "errorSamples": [],
+  "generatedAt": "2026-11-27T21:44:06.548Z"
+}

@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { assertFeature, assertLimit, featureRequiredMessage, hasFeature, subscriptionAccess } from "@/lib/entitlements/guards";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { tenantCacheKey, withTenantCache } from "@/lib/cache/distributed";
 import type {
   PlanFeatureRow,
   SubscriptionFeatureRow,
@@ -60,6 +61,15 @@ export async function getWorkspaceEntitlementsAsService(workspaceId: string): Pr
 }
 
 async function loadWorkspaceEntitlements(
+  workspaceId: string,
+  options: LoadOptions,
+): Promise<WorkspaceEntitlements> {
+  const scope = options.userId ? `user:${options.userId}` : "service";
+  const key = tenantCacheKey(workspaceId, "entitlements", scope);
+  return withTenantCache(key, workspaceId, 30, () => loadWorkspaceEntitlementsUncached(workspaceId, options));
+}
+
+async function loadWorkspaceEntitlementsUncached(
   workspaceId: string,
   options: LoadOptions,
 ): Promise<WorkspaceEntitlements> {

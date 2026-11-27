@@ -46,6 +46,15 @@ export async function GET(request: Request) {
 
   const database = await databaseReady();
   const ready = database && configReady;
+  let operational: unknown = null;
+  if (authorized) {
+    try {
+      const { data } = await createAdminClient().rpc("get_operational_stats");
+      operational = data ?? null;
+    } catch {
+      operational = null;
+    }
+  }
   const body = {
     status: ready ? "ok" : "degraded",
     service: "kontaflow",
@@ -60,6 +69,7 @@ export async function GET(request: Request) {
           target: info.target,
           version: info.version,
           latencyMs: Date.now() - startedAt,
+          operational,
         }
       : {}),
   };
