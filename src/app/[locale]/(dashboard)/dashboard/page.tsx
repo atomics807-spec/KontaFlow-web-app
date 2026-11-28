@@ -9,6 +9,7 @@ import {
   FileBarChart2,
   FileText,
   HandCoins,
+  Smile,
   Sparkles,
   Target,
   TrendingDown,
@@ -173,6 +174,25 @@ export default async function DashboardPage({
   return (
     <div className="space-y-6">
       {header}
+
+      <Card className="border-2 border-jade-200 bg-jade-50 p-4 sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-jade-600 text-white">
+            <Smile className="h-7 w-7" aria-hidden />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-black text-heading">{dict.easy.dashboardTitle}</h2>
+            <p className="mt-0.5 text-sm text-muted">{dict.easy.dashboardHint}</p>
+          </div>
+          <Link
+            href={`/${locale}/easy`}
+            className={buttonVariants({ variant: "primary", size: "md", className: "shrink-0 justify-center" })}
+          >
+            {dict.easy.openEasy}
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+      </Card>
 
       {context.memberships.length > 1 ? (
         <form action={switchWorkspaceFormAction} className="flex flex-wrap items-center gap-2">

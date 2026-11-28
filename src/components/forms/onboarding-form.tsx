@@ -5,6 +5,7 @@ import { ArrowRight, Building2, MapPin, Wallet } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
+import { SpeakButton } from "@/components/easy/speak-button";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
 import { BUSINESS_SIZES, BUSINESS_TYPES, INDUSTRIES } from "@/lib/business";
@@ -76,6 +77,11 @@ export function OnboardingForm({
       <p className="mt-3 text-balance text-sm leading-relaxed text-muted sm:text-base">
         {dict.onboarding.subtitle}
       </p>
+      <SpeakButton
+        text={`${dict.onboarding.title}. ${dict.onboarding.subtitle}`}
+        label={dict.easy.listen}
+        className="mt-4"
+      />
 
       <form action={action} encType="multipart/form-data" className="mt-8 space-y-7" noValidate>
         <input type="hidden" name="locale" value={locale} />

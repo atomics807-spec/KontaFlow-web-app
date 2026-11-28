@@ -13,9 +13,11 @@ import {
   FileText,
   Handshake,
   LayoutDashboard,
+  LayoutGrid,
   Menu,
   Plus,
   Settings,
+  Smile,
   Sparkles,
   Target,
   UserCog,
@@ -88,6 +90,7 @@ export function AppShell({
 
   const primary = [
     { href: `/${locale}/dashboard`, label: dict.nav.overview, icon: LayoutDashboard },
+    { href: `/${locale}/easy`, label: dict.nav.easy, icon: Smile },
     { href: `/${locale}/transactions`, label: dict.nav.transactions, icon: ArrowLeftRight },
     { href: `/${locale}/accounts`, label: dict.nav.accounts, icon: Coins },
     { href: `/${locale}/contacts`, label: dict.nav.contacts, icon: Users },
@@ -227,6 +230,43 @@ export function AppShell({
       </div>
     </>
   );
+
+  const easyMode = pathname === `/${locale}/easy` || pathname.startsWith(`/${locale}/easy/`);
+
+  if (easyMode) {
+    return (
+      <div className="min-h-dvh bg-page">
+        <header className="sticky top-0 z-20 border-b-2 border-line bg-page/95 backdrop-blur-md">
+          <div className="mx-auto flex h-16 w-full max-w-4xl items-center gap-2 px-4 sm:px-6">
+            <Link href={`/${locale}/easy`} aria-label={dict.easy.backToEasy} className="inline-flex items-center gap-2">
+              <LogoMark className="h-9 w-9" />
+              <span className="text-lg font-black tracking-tight text-heading">
+                Konta<span className="text-accent">Flow</span>
+              </span>
+            </Link>
+            <span className="ml-1 hidden rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent sm:inline">
+              {dict.easy.badge}
+            </span>
+            <div className="ml-auto flex items-center gap-1.5">
+              <LocaleSwitcher compact />
+              <SignOutButton label={dict.common.signOut} compact />
+              <Link
+                href={`/${locale}/dashboard`}
+                aria-label={dict.easy.backToFull}
+                className="ml-1 inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-panel px-2.5 py-2 text-xs font-bold text-heading hover:bg-accent-soft sm:px-3"
+              >
+                <LayoutGrid className="h-4 w-4" aria-hidden />
+                <span className="hidden lg:inline">{dict.easy.backToFull}</span>
+              </Link>
+            </div>
+          </div>
+        </header>
+        <main id="main" className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 sm:py-7">
+          <PageTransition>{children}</PageTransition>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-page">

@@ -9,6 +9,7 @@ import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useI18n } from "@/components/layout/i18n-provider";
+import { SimpleTransactionFields, type EasyStep } from "@/components/easy/simple-transaction-fields";
 import { moneyLocale, parseMoneyToMinor } from "@/lib/money";
 import { getCurrency } from "@/lib/currency";
 import { pickTranslation } from "@/lib/i18n/config";
@@ -20,7 +21,7 @@ import type { AccountSubtype, CategoryKind, TransactionKind } from "@/types/data
 
 type Option = { id: string; name: string; translations?: Record<string, string> | null };
 type AccountOption = Option & { subtype: AccountSubtype };
-type CategoryOption = Option & { kind: CategoryKind; color: string };
+type CategoryOption = Option & { kind: CategoryKind; color: string; icon?: string | null };
 type ContactOption = Option & { kind: "customer" | "supplier" | "both" };
 
 export function TransactionForm({
@@ -31,6 +32,7 @@ export function TransactionForm({
   accounts,
   categories,
   contacts,
+  simple = false,
 }: {
   workspaceId: string;
   currency: string;
@@ -39,6 +41,7 @@ export function TransactionForm({
   accounts: AccountOption[];
   categories: CategoryOption[];
   contacts: ContactOption[];
+  simple?: boolean;
 }) {
   const { locale, dict } = useI18n();
   const { toast } = useToast();
@@ -49,6 +52,8 @@ export function TransactionForm({
   const [kind, setKind] = useState<TransactionKind>(defaultKind);
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [simpleStep, setSimpleStep] = useState<EasyStep>("amount");
+  const [simpleAccountId, setSimpleAccountId] = useState(accounts[0]?.id ?? "");
   const [receipt, setReceipt] = useState<File | null>(null);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ tone: "success" | "warning" | "error"; text: string } | null>(null);
@@ -198,6 +203,95 @@ export function TransactionForm({
 
     setMessage({ tone: "error", text: dict.transactions.createError });
     toast({ title: dict.errors.generic, tone: "error" });
+  }
+
+  const simpleCategory = categories.find((category) => category.id === categoryId) ?? null;
+  const simpleCategoryName = simpleCategory
+    ? pickTranslation(simpleCategory.translations, locale) ?? simpleCategory.name
+    : "";
+  const simpleAccount = accounts.find((account) => account.id === simpleAccountId) ?? accounts[0] ?? null;
+  const simplePaymentMethod =
+    simpleAccount?.subtype === "mobile_money"
+      ? "mobile_money"
+      : simpleAccount?.subtype === "bank"
+        ? "bank_transfer"
+        : "cash";
+
+  function simpleAmountIsValid(): boolean {
+    try {
+      return parseMoneyToMinor(amount, currency) > 0n;
+    } catch {
+      return false;
+    }
+  }
+
+  function simpleNext() {
+    if (simpleStep === "amount") {
+      if (!simpleAmountIsValid()) {
+        setMessage({ tone: "error", text: dict.easy.amountRequired });
+        return;
+      }
+      setMessage(null);
+      setSimpleStep("category");
+      return;
+    }
+
+    if (simpleStep === "category") {
+      if (!categoryId) {
+        setMessage({ tone: "error", text: dict.easy.categoryRequired });
+        return;
+      }
+      setMessage(null);
+      setSimpleStep("review");
+    }
+  }
+
+  function simpleReset() {
+    setMessage(null);
+    setSimpleStep("amount");
+    setAmount("");
+    setCategoryId("");
+  }
+
+  if (simple) {
+    return (
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <input
+          type="hidden"
+          name="description"
+          value={`${kind === "income" ? dict.easy.saleDescription : dict.easy.expenseDescription}: ${simpleCategoryName}`}
+        />
+        <input type="hidden" name="occurredOn" value={defaultDate} />
+        <input type="hidden" name="accountId" value={simpleAccount?.id ?? ""} />
+        <input type="hidden" name="paymentMethod" value={simplePaymentMethod} />
+        <input type="hidden" name="contactId" value="" />
+        <SimpleTransactionFields
+          kind={kind}
+          onKindChange={(nextKind) => {
+            setKind(nextKind);
+            setCategoryId("");
+            setMessage(null);
+            setSimpleStep((current) => (current === "amount" ? "amount" : "category"));
+          }}
+          amount={amount}
+          onAmountChange={setAmount}
+          categoryId={categoryId}
+          onCategoryChange={setCategoryId}
+          accountId={simpleAccount?.id ?? ""}
+          onAccountChange={setSimpleAccountId}
+          categories={visibleCategories}
+          accounts={accounts}
+          step={simpleStep}
+          onStepChange={setSimpleStep}
+          onNext={simpleNext}
+          pending={pending}
+          message={message}
+          onReset={simpleReset}
+          onVoiceError={() => setMessage({ tone: "error", text: dict.easy.voiceFailed })}
+          currency={currency}
+        />
+      </form>
+    );
   }
 
   return (

@@ -171,6 +171,31 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   `next/image` plus `unoptimized` (hand-authored SVGs, served statically).
 * Design documentation: `docs/design/design-system.md`.
 
+## Low-literacy Easy Mode (Phase 23)
+
+* Routes: `/[locale]/easy` (money dashboard) and
+  `/[locale]/easy/record?kind=income|expense` (three-step recording). Both live
+  in the dashboard group, so authentication, billing and workspace checks still
+  apply, but `AppShell` swaps the sidebar for a slim header when the path starts
+  with `/[locale]/easy`.
+* The recording screen passes `simple` to `TransactionForm`. Keep that path on
+  the same submit handler as the full form so validation, idempotency, audit and
+  the offline outbox cannot drift. The simple path hides description/date/
+  receipt inputs and generates a description from kind + category.
+* Speech helpers live in `src/lib/easy/speech.ts`. `parseSpokenAmount` is pure and
+  covered by `tests/easy-speech.test.ts`; read-aloud and recognition are browser
+  APIs inside `src/components/easy/`. Recognition is optional; the number pad
+  must always remain the complete flow.
+* Category pictures live in `src/components/easy/category-glyph.tsx`. Add new
+  default category names there when the seed catalogue grows.
+* Easy copy lives under `easy.*` and `nav.easy` in all three dictionaries. Keep
+  all visible strings in the dictionaries; the easy flows intentionally avoid
+  paragraphs and jargon.
+* Do not put advanced charts, tables or multi-field forms on Easy Mode. Large
+  tap targets, icon + text labels, and a single primary action per step are the
+  acceptance criteria.
+* QA evidence: `docs/testing/phase-23-low-literacy-easy-mode-report.md`.
+
 ## Public marketing pages (Phase 2.1)
 
 * Authenticated app routes and public pages share `src/app/[locale]/`. Public
@@ -495,7 +520,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (217), `npm run test:db` (362),
+* Validation: `npm run typecheck`, `npm test` (238), `npm run test:db` (362),
   `npm run test:e2e` (21), `npm run lint`, `npm run build`,
   `npm run verify:production -- --local`.
 * Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own

@@ -135,3 +135,22 @@ mango for expense; dashed `chart-grid`; tooltips use `panel`/`line`.
 - Touch targets are at least 36×36px (40×40 for primary actions).
 - Landmarks: `header`, `nav` with labels, `main`, `footer`, `section` with
   `aria-labelledby` where a heading exists.
+
+## Low-literacy Easy Mode
+
+`/{locale}/easy` is a separate visual density, not a new brand. It keeps the
+same palette and type family but raises the floor:
+
+- Primary actions use 56–64px heights and 64px keypad keys, with a 12-key number
+  pad and a single primary action per step.
+- Every action pairs an icon or picture with a short label. Colour is reinforced
+  by arrows and words, never used alone.
+- The shell hides the advanced sidebar on easy routes, so the user sees only the
+  logo, language, sign-out and a way back to the full app.
+- Amounts are shown at 32–60px; category choices use a two-column picture grid.
+- Read-aloud is a first-class action (`SpeakButton`) rather than a settings
+  option. The speech locale follows the UI locale. Nothing speaks automatically:
+  financial totals are only read after an explicit tap, so they are not broadcast
+  in a crowded market.
+- Easy Mode uses the same `TransactionForm` submit path and offline outbox as the
+  full app, so accessibility does not create a second financial code path.
