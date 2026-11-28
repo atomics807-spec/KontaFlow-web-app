@@ -218,6 +218,20 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   the forest sidebar.
 * QA evidence: `docs/testing/phase-24-low-literacy-ux-report.md`.
 
+## Preview demo accounts
+
+* `npm run seed:demo` provisions idempotent demo users and data through
+  `scripts/seed-demo.ts`. The shared local password is `KontaFlowDemo2026!`;
+  never point this script at production without `ALLOW_DEMO_SEED=true`.
+* Full-screen roles: `owner@`, `admin@`, `accountant@`, `manager@`, `staff@`,
+  `scale@`, `trial@`, `expired@`, and `onboarding@demo.kontaflow.app`.
+  `superadmin@` and `support@` open the platform console at `/[locale]/admin`.
+* `easy@demo.kontaflow.app` owns a market-stall workspace with `easy_mode=true`
+  so the picture-first dashboard can be reviewed without changing another
+  account's preference.
+* `seed-demo.ts` explicitly writes `profiles.easy_mode`: demo accounts default
+  to the full screen, and only the `easy` account starts simple.
+
 ## Public marketing pages (Phase 2.1)
 
 * Authenticated app routes and public pages share `src/app/[locale]/`. Public

@@ -54,6 +54,7 @@ type DemoAccount = {
   locale?: string;
   verified?: boolean;
   onboarding?: boolean;
+  easyMode?: boolean;
 };
 
 type WorkspaceInfo = { id: string; name: string };
@@ -66,6 +67,12 @@ const accounts: Record<string, DemoAccount> = {
   staff: { email: `staff@${DEMO_DOMAIN}`, name: "Estelle Mbah", phone: "+237670000005" },
   scale: { email: `scale@${DEMO_DOMAIN}`, name: "Franck Ngu", phone: "+237670000006" },
   trial: { email: `trial@${DEMO_DOMAIN}`, name: "Ghislaine Mola", phone: "+237670000007" },
+  easy: {
+    email: `easy@${DEMO_DOMAIN}`,
+    name: "Joaquim Enow",
+    phone: "+237670000012",
+    easyMode: true,
+  },
   expired: { email: `expired@${DEMO_DOMAIN}`, name: "Henri Bello", phone: "+237670000008" },
   onboarding: {
     email: `onboarding@${DEMO_DOMAIN}`,
@@ -153,6 +160,7 @@ async function setProfile(
     phone_verified_at: verified ? now : null,
     verification_required: !verified,
     onboarding_completed_at: options.onboarding === false ? null : now,
+    easy_mode: account.easyMode === true,
   };
   if (options.defaultWorkspaceId !== undefined) payload.default_workspace_id = options.defaultWorkspaceId;
   const { error } = await admin.from("profiles").upsert(payload, { onConflict: "id" });
@@ -751,6 +759,12 @@ async function main(): Promise<void> {
   await setPlan(expired.id, "growth", "active");
   await seedTransactions(expired, accounts.expired.email, 18, "Garoua Auto Parts");
   await setPlan(expired.id, "growth", "canceled");
+
+  // Picture-first demo: a market stall owner who starts on Easy Mode.
+  const easy = await ensureWorkspace(ids.easy!, accounts.easy.email, "Muea Market Stall");
+  await setProfile(ids.easy!, accounts.easy, { defaultWorkspaceId: easy.id });
+  await seedTransactions(easy, accounts.easy.email, 12, "Muea Market Stall");
+  await ensureBudgets(easy.id, ids.easy!);
 
   // Onboarding account: verified but no workspace yet.
   await setProfile(ids.onboarding!, accounts.onboarding, { onboarding: false, defaultWorkspaceId: null });
