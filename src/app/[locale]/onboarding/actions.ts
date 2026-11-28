@@ -1,11 +1,17 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { getPlatformAdmin, getProfile, getSessionUser, WORKSPACE_COOKIE } from "@/lib/supabase/auth";
+import {
+  getPlatformAdmin,
+  getProfile,
+  getSessionUser,
+  getWorkspaceContext,
+  WORKSPACE_COOKIE,
+} from "@/lib/supabase/auth";
 import { mapSupabaseError } from "@/lib/supabase/errors";
 import { getDictionary } from "@/lib/i18n/server";
 import { resolveLocale, LOCALE_COOKIE } from "@/lib/i18n/config";
@@ -26,6 +32,28 @@ type CreatedWorkspace = { id: string; name: string; slug: string; onboarding_com
 
 export async function createWorkspaceAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const locale = resolveLocale(String(formData.get("locale") ?? "en"));
+
+  try {
+    return await runCreateWorkspaceAction(formData, locale);
+  } catch (error) {
+    // Preserve Next's redirect/notFound control flow; only swallow real failures.
+    unstable_rethrow(error);
+    logger.error("workspace.onboarding_unhandled", { error });
+
+    // The RPC may have committed before a later step (logo, cookies, revalidate)
+    // failed. Send the owner to the workspace instead of stranding them here.
+    const context = await getWorkspaceContext().catch(() => null);
+    if (context) redirect(`/${locale}/dashboard?welcome=1`);
+
+    const dict = await getDictionary(locale);
+    return formError(dict.errors.generic);
+  }
+}
+
+async function runCreateWorkspaceAction(
+  formData: FormData,
+  locale: ReturnType<typeof resolveLocale>,
+): Promise<FormState> {
   const dict = await getDictionary(locale);
   const user = await getSessionUser();
   if (!user) return formError(dict.errors.sessionExpired);

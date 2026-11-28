@@ -83,7 +83,7 @@ export function OnboardingForm({
         className="mt-4"
       />
 
-      <form action={action} encType="multipart/form-data" className="mt-8 space-y-7" noValidate>
+      <form action={action} className="mt-8 space-y-7" noValidate>
         <input type="hidden" name="locale" value={locale} />
         {state.status === "error" && state.message ? <Alert tone="error">{state.message}</Alert> : null}
 

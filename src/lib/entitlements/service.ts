@@ -73,7 +73,9 @@ async function loadWorkspaceEntitlementsUncached(
   workspaceId: string,
   options: LoadOptions,
 ): Promise<WorkspaceEntitlements> {
-  const admin = createAdminClient();
+  // Member-facing reads use the caller's session so RLS applies. The service
+  // role is reserved for webhooks and other contexts with no signed-in user.
+  const db = options.userId && !options.serviceRole ? await createClient() : createAdminClient();
   const since = monthStart();
 
   const [
@@ -90,43 +92,43 @@ async function loadWorkspaceEntitlementsUncached(
     integrationsResult,
     exportUsageResult,
   ] = await Promise.all([
-    admin.from("workspaces").select("id, plan").eq("id", workspaceId).maybeSingle(),
-    admin.from("subscriptions").select("*").eq("workspace_id", workspaceId).maybeSingle(),
-    admin.from("subscription_plans").select("*").order("sort_order"),
-    admin.from("subscription_features").select("*"),
-    admin.from("plan_features").select("*"),
+    db.from("workspaces").select("id, plan").eq("id", workspaceId).maybeSingle(),
+    db.from("subscriptions").select("*").eq("workspace_id", workspaceId).maybeSingle(),
+    db.from("subscription_plans").select("*").order("sort_order"),
+    db.from("subscription_features").select("*"),
+    db.from("plan_features").select("*"),
     options.userId
-      ? admin
+      ? db
           .from("workspace_members")
           .select("role, status")
           .eq("workspace_id", workspaceId)
           .eq("user_id", options.userId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
-    admin
+    db
       .from("workspace_members")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
       .in("status", ["active", "invited"]),
-    admin
+    db
       .from("workspace_invitations")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
       .eq("status", "pending"),
-    admin
+    db
       .from("usage_events")
       .select("quantity")
       .eq("workspace_id", workspaceId)
       .eq("kind", "ai_message")
       .gte("created_at", since),
-    admin
+    db
       .from("transactions")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
       .eq("status", "posted")
       .gte("created_at", since),
-    admin.from("channel_identities").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
-    admin
+    db.from("channel_identities").select("id", { count: "exact", head: true }).eq("workspace_id", workspaceId),
+    db
       .from("usage_events")
       .select("quantity")
       .eq("workspace_id", workspaceId)

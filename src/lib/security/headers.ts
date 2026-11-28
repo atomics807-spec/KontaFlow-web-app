@@ -33,7 +33,7 @@ export function buildSecurityHeaders(input: {
     `script-src 'self' 'unsafe-inline'${input.isDevelopment ? " 'unsafe-eval'" : ""}`,
     "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https:",
+    `img-src 'self' data: blob: https: ${supabaseOrigin}`.trim(),
     "font-src 'self' data:",
     `connect-src ${connectSources}`,
     "media-src 'none'",

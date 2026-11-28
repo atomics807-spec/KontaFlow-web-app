@@ -169,6 +169,15 @@ describe("security headers", () => {
     expect(csp).toContain("upgrade-insecure-requests");
   });
 
+  it("permits workspace logos served by a self-hosted Supabase origin", () => {
+    const local = buildSecurityHeaders({
+      isDevelopment: true,
+      appUrl: "http://localhost:3000",
+      supabaseUrl: "http://127.0.0.1:54321",
+    }).find((header) => header.key === "Content-Security-Policy")?.value;
+    expect(local).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321");
+  });
+
   it("adds transport and cross-origin protections", () => {
     expect(headers).toContainEqual({
       key: "Strict-Transport-Security",

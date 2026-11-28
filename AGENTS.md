@@ -244,6 +244,16 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   trigger.
 * `requireVerifiedUser(locale, nextPath)` in `src/lib/supabase/auth.ts` drives
   the UI gate. Keep the default next path locale-prefixed.
+* `createWorkspaceAction` has a recovery boundary: it logs
+  `workspace.onboarding_unhandled`, rethrows Next control flow, and redirects to
+  the dashboard when `complete_onboarding` committed before a later step failed.
+  Keep that ordering when adding post-RPC work such as uploads or emails.
+* Member-facing entitlement reads use the caller's Supabase session; the
+  service-role key is for webhooks/cron and must not be required to open a
+  dashboard. `getWorkspaceEntitlementsAsService` is the explicit service path.
+* `img-src` includes the configured Supabase origin so workspace logos work on
+  self-hosted/local Supabase over `http://` while production keeps `https:`.
+* QA evidence: `docs/testing/onboarding-completion-fix-report.md`.
 
 ## Finance operations (Phase 7)
 
@@ -520,8 +530,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (238), `npm run test:db` (362),
-  `npm run test:e2e` (21), `npm run lint`, `npm run build`,
+* Validation: `npm run typecheck`, `npm test` (239), `npm run test:db` (376),
+  `npm run test:e2e` (25), `npm run lint`, `npm run build`,
   `npm run verify:production -- --local`.
 * Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own
   Cloudflare; `workers/cron-trigger` calls the same cron routes. The Vercel Hobby
