@@ -106,11 +106,13 @@ leave `SUPABASE_INTERNAL_URL` unset.
    verification and the Supabase SDK.
 6. Confirm `GET /api/health` returns 200 and check the cron logs.
 
-The digest job runs hourly and processes workspaces whose local hour is 21:00.
-It reads each member's `report_preferences`; daily closes go out every day,
-weekly reports on Sunday and monthly reports on the last day of the month.
-Delivery is recorded per recipient and channel in `report_deliveries`, which
-keeps the job idempotent and retries failed channels for two days.
+The digest job processes workspaces whose local hour is 21:00. It reads each
+member's `report_preferences`; daily closes go out every day, weekly reports on
+Sunday and monthly reports on the last day of the month. Delivery is recorded
+per recipient and channel in `report_deliveries`, which keeps the job idempotent
+and retries failed channels for two days. The default `vercel.json` runs it
+daily at 20:00 UTC (21:00 Africa/Douala) so the project deploys on the Vercel
+Hobby plan. Vercel Pro or the Cloudflare cron worker can run it hourly.
 
 The trial reminder job expires finished trials, sends the configured 7/3/1-day
 emails and writes one reminder log row per workspace per interval. Vercel sends
@@ -118,9 +120,10 @@ emails and writes one reminder log row per workspace per interval. Vercel sends
 
 The payment reconciliation job polls pending and processing payments younger
 than seven days and settles or expires them. Provider callbacks remain the fast
-path; the cron is the safety net. Three cron jobs and a five-minute schedule need
-a Vercel plan that allows them; otherwise use the Cloudflare cron worker or
-accept a slower fallback.
+path; the daily cron is the Hobby-plan safety net. Use Vercel Pro or the
+Cloudflare cron worker for five-minute reconciliation. The queue worker is also
+daily on Hobby, so async work can wait until the next 02:00 UTC drain; use
+Cloudflare or Pro for per-minute queue processing.
 
 See [vercel.md](vercel.md) for preview deployments, monitoring and rollback.
 

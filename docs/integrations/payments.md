@@ -171,6 +171,8 @@ short-circuits approval.
 4. Confirm the callback URL is public HTTPS and reachable by the provider.
 5. Run one real sandbox payment end to end, including callback and status poll.
 6. Set production credentials and `PAYMENT_MODE=production`.
-7. Schedule `/api/cron/payment-reconciliation` every five minutes.
+7. Schedule `/api/cron/payment-reconciliation`. The default Vercel Hobby config
+   runs it daily at `0 3 * * *`; use Vercel Pro or the Cloudflare cron worker
+   for five-minute reconciliation. Provider webhooks remain the fast path.
 8. Monitor `payment_webhooks` failures and `payment_transactions` rows stuck in
    `processing`.

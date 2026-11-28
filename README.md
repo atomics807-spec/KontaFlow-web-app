@@ -60,7 +60,9 @@ npm run verify:production
 
 Set `APP_ENV=production`, `DEPLOYMENT_TARGET=vercel`, `NEXT_PUBLIC_APP_URL` and
 the provider secrets in Vercel. Cron routes are authenticated with
-`CRON_SECRET` and run hourly, daily and every five minutes.
+`CRON_SECRET`. `vercel.json` uses daily cron schedules so the project can deploy
+on the Hobby plan; Vercel Pro or the Cloudflare cron worker can run the finer
+schedules.
 
 ### Cloudflare Workers
 

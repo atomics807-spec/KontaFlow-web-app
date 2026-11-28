@@ -25,9 +25,10 @@ are read in `src/lib/platform/deployment.ts` and surfaced by `/api/health`.
   "buildCommand": "npm run build",
   "regions": ["cdg1"],
   "crons": [
-    { "path": "/api/cron/daily-digest", "schedule": "0 * * * *" },
+    { "path": "/api/cron/queue-worker", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/daily-digest", "schedule": "0 20 * * *" },
     { "path": "/api/cron/trial-reminders", "schedule": "0 8 * * *" },
-    { "path": "/api/cron/payment-reconciliation", "schedule": "*/5 * * * *" }
+    { "path": "/api/cron/payment-reconciliation", "schedule": "0 3 * * *" }
   ]
 }
 ```
@@ -99,15 +100,28 @@ Never put the service-role key in a `NEXT_PUBLIC_*` variable.
 Vercel sends `Authorization: Bearer $CRON_SECRET` to cron routes when the
 environment variable exists. The routes reject any other caller.
 
-| Route | Schedule | Purpose |
+| Route | Hobby schedule (daily UTC) | Purpose |
 | --- | --- | --- |
-| `/api/cron/daily-digest` | hourly at minute 0 | Sends reports at 21:00 in each workspace timezone; retries for two days |
-| `/api/cron/trial-reminders` | daily 08:00 UTC | Expires finished trials and sends 7/3/1-day reminders |
-| `/api/cron/payment-reconciliation` | every 5 minutes | Reconciles missed provider callbacks |
+| `/api/cron/queue-worker` | `0 2 * * *` | Drains the durable queue and outbox once per day |
+| `/api/cron/daily-digest` | `0 20 * * *` | Sends daily closes at 21:00 Africa/Douala; retries for two days |
+| `/api/cron/trial-reminders` | `0 8 * * *` | Expires finished trials and sends 7/3/1-day reminders |
+| `/api/cron/payment-reconciliation` | `0 3 * * *` | Reconciles missed provider callbacks once per day |
 
-The three cron jobs and the five-minute schedule require a Vercel plan that
-permits them. On a Hobby plan with daily-only crons, use the Cloudflare cron
-worker or accept a slower payment safety net. All routes declare `runtime = "nodejs"` and `maxDuration = 60`.
+`vercel.json` uses daily schedules so the project deploys on the Vercel Hobby
+plan. Vercel Hobby only allows once-per-day cron expressions.
+
+Trade-offs on Hobby:
+
+- async AI jobs and outbox rows can wait until the next 02:00 UTC queue drain;
+- payment reconciliation is a daily safety net, so provider webhooks are the
+  fast path;
+- the digest runs at 20:00 UTC, which is 21:00 in Africa/Douala. Workspaces in
+  other timezones may not match the 21:00 local window.
+
+For per-minute queue draining, five-minute payment reconciliation and hourly
+digests, use Vercel Pro or the Cloudflare cron worker. The Cloudflare cron
+worker keeps the original finer-grained schedules. All routes declare
+`runtime = "nodejs"` and `maxDuration = 60`.
 
 ## Monitoring
 

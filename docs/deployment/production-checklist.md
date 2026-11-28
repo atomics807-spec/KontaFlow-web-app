@@ -66,11 +66,17 @@ database without production provider gates.
 
 ## Scheduled jobs
 
-| Job | Vercel | Cloudflare | Status |
+| Job | Vercel Hobby | Cloudflare | Status |
 | --- | --- | --- | --- |
-| Daily digest | `vercel.json` hourly `0 * * * *` | `workers/cron-trigger` hourly | Repo config; operator deploy |
+| Queue worker | `vercel.json` daily `0 2 * * *` | `workers/cron-trigger` every minute | Repo config; operator deploy |
+| Daily digest | `vercel.json` daily `0 20 * * *` | `workers/cron-trigger` hourly | Repo config; operator deploy |
 | Trial reminders | `vercel.json` `0 8 * * *` | `workers/cron-trigger` `0 8 * * *` | Repo config; operator deploy |
-| Payment reconciliation | `vercel.json` `*/5 * * * *` | `workers/cron-trigger` `*/5 * * * *` | Repo config; operator deploy |
+| Payment reconciliation | `vercel.json` daily `0 3 * * *` | `workers/cron-trigger` every five minutes | Repo config; operator deploy |
+
+Vercel Hobby requires daily-only expressions. The daily digest is pinned to
+20:00 UTC (21:00 Africa/Douala). Use Vercel Pro or the Cloudflare cron worker
+for per-minute queue processing, five-minute payment reconciliation and hourly
+digest runs.
 
 Confirm at least one successful run in platform logs. The routes require
 `Authorization: Bearer $CRON_SECRET` and return non-200 on failure.

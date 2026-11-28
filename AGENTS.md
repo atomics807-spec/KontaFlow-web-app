@@ -132,10 +132,11 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   `(workspace_id, user_id, kind, report_date, channel)`. Only the service role
   writes it; members may read their own rows and workspace managers may read
   all rows. Never delete a delivery row to force a resend.
-* The hourly `/api/cron/daily-digest` worker sends at 21:00 workspace time:
-  daily closes for the previous day, weekly on Sunday and monthly on the last
-  day. It retries failed channels for two days with at most four attempts and
-  turns stale `sending` rows into `failed`.
+* The `/api/cron/daily-digest` worker sends at 21:00 workspace time: daily
+  closes for the previous day, weekly on Sunday and monthly on the last day.
+  Cloudflare/Pro run it hourly; the default Vercel Hobby config runs once at
+  20:00 UTC (21:00 Africa/Douala). It retries failed channels for two days with
+  at most four attempts and turns stale `sending` rows into `failed`.
 * In-app notices are deduplicated by the partial unique index
   `notifications_report_delivery_key` on `(workspace_id, user_id,
   data->>'report_kind', data->>'report_date')` where the channel is `in_app`.
@@ -433,13 +434,15 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Starter is a 14-day trial, not a free plan. It keeps the Starter
   allowances and features during the trial. When the trial ends the workspace
   is read-only until a paid plan is active.
-* `/api/cron/daily-digest` runs hourly. It sends each active workspace its
-  report at 21:00 local time, plus the weekly report on Sundays. Starter,
-  Growth and Scale all have the `daily_reports`/`weekly_reports` features;
-  expired trials stop receiving reports because the workspace is read-only.
+* `/api/cron/daily-digest` sends each active workspace its report at 21:00
+  local time, plus the weekly report on Sundays. Cloudflare/Pro run it hourly;
+  the default Vercel Hobby config runs once at 20:00 UTC (21:00 Africa/Douala).
+  Starter, Growth and Scale all have the `daily_reports`/`weekly_reports`
+  features; expired trials stop receiving reports because the workspace is
+  read-only.
 * `report_deliveries` is the idempotency and audit table. It is service-role
   only (RLS enabled, no authenticated policy). A failed delivery is retried on
-  the next hourly run; a stale `sending` reservation is cleared after two hours.
+  the next run; a stale `sending` reservation is cleared after two hours.
 * The cron calls `has_workspace_feature` as `service_role`; that function
   allows the service role but keeps the membership check for tenant users.
 
@@ -496,6 +499,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   `npm run test:e2e` (21), `npm run lint`, `npm run build`,
   `npm run verify:production -- --local`.
 * Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own
-  Cloudflare; `workers/cron-trigger` calls the same cron routes. Platform env
-  reads belong in `src/lib/platform/deployment.ts`. See
+  Cloudflare; `workers/cron-trigger` calls the same cron routes. The Vercel Hobby
+  config uses daily-only expressions; Cloudflare keeps per-minute queue and
+  five-minute payment schedules. Platform env reads belong in
+  `src/lib/platform/deployment.ts`. See
   `docs/deployment/production-checklist.md` before claiming production ready.

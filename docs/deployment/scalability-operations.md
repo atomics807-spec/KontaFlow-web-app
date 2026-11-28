@@ -24,9 +24,10 @@ leaves jobs for the next one.
 
 ### Vercel
 
-`vercel.json` includes a `queue-worker` cron. Vercel Hobby does not support
-per-minute crons; use a plan that does, or call the endpoint from an external
-scheduler. Keep `CRON_SECRET` set in the project environment.
+`vercel.json` includes a `queue-worker` cron. On the Vercel Hobby plan it runs
+once daily at `0 2 * * *`; async jobs and outbox rows can wait until that drain.
+Use Vercel Pro, the Cloudflare cron worker, or an external scheduler for
+per-minute draining. Keep `CRON_SECRET` set in the project environment.
 
 ### Cloudflare
 
