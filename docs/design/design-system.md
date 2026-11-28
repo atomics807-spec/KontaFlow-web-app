@@ -148,9 +148,8 @@ same palette and type family but raises the floor:
 - The shell hides the advanced sidebar on easy routes, so the user sees only the
   logo, language, sign-out and a way back to the full app.
 - Amounts are shown at 32–60px; category choices use a two-column picture grid.
-- Read-aloud is a first-class action (`SpeakButton`) rather than a settings
-  option. The speech locale follows the UI locale. Nothing speaks automatically:
-  financial totals are only read after an explicit tap, so they are not broadcast
-  in a crowded market.
+- Easy Mode is silent. It has no read-aloud, speech-recognition or microphone
+  controls; all guidance is visual and text-based. Keep `microphone=()` in the
+  Permissions-Policy unless a future reviewed feature explicitly needs it.
 - Easy Mode uses the same `TransactionForm` submit path and offline outbox as the
   full app, so accessibility does not create a second financial code path.

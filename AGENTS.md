@@ -182,10 +182,10 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   the same submit handler as the full form so validation, idempotency, audit and
   the offline outbox cannot drift. The simple path hides description/date/
   receipt inputs and generates a description from kind + category.
-* Speech helpers live in `src/lib/easy/speech.ts`. `parseSpokenAmount` is pure and
-  covered by `tests/easy-speech.test.ts`; read-aloud and recognition are browser
-  APIs inside `src/components/easy/`. Recognition is optional; the number pad
-  must always remain the complete flow.
+* Easy Mode has no voice assistant. Read-aloud, speech synthesis, speech
+  recognition, the voice preference and their components were removed in Phase
+  25. Use the number pad, pictures and text only; do not reintroduce microphone
+  permission or speech APIs without an explicit product decision.
 * Category pictures live in `src/components/easy/category-glyph.tsx`. Add new
   default category names there when the seed catalogue grows.
 * Easy copy lives under `easy.*` and `nav.easy` in all three dictionaries. Keep
@@ -207,10 +207,9 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   `easy`.
 * `/[locale]/dashboard` redirects Easy Mode owners to `/[locale]/easy`.
   `setEasyModeAction` switches both ways, persists the preference and revalidates.
-* First visit shows `EasyGuide` (three picture panels, spoken). Completion is a
-  local-storage flag; `?guide=1` reopens it. The voice preference is local
-  storage in `src/lib/easy/audio.ts`, surfaced by `EasySoundToggle` and
-  `useEasyAudio`. Easy recording speaks step prompts, errors and saved messages.
+* First visit shows `EasyGuide` (three picture panels). Completion is a
+  local-storage flag; `?guide=1` reopens it. Easy Mode stays silent: no prompts,
+  totals or saved messages are spoken.
 * `EasyBottomNav` replaces the sidebar destinations on Easy routes. Keep its
   items at 64 px and leave bottom padding on the easy main area.
 * `SupportLinks` (Call/WhatsApp from `src/lib/contact-details.ts`) must stay on
@@ -566,7 +565,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (240), `npm run test:db` (379),
+* Validation: `npm run typecheck`, `npm test` (233), `npm run test:db` (379),
   `npm run test:e2e` (26), `npm run lint`, `npm run build`,
   `npm run verify:production -- --local`.
 * Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own

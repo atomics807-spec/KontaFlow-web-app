@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -18,13 +17,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { categoryGlyph } from "@/components/easy/category-glyph";
-import { SpeakButton } from "@/components/easy/speak-button";
-import { VoiceAmountButton } from "@/components/easy/voice-amount-button";
-import { useEasyAudio } from "@/components/easy/use-easy-audio";
-import { speakEasy } from "@/lib/easy/audio";
 import { getCurrency } from "@/lib/currency";
 import { pickTranslation } from "@/lib/i18n/config";
-import { interpolate } from "@/lib/i18n/interpolate";
 import { cn } from "@/lib/utils";
 import type { AccountSubtype, CategoryKind, TransactionKind } from "@/types/database";
 
@@ -64,7 +58,6 @@ export function SimpleTransactionFields({
   pending,
   message,
   onReset,
-  onVoiceError,
   currency,
 }: {
   kind: TransactionKind;
@@ -83,7 +76,6 @@ export function SimpleTransactionFields({
   pending: boolean;
   message: Message | null;
   onReset: () => void;
-  onVoiceError: () => void;
   currency: string;
 }) {
   const { locale, dict } = useI18n();
@@ -93,46 +85,6 @@ export function SimpleTransactionFields({
   const categoryName = category ? pickTranslation(category.translations, locale) ?? category.name : "";
   const actionLabel = kind === "income" ? dict.easy.youSold : dict.easy.youSpent;
   const isSaved = message?.tone === "success" || message?.tone === "warning";
-  const audioEnabled = useEasyAudio();
-  const previousStep = useRef<EasyStep | null>(null);
-  const spokenError = useRef<string | null>(null);
-  const spokenSaved = useRef(false);
-
-  useEffect(() => {
-    if (!audioEnabled) {
-      previousStep.current = step;
-      return;
-    }
-    if (previousStep.current === step) return;
-    previousStep.current = step;
-    if (isSaved) return;
-    const prompt =
-      step === "amount"
-        ? dict.easy.amountPromptSpoken
-        : step === "category"
-          ? dict.easy.categoryPromptSpoken
-          : interpolate(dict.easy.reviewSpoken, { kind: actionLabel, amount: `${amount || "0"} ${currencyMeta.symbol}`, category: categoryName }, { locale });
-    speakEasy(prompt, locale);
-  }, [step, audioEnabled, isSaved, amount, actionLabel, categoryName, currencyMeta.symbol, dict, locale]);
-
-  useEffect(() => {
-    if (audioEnabled && message?.tone === "error" && message.text !== spokenError.current) {
-      spokenError.current = message.text;
-      speakEasy(message.text, locale);
-    }
-    if (message?.tone !== "error") spokenError.current = null;
-  }, [audioEnabled, message, locale]);
-
-  useEffect(() => {
-    if (!isSaved) {
-      spokenSaved.current = false;
-      return;
-    }
-    if (audioEnabled && !spokenSaved.current) {
-      spokenSaved.current = true;
-      speakEasy(message?.tone === "success" ? dict.easy.savedSpoken : dict.easy.savedOfflineSpoken, locale);
-    }
-  }, [audioEnabled, isSaved, message?.tone, dict, locale]);
 
   function buzz() {
     try {
@@ -171,11 +123,6 @@ export function SimpleTransactionFields({
             {dict.easy.seeMyMoney}
           </Link>
         </div>
-        <SpeakButton
-          text={message.tone === "success" ? dict.easy.savedSpoken : dict.easy.savedOfflineSpoken}
-          label={dict.easy.listen}
-          className="mt-4"
-        />
       </div>
     );
   }
@@ -298,14 +245,10 @@ export function SimpleTransactionFields({
             ))}
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <VoiceAmountButton onAmount={onAmountChange} onError={onVoiceError} className="min-h-14 flex-1 text-lg" />
-            <Button type="button" size="lg" onClick={onNext} className="min-h-14 flex-1 text-lg">
-              {dict.easy.continue}
-              <ChevronRight className="h-5 w-5" aria-hidden />
-            </Button>
-          </div>
-          <SpeakButton text={dict.easy.amountHint} label={dict.easy.listen} className="w-full" />
+          <Button type="button" size="lg" onClick={onNext} className="min-h-14 w-full text-lg">
+            {dict.easy.continue}
+            <ChevronRight className="h-5 w-5" aria-hidden />
+          </Button>
         </section>
       ) : null}
 
@@ -353,11 +296,6 @@ export function SimpleTransactionFields({
               <ChevronRight className="h-5 w-5" aria-hidden />
             </Button>
           </div>
-          <SpeakButton
-            text={category ? interpolate(dict.easy.categorySpoken, { category: categoryName }, { locale }) : dict.easy.categoryHint}
-            label={dict.easy.listen}
-            className="w-full"
-          />
         </section>
       ) : null}
 
@@ -423,15 +361,6 @@ export function SimpleTransactionFields({
               {pending ? dict.easy.saving : dict.easy.yesSave}
             </Button>
           </div>
-          <SpeakButton
-            text={interpolate(
-              dict.easy.reviewSpoken,
-              { kind: actionLabel, amount: `${amount || "0"} ${currencyMeta.symbol}`, category: categoryName },
-              { locale },
-            )}
-            label={dict.easy.listen}
-            className="w-full"
-          />
         </section>
       ) : null}
     </div>

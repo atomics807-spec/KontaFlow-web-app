@@ -5,7 +5,6 @@ import { useActionState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
-import { SpeakButton } from "@/components/easy/speak-button";
 import { fill, useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
 import { PRIVACY_POLICY_PATH, TERMS_PATH } from "@/lib/legal";
@@ -35,12 +34,6 @@ export function LoginForm({ next }: { next: string }) {
     <div>
       <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.signInTitle}</h1>
       <p className="mt-2 text-sm text-muted">{dict.auth.signInSubtitle}</p>
-      <SpeakButton
-        text={`${dict.auth.signInTitle}. ${dict.auth.signInSubtitle}`}
-        label={dict.easy.listen}
-        className="mt-3"
-      />
-
       <form action={action} className="mt-7 space-y-4" noValidate>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="next" value={next} />
@@ -103,12 +96,6 @@ export function SignupForm({ next }: { next: string }) {
     <div>
       <h1 className="text-2xl font-extrabold tracking-tight text-heading">{dict.auth.signUpTitle}</h1>
       <p className="mt-2 text-sm text-muted">{dict.auth.signUpSubtitle}</p>
-      <SpeakButton
-        text={`${dict.auth.signUpTitle}. ${dict.auth.signUpSubtitle}`}
-        label={dict.easy.listen}
-        className="mt-3"
-      />
-
       <form action={action} className="mt-7 space-y-4" noValidate>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="next" value={next} />

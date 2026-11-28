@@ -287,7 +287,6 @@ export function TransactionForm({
           pending={pending}
           message={message}
           onReset={simpleReset}
-          onVoiceError={() => setMessage({ tone: "error", text: dict.easy.voiceFailed })}
           currency={currency}
         />
       </form>

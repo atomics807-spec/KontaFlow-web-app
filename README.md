@@ -103,9 +103,8 @@ completed by a commit alone.
 * Offline outbox with idempotent sync.
 * Billing page with plan catalogue, usage and payment history.
 * Per-member daily, weekly and monthly reports by email, in-app notification or WhatsApp, with retries, idempotency and a delivery log.
-* Low-literacy Easy Mode: large picture actions, three-step number-pad entry,
-  read-aloud totals and voice amount input in EN/FR/PCM, without typing a
-  description.
+* Low-literacy Easy Mode: large picture actions and three-step number-pad
+  entry in EN/FR/PCM, without typing a description or using a microphone.
 * PWA shell, strict security headers, audit trail, i18n EN/FR/PCM (Cameroon Pidgin).
 * Daily financial rollups, a durable queue/outbox with lease recovery, a shared
   cache, protected metrics and keyset pagination for large ledgers.

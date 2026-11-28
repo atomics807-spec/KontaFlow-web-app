@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronRight, HandCoins, ShoppingBasket, Wallet, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SpeakButton } from "@/components/easy/speak-button";
 import { useI18n } from "@/components/layout/i18n-provider";
-import { speakEasy } from "@/lib/easy/audio";
-import { useEasyAudio } from "@/components/easy/use-easy-audio";
 
 const GUIDE_KEY = "kontaflow.easy.guide.v1";
 const GUIDE_EVENT = "kontaflow:easy-guide-change";
@@ -29,8 +26,7 @@ function subscribeGuide(listener: () => void): () => void {
 }
 
 export function EasyGuide({ forceOpen = false }: { forceOpen?: boolean }) {
-  const { locale, dict } = useI18n();
-  const audioEnabled = useEasyAudio();
+  const { dict } = useI18n();
   const done = useSyncExternalStore(subscribeGuide, guideDone, () => true);
   const [dismissed, setDismissed] = useState(false);
   const [index, setIndex] = useState(0);
@@ -102,9 +98,7 @@ export function EasyGuide({ forceOpen = false }: { forceOpen?: boolean }) {
       close();
       return;
     }
-    const upcoming = slides[index + 1];
     setIndex(index + 1);
-    if (audioEnabled && upcoming) speakEasy(`${upcoming.title}. ${upcoming.body}`, locale);
   }
 
   if (!open) return null;
@@ -151,8 +145,6 @@ export function EasyGuide({ forceOpen = false }: { forceOpen?: boolean }) {
         <p id="easy-guide-body" className="mt-3 text-center text-lg font-medium leading-snug text-muted">
           {slide.body}
         </p>
-
-        <SpeakButton text={`${slide.title}. ${slide.body}`} label={dict.easy.listen} className="mt-5 w-full" />
 
         <div className="mt-4 flex flex-col gap-2">
           <Button ref={nextRef} type="button" size="lg" onClick={next} className="min-h-16 text-xl">

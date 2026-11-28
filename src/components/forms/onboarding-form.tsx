@@ -5,7 +5,6 @@ import { ArrowRight, Building2, LayoutDashboard, MapPin, Smile, Wallet } from "l
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
-import { SpeakButton } from "@/components/easy/speak-button";
 import { useI18n } from "@/components/layout/i18n-provider";
 import { initialFormState } from "@/lib/action-utils";
 import { BUSINESS_SIZES, BUSINESS_TYPES, INDUSTRIES } from "@/lib/business";
@@ -77,12 +76,6 @@ export function OnboardingForm({
       <p className="mt-3 text-balance text-sm leading-relaxed text-muted sm:text-base">
         {dict.onboarding.subtitle}
       </p>
-      <SpeakButton
-        text={`${dict.onboarding.title}. ${dict.onboarding.subtitle}`}
-        label={dict.easy.listen}
-        className="mt-4"
-      />
-
       <form action={action} className="mt-8 space-y-7" noValidate>
         <input type="hidden" name="locale" value={locale} />
         {state.status === "error" && state.message ? <Alert tone="error">{state.message}</Alert> : null}
@@ -281,10 +274,6 @@ export function OnboardingForm({
               </span>
             </label>
           </div>
-          <SpeakButton
-            text={`${dict.onboarding.modeSection}. ${dict.onboarding.modeEasy}. ${dict.onboarding.modeEasyHint}`}
-            label={dict.easy.listen}
-          />
         </fieldset>
 
         <SubmitButton className="mt-2 w-full" size="lg" pendingLabel={dict.onboarding.creating}>

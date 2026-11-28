@@ -1,3 +1,8 @@
+> **Update (Phase 25):** Every voice, read-aloud and speech-recognition
+> control described below has been removed. The current Easy Mode is silent
+> and uses the number pad, pictures and text only. See
+> `docs/testing/phase-25-remove-voice-assistant-report.md`.
+
 # Phase 24 — Accessible, picture-first onboarding and Easy Mode report
 
 ## Goal

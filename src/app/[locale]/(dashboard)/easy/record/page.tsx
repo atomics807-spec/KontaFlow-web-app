@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { TransactionForm } from "@/components/forms/transaction-form";
-import { SpeakButton } from "@/components/easy/speak-button";
 import { getTransactionOptions } from "@/services/transactions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { resolveLocale } from "@/lib/i18n/config";
@@ -36,7 +35,6 @@ export default async function EasyRecordPage({
   const kind: TransactionKind = requested === "expense" ? "expense" : "income";
   const options = await getTransactionOptions(context.workspace.id);
   const title = kind === "expense" ? dict.easy.iSpent : dict.easy.iSold;
-  const instructions = kind === "expense" ? dict.easy.recordExpenseSpoken : dict.easy.recordIncomeSpoken;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -48,12 +46,9 @@ export default async function EasyRecordPage({
           <ArrowLeft className="h-5 w-5" aria-hidden />
           {dict.easy.backToEasy}
         </Link>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-heading">{title}</h1>
-            <p className="mt-1 text-base font-medium text-muted">{dict.easy.recordHint}</p>
-          </div>
-          <SpeakButton text={instructions} label={dict.easy.listen} />
+        <div className="mt-3">
+          <h1 className="text-3xl font-black tracking-tight text-heading">{title}</h1>
+          <p className="mt-1 text-base font-medium text-muted">{dict.easy.recordHint}</p>
         </div>
       </header>
 

@@ -33,7 +33,6 @@ import { DataSaverToggle } from "@/components/pwa/data-saver-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { EasyBottomNav } from "@/components/easy/easy-bottom-nav";
-import { EasySoundToggle } from "@/components/easy/easy-sound-toggle";
 import { SupportLinks } from "@/components/support/support-links";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Avatar } from "@/components/ui/avatar";
@@ -259,7 +258,6 @@ export function AppShell({
               {dict.easy.badge}
             </span>
             <div className="ml-auto flex items-center gap-1.5">
-              <EasySoundToggle />
               <LocaleSwitcher compact />
               <SignOutButton label={dict.common.signOut} compact />
               <form action={setEasyModeAction} className="ml-1">

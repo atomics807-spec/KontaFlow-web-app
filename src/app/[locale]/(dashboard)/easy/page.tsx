@@ -12,7 +12,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
-import { SpeakButton } from "@/components/easy/speak-button";
 import { EasyGuide } from "@/components/easy/easy-guide";
 import { SupportLinks } from "@/components/support/support-links";
 import { setEasyModeAction } from "@/app/[locale]/(dashboard)/easy/actions";
@@ -20,7 +19,6 @@ import { getDashboardForMonth } from "@/services/dashboard";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
-import { interpolate } from "@/lib/i18n/interpolate";
 import { formatMoney, moneyLocale, toMinorUnits } from "@/lib/money";
 import { formatDate } from "@/lib/dates";
 import { getCurrency } from "@/lib/currency";
@@ -62,9 +60,6 @@ export default async function EasyPage({
   const cash = summary ? money(summary.cashBalanceMinor) : "—";
   const receivables = summary ? money(summary.outstandingReceivablesMinor) : "—";
   const payables = summary ? money(summary.outstandingPayablesMinor) : "—";
-  const spokenSummary = summary
-    ? interpolate(dict.easy.summarySpoken, { income, expense, cash }, { locale: intlLocale(locale) })
-    : dict.easy.summaryUnavailable;
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -73,7 +68,6 @@ export default async function EasyPage({
         <Badge tone="jade">{dict.easy.badge}</Badge>
         <h1 className="mt-3 text-3xl font-black tracking-tight text-heading sm:text-4xl">{dict.easy.title}</h1>
         <p className="mx-auto mt-2 max-w-md text-lg font-medium leading-snug text-muted">{dict.easy.subtitle}</p>
-        <SpeakButton text={dict.easy.instructionsSpoken} label={dict.easy.listen} className="mt-4" />
       </header>
 
       {recorded ? <Alert tone="success">{dict.easy.recordedBanner}</Alert> : null}
@@ -134,8 +128,6 @@ export default async function EasyPage({
       ) : (
         <Alert tone="info">{dict.easy.viewOnly}</Alert>
       )}
-
-      <SpeakButton text={spokenSummary} label={dict.easy.hearMoney} className="w-full bg-mango-100" />
 
       <section aria-label={dict.easy.debtsTitle} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
