@@ -83,6 +83,7 @@ export type ProfileRow = {
   phone_verified_at: string | null;
   onboarding_completed_at: string | null;
   verification_required: boolean;
+  easy_mode: boolean;
   last_seen_at: string | null;
   created_at: string;
   updated_at: string;

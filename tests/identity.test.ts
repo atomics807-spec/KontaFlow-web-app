@@ -133,6 +133,14 @@ describe("onboarding schema", () => {
     expect(onboardingSchema.safeParse(validOnboarding()).success).toBe(true);
   });
 
+  it("defaults to the simple screen and accepts the full screen", () => {
+    const simple = onboardingSchema.safeParse(validOnboarding());
+    expect(simple.success && simple.data.uiMode).toBe("easy");
+    const full = onboardingSchema.safeParse(validOnboarding({ uiMode: "full" }));
+    expect(full.success && full.data.uiMode).toBe("full");
+    expect(onboardingSchema.safeParse(validOnboarding({ uiMode: "print" })).success).toBe(false);
+  });
+
   it("coerces the fiscal month from a select value", () => {
     const result = onboardingSchema.safeParse(validOnboarding({ fiscalYearStartMonth: "7" }));
     expect(result.success && result.data.fiscalYearStartMonth).toBe(7);

@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { LogoMark } from "@/components/layout/logo";
+import { SupportLinks } from "@/components/support/support-links";
 import { resolveLocale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/server";
 
@@ -89,6 +90,14 @@ export default async function AuthLayout({
         </div>
         <div className="flex flex-1 items-center justify-center px-5 py-10 sm:px-8">
           <div className="w-full max-w-md">{children}</div>
+        </div>
+        <div className="px-5 pb-8 sm:px-8">
+          <SupportLinks
+            title={dict.common.needHelp}
+            call={dict.common.call}
+            whatsapp={dict.common.whatsapp}
+            className="mx-auto max-w-md"
+          />
         </div>
       </main>
     </div>

@@ -95,6 +95,7 @@ export async function seedUser(options: {
       email_verified_at: verified ? now : null,
       verification_required: !verified,
       onboarding_completed_at: verified ? now : null,
+      easy_mode: false,
     })
     .eq("id", data.user.id);
 
@@ -224,7 +225,7 @@ export async function login(page: Page, email: string, password = PASSWORD): Pro
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/en\/(dashboard|onboarding|verify-phone)/, { timeout: 30_000 });
+  await page.waitForURL(/\/en\/(dashboard|easy|onboarding|verify-phone)/, { timeout: 30_000 });
 }
 
 export async function clearRateLimits(): Promise<void> {
@@ -278,11 +279,16 @@ export async function verifyPhoneThroughUi(page: Page, phone: string): Promise<v
   await page.waitForURL(/onboarding/, { timeout: 30_000 });
 }
 
-export async function completeOnboarding(page: Page, name = "Nkeng Fresh Foods"): Promise<void> {
+export async function completeOnboarding(
+  page: Page,
+  name = "Nkeng Fresh Foods",
+  mode: "easy" | "full" = "full",
+): Promise<void> {
   await page.locator("#name").fill(name);
   await page.locator("#city").fill("Douala");
+  await page.locator(`input[name="uiMode"][value="${mode}"]`).check({ force: true });
   await page.getByRole("button", { name: /create workspace/i }).click();
-  await page.waitForURL(/dashboard/, { timeout: 30_000 });
+  await page.waitForURL(mode === "easy" ? /\/easy/ : /dashboard/, { timeout: 30_000 });
 }
 
 export async function recordQuickTransaction(

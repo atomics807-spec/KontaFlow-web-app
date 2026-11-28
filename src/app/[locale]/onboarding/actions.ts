@@ -43,7 +43,9 @@ export async function createWorkspaceAction(_prev: FormState, formData: FormData
     // The RPC may have committed before a later step (logo, cookies, revalidate)
     // failed. Send the owner to the workspace instead of stranding them here.
     const context = await getWorkspaceContext().catch(() => null);
-    if (context) redirect(`/${locale}/dashboard?welcome=1`);
+    if (context) {
+      redirect(`/${locale}/${context.profile.easy_mode ? "easy" : "dashboard"}?welcome=1`);
+    }
 
     const dict = await getDictionary(locale);
     return formError(dict.errors.generic);
@@ -84,6 +86,7 @@ async function runCreateWorkspaceAction(
     country: formData.get("country") ?? "CM",
     timezone: formData.get("timezone") ?? "Africa/Douala",
     uiLocale: formData.get("uiLocale") ?? locale,
+    uiMode: formData.get("uiMode") ?? "easy",
     businessPhone: formData.get("businessPhone") ?? "",
   });
 
@@ -163,6 +166,13 @@ async function runCreateWorkspaceAction(
   const workspace = data as CreatedWorkspace | null;
   if (!workspace?.id) return formError(dict.errors.generic);
 
+  const easyMode = parsed.data.uiMode !== "full";
+  const { error: modeError } = await supabase
+    .from("profiles")
+    .update({ easy_mode: easyMode })
+    .eq("id", user.id);
+  if (modeError) logger.warn("workspace.easy_mode_save_failed", { code: modeError.code });
+
   if (logo) {
     const path = `${workspace.id}/logo-${Date.now()}.${logo.extension}`;
     const { error: uploadError } = await supabase.storage
@@ -222,7 +232,7 @@ async function runCreateWorkspaceAction(
   });
 
   revalidatePath("/", "layout");
-  redirect(`/${parsed.data.uiLocale}/dashboard?welcome=1`);
+  redirect(`/${parsed.data.uiLocale}/${easyMode ? "easy" : "dashboard"}?welcome=1`);
 }
 
 export async function switchWorkspaceAction(workspaceId: string, locale: string): Promise<void> {

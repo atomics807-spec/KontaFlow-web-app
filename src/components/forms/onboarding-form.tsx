@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { ArrowRight, Building2, MapPin, Wallet } from "lucide-react";
+import { ArrowRight, Building2, LayoutDashboard, MapPin, Smile, Wallet } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Field, Input, Select } from "@/components/ui/input";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -255,6 +255,36 @@ export function OnboardingForm({
               className="h-auto py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-accent-soft file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-accent-strong"
             />
           </Field>
+        </fieldset>
+
+        <fieldset className="space-y-3 border-t border-line pt-6">
+          <legend className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.12em] text-muted">
+            <Smile className="h-4 w-4 text-accent-strong" aria-hidden />
+            {dict.onboarding.modeSection}
+          </legend>
+          <p className="text-sm leading-relaxed text-muted">{dict.onboarding.modeHint}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="cursor-pointer">
+              <input type="radio" name="uiMode" value="easy" defaultChecked className="peer sr-only" />
+              <span className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-2xl border-4 border-line bg-panel px-4 py-4 text-center transition peer-checked:border-forest peer-checked:bg-accent-soft peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-strong">
+                <Smile className="h-9 w-9 text-accent" aria-hidden />
+                <span className="text-lg font-black text-heading">{dict.onboarding.modeEasy}</span>
+                <span className="text-sm leading-snug text-muted">{dict.onboarding.modeEasyHint}</span>
+              </span>
+            </label>
+            <label className="cursor-pointer">
+              <input type="radio" name="uiMode" value="full" className="peer sr-only" />
+              <span className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-2xl border-4 border-line bg-panel px-4 py-4 text-center transition peer-checked:border-forest peer-checked:bg-accent-soft peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent-strong">
+                <LayoutDashboard className="h-9 w-9 text-accent" aria-hidden />
+                <span className="text-lg font-black text-heading">{dict.onboarding.modeFull}</span>
+                <span className="text-sm leading-snug text-muted">{dict.onboarding.modeFullHint}</span>
+              </span>
+            </label>
+          </div>
+          <SpeakButton
+            text={`${dict.onboarding.modeSection}. ${dict.onboarding.modeEasy}. ${dict.onboarding.modeEasyHint}`}
+            label={dict.easy.listen}
+          />
         </fieldset>
 
         <SubmitButton className="mt-2 w-full" size="lg" pendingLabel={dict.onboarding.creating}>

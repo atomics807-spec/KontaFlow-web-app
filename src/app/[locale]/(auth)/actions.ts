@@ -90,7 +90,7 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     return formError(dict.auth.invalidCredentials);
   }
 
-  const next = safeNextPath(formData.get("next"), `/${locale}/dashboard`);
+  const requestedNext = safeNextPath(formData.get("next"), "");
   const user = data.user;
   let preferredLocale = locale;
 
@@ -103,12 +103,13 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
     });
     const { data: profile } = await supabase
       .from("profiles")
-      .select("verification_required, phone_verified_at, email_verified_at, locale")
+      .select("verification_required, phone_verified_at, email_verified_at, locale, easy_mode")
       .eq("id", user.id)
       .maybeSingle();
 
     preferredLocale = resolveLocale(profile?.locale ?? locale);
-    const destination = localizePath(next, preferredLocale);
+    const defaultPath = profile?.easy_mode ? "/easy" : "/dashboard";
+    const destination = localizePath(requestedNext || defaultPath, preferredLocale);
     const cookieStore = await cookies();
     cookieStore.set(LOCALE_COOKIE, preferredLocale, {
       path: "/",
@@ -157,7 +158,7 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
   }
 
   revalidatePath("/", "layout");
-  redirect(next);
+  redirect(localizePath(requestedNext || "/dashboard", locale));
 }
 
 export async function signUpAction(_prev: FormState, formData: FormData): Promise<FormState> {

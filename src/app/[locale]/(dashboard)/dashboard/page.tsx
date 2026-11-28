@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import {
   AlertTriangle,
@@ -32,6 +33,7 @@ import { getTransactionOptions } from "@/services/transactions";
 import { getSubscription } from "@/services/workspaces";
 import { listActiveAnnouncements } from "@/services/announcements";
 import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
+import { setEasyModeAction } from "@/app/[locale]/(dashboard)/easy/actions";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { isAiConfigured } from "@/lib/ai/client";
 import { resolveLocale, intlLocale, pickTranslation } from "@/lib/i18n/config";
@@ -65,6 +67,7 @@ export default async function DashboardPage({
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const { workspace, profile } = context;
+  if (profile.easy_mode) redirect(`/${locale}/easy`);
 
   const period = resolvePeriod(query.period, query.from, query.to, workspace.timezone);
 
@@ -184,13 +187,14 @@ export default async function DashboardPage({
             <h2 className="text-base font-black text-heading">{dict.easy.dashboardTitle}</h2>
             <p className="mt-0.5 text-sm text-muted">{dict.easy.dashboardHint}</p>
           </div>
-          <Link
-            href={`/${locale}/easy`}
-            className={buttonVariants({ variant: "primary", size: "md", className: "shrink-0 justify-center" })}
-          >
-            {dict.easy.openEasy}
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+          <form action={setEasyModeAction} className="shrink-0">
+            <input type="hidden" name="locale" value={locale} />
+            <input type="hidden" name="mode" value="easy" />
+            <Button type="submit" size="md" className="w-full justify-center">
+              {dict.easy.openEasy}
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Button>
+          </form>
         </div>
       </Card>
 

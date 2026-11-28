@@ -16,6 +16,7 @@ export const onboardingSchema = z
     country: z.string().trim().length(2),
     timezone: z.string().trim().min(3).max(64),
     uiLocale: z.enum(["en", "fr", "pcm"]),
+    uiMode: z.enum(["easy", "full"]).default("easy"),
     businessPhone: z.string().trim().max(24).optional().or(z.literal("")),
   })
   .superRefine((value, ctx) => {

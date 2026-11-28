@@ -142,6 +142,7 @@ export const getWorkspaceContext = cache(async (): Promise<WorkspaceContext | nu
       phone_verified_at: null,
       onboarding_completed_at: null,
       verification_required: true,
+      easy_mode: true,
       last_seen_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

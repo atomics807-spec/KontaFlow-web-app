@@ -1482,6 +1482,17 @@ async function main(): Promise<void> {
         }),
       ),
     );
+    eq("new accounts start on the simple screen", await scalar(client, `select easy_mode from profiles where id = $1`, [EVE]), "true");
+    ok(
+      "users can choose the full screen",
+      Boolean(
+        await commitAs(client, eve, async (c) => {
+          const result = await c.query(`update profiles set easy_mode = false where id = $1`, [EVE]);
+          return result.rowCount === 1;
+        }),
+      ),
+    );
+    eq("the screen preference is stored", await scalar(client, `select easy_mode from profiles where id = $1`, [EVE]), "false");
 
     const unverifiedWorkspace = await expectError(
       client,

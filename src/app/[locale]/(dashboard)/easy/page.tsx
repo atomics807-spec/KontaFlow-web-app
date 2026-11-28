@@ -4,6 +4,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronRight,
+  CircleHelp,
   HandCoins,
   ShoppingBasket,
   Wallet,
@@ -12,6 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { SpeakButton } from "@/components/easy/speak-button";
+import { EasyGuide } from "@/components/easy/easy-guide";
+import { SupportLinks } from "@/components/support/support-links";
+import { setEasyModeAction } from "@/app/[locale]/(dashboard)/easy/actions";
 import { getDashboardForMonth } from "@/services/dashboard";
 import { requireWorkspaceContext } from "@/lib/supabase/auth";
 import { intlLocale, resolveLocale } from "@/lib/i18n/config";
@@ -32,14 +36,16 @@ export default async function EasyPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ recorded?: string }>;
+  searchParams: Promise<{ recorded?: string; welcome?: string; guide?: string }>;
 }) {
   const locale = resolveLocale((await params).locale);
   const dict = await getDictionary(locale);
   const context = await requireWorkspaceContext(locale);
   const { workspace } = context;
   const canRecord = context.can("transactions:create");
-  const recorded = (await searchParams).recorded === "1";
+  const query = await searchParams;
+  const recorded = query.recorded === "1";
+  const guide = query.guide === "1";
 
   let summary: DashboardSummary | null = null;
   try {
@@ -62,6 +68,7 @@ export default async function EasyPage({
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      <EasyGuide key={guide ? "guide" : "first"} forceOpen={guide} />
       <header className="text-center">
         <Badge tone="jade">{dict.easy.badge}</Badge>
         <h1 className="mt-3 text-3xl font-black tracking-tight text-heading sm:text-4xl">{dict.easy.title}</h1>
@@ -77,19 +84,19 @@ export default async function EasyPage({
         <div className="rounded-3xl border-2 border-jade-200 bg-jade-50 p-4 text-center">
           <ArrowDownLeft className="mx-auto h-7 w-7 text-accent" aria-hidden />
           <p className="mt-1 text-sm font-bold text-accent">{dict.easy.moneyIn}</p>
-          <p className="kpi-value mt-1 text-xl font-black text-heading">{income}</p>
+          <p className="kpi-value mt-1 text-2xl font-black text-heading sm:text-3xl">{income}</p>
           <p className="text-xs font-semibold text-muted">{dict.easy.thisMonth}</p>
         </div>
         <div className="rounded-3xl border-2 border-danger/20 bg-clay-soft p-4 text-center">
           <ArrowUpRight className="mx-auto h-7 w-7 text-danger" aria-hidden />
           <p className="mt-1 text-sm font-bold text-danger">{dict.easy.moneyOut}</p>
-          <p className="kpi-value mt-1 text-xl font-black text-heading">{expense}</p>
+          <p className="kpi-value mt-1 text-2xl font-black text-heading sm:text-3xl">{expense}</p>
           <p className="text-xs font-semibold text-muted">{dict.easy.thisMonth}</p>
         </div>
         <div className="rounded-3xl border-2 border-mango-400 bg-mango-100 p-4 text-center">
           <Wallet className="mx-auto h-7 w-7 text-heading" aria-hidden />
           <p className="mt-1 text-sm font-bold text-heading">{dict.easy.moneyLeft}</p>
-          <p className="kpi-value mt-1 text-xl font-black text-heading">{cash}</p>
+          <p className="kpi-value mt-1 text-2xl font-black text-heading sm:text-3xl">{cash}</p>
           <p className="text-xs font-semibold text-muted">{dict.easy.cashToday}</p>
         </div>
       </section>
@@ -206,15 +213,35 @@ export default async function EasyPage({
         </Card>
       )}
 
-      <section className="rounded-2xl border-2 border-dashed border-line bg-panel/60 p-4 text-center">
-        <p className="text-sm font-semibold text-muted">{dict.easy.helpHint}</p>
-        <div className="mt-3 flex flex-wrap justify-center gap-2">
-          <Link href={`/${locale}/dashboard`} className="text-sm font-bold text-accent hover:underline">
-            {dict.easy.backToFull}
-          </Link>
-          <span className="text-muted" aria-hidden>·</span>
-          <span className="text-sm font-semibold text-muted">{getCurrency(workspace.currency).symbol}</span>
+      <section id="help" className="space-y-3">
+        <div className="rounded-2xl border-2 border-dashed border-line bg-panel/60 p-4 text-center">
+          <p className="text-base font-bold leading-snug text-heading">{dict.easy.helpHint}</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Link
+              href={`/${locale}/easy?guide=1#help`}
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-line bg-panel px-3 text-sm font-black text-heading"
+            >
+              <CircleHelp className="h-5 w-5 text-accent" aria-hidden />
+              {dict.easy.guideOpen}
+            </Link>
+            <form action={setEasyModeAction}>
+              <input type="hidden" name="locale" value={locale} />
+              <input type="hidden" name="mode" value="full" />
+              <button
+                type="submit"
+                className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 border-line bg-panel px-3 text-sm font-black text-heading"
+              >
+                {dict.easy.backToFull}
+              </button>
+            </form>
+          </div>
         </div>
+        <SupportLinks
+          title={dict.common.needHelp}
+          call={dict.common.call}
+          whatsapp={dict.common.whatsapp}
+        />
+        <p className="text-center text-sm font-semibold text-muted">{getCurrency(workspace.currency).symbol}</p>
       </section>
     </div>
   );

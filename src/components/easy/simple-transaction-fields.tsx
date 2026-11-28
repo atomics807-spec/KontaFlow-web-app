@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -19,6 +20,8 @@ import { useI18n } from "@/components/layout/i18n-provider";
 import { categoryGlyph } from "@/components/easy/category-glyph";
 import { SpeakButton } from "@/components/easy/speak-button";
 import { VoiceAmountButton } from "@/components/easy/voice-amount-button";
+import { useEasyAudio } from "@/components/easy/use-easy-audio";
+import { speakEasy } from "@/lib/easy/audio";
 import { getCurrency } from "@/lib/currency";
 import { pickTranslation } from "@/lib/i18n/config";
 import { interpolate } from "@/lib/i18n/interpolate";
@@ -90,6 +93,54 @@ export function SimpleTransactionFields({
   const categoryName = category ? pickTranslation(category.translations, locale) ?? category.name : "";
   const actionLabel = kind === "income" ? dict.easy.youSold : dict.easy.youSpent;
   const isSaved = message?.tone === "success" || message?.tone === "warning";
+  const audioEnabled = useEasyAudio();
+  const previousStep = useRef<EasyStep | null>(null);
+  const spokenError = useRef<string | null>(null);
+  const spokenSaved = useRef(false);
+
+  useEffect(() => {
+    if (!audioEnabled) {
+      previousStep.current = step;
+      return;
+    }
+    if (previousStep.current === step) return;
+    previousStep.current = step;
+    if (isSaved) return;
+    const prompt =
+      step === "amount"
+        ? dict.easy.amountPromptSpoken
+        : step === "category"
+          ? dict.easy.categoryPromptSpoken
+          : interpolate(dict.easy.reviewSpoken, { kind: actionLabel, amount: `${amount || "0"} ${currencyMeta.symbol}`, category: categoryName }, { locale });
+    speakEasy(prompt, locale);
+  }, [step, audioEnabled, isSaved, amount, actionLabel, categoryName, currencyMeta.symbol, dict, locale]);
+
+  useEffect(() => {
+    if (audioEnabled && message?.tone === "error" && message.text !== spokenError.current) {
+      spokenError.current = message.text;
+      speakEasy(message.text, locale);
+    }
+    if (message?.tone !== "error") spokenError.current = null;
+  }, [audioEnabled, message, locale]);
+
+  useEffect(() => {
+    if (!isSaved) {
+      spokenSaved.current = false;
+      return;
+    }
+    if (audioEnabled && !spokenSaved.current) {
+      spokenSaved.current = true;
+      speakEasy(message?.tone === "success" ? dict.easy.savedSpoken : dict.easy.savedOfflineSpoken, locale);
+    }
+  }, [audioEnabled, isSaved, message?.tone, dict, locale]);
+
+  function buzz() {
+    try {
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(10);
+    } catch {
+      // Haptics are optional.
+    }
+  }
 
   function append(value: string) {
     if (value === "00" && !amount) return;
@@ -134,7 +185,10 @@ export function SimpleTransactionFields({
       <div className="grid grid-cols-2 gap-3">
         <button
           type="button"
-          onClick={() => onKindChange("income")}
+          onClick={() => {
+            buzz();
+            onKindChange("income");
+          }}
           aria-pressed={kind === "income"}
           className={cn(
             "flex min-h-24 flex-col items-center justify-center gap-1 rounded-3xl border-4 px-3 py-4 text-center transition",
@@ -148,7 +202,10 @@ export function SimpleTransactionFields({
         </button>
         <button
           type="button"
-          onClick={() => onKindChange("expense")}
+          onClick={() => {
+            buzz();
+            onKindChange("expense");
+          }}
           aria-pressed={kind === "expense"}
           className={cn(
             "flex min-h-24 flex-col items-center justify-center gap-1 rounded-3xl border-4 px-3 py-4 text-center transition",
@@ -212,7 +269,11 @@ export function SimpleTransactionFields({
               <button
                 key={key}
                 type="button"
-                onClick={() => (key === "back" ? onAmountChange(amount.slice(0, -1)) : append(key))}
+                onClick={() => {
+                  buzz();
+                  if (key === "back") onAmountChange(amount.slice(0, -1));
+                  else append(key);
+                }}
                 aria-label={key === "back" ? dict.easy.deleteDigit : key}
                 className="grid h-16 place-items-center rounded-2xl border-2 border-line bg-panel text-2xl font-black text-heading transition active:scale-95 hover:border-forest hover:bg-accent-soft"
               >
@@ -226,7 +287,10 @@ export function SimpleTransactionFields({
               <button
                 key={value}
                 type="button"
-                onClick={() => onAmountChange(value)}
+                onClick={() => {
+                  buzz();
+                  onAmountChange(value);
+                }}
                 className="min-h-11 rounded-full border-2 border-line bg-panel px-4 text-sm font-bold text-muted hover:border-forest hover:text-heading"
               >
                 {new Intl.NumberFormat(locale === "fr" ? "fr-CM" : "en-CM").format(Number(value))}
@@ -260,7 +324,10 @@ export function SimpleTransactionFields({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => onCategoryChange(item.id)}
+                  onClick={() => {
+                    buzz();
+                    onCategoryChange(item.id);
+                  }}
                   aria-pressed={selected}
                   className={cn(
                     "flex min-h-32 flex-col items-center justify-center gap-2 rounded-3xl border-4 px-3 py-4 text-center transition",
@@ -326,7 +393,10 @@ export function SimpleTransactionFields({
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => onAccountChange(item.id)}
+                    onClick={() => {
+                      buzz();
+                      onAccountChange(item.id);
+                    }}
                     aria-pressed={selected}
                     className={cn(
                       "flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border-2 px-3 py-2 text-center transition",

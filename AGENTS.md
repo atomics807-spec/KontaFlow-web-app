@@ -196,6 +196,28 @@ works, but `supabase migration up` / `npm run db:push` is preferred.
   acceptance criteria.
 * QA evidence: `docs/testing/phase-23-low-literacy-easy-mode-report.md`.
 
+## Low-literacy reading comfort and help (Phase 24)
+
+* `profiles.easy_mode` (migration `20260101000048`) is the persisted screen
+  preference. New accounts start on the Simple screen; existing accounts were
+  migrated to `false` (full dashboard) until they choose. Only
+  `update (easy_mode)` is granted to `authenticated`; RLS still limits the row.
+* Onboarding writes the choice from `input[name="uiMode"]`. Keep the `uiMode`
+  field in `onboardingSchema` and pass it from `FormData`; the Zod default is
+  `easy`.
+* `/[locale]/dashboard` redirects Easy Mode owners to `/[locale]/easy`.
+  `setEasyModeAction` switches both ways, persists the preference and revalidates.
+* First visit shows `EasyGuide` (three picture panels, spoken). Completion is a
+  local-storage flag; `?guide=1` reopens it. The voice preference is local
+  storage in `src/lib/easy/audio.ts`, surfaced by `EasySoundToggle` and
+  `useEasyAudio`. Easy recording speaks step prompts, errors and saved messages.
+* `EasyBottomNav` replaces the sidebar destinations on Easy routes. Keep its
+  items at 64 px and leave bottom padding on the easy main area.
+* `SupportLinks` (Call/WhatsApp from `src/lib/contact-details.ts`) must stay on
+  auth, Easy and full-shell (sidebar/drawer) surfaces. Use `variant="dark"` on
+  the forest sidebar.
+* QA evidence: `docs/testing/phase-24-low-literacy-ux-report.md`.
+
 ## Public marketing pages (Phase 2.1)
 
 * Authenticated app routes and public pages share `src/app/[locale]/`. Public
@@ -530,8 +552,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 * Cameroon note: Law No. 2010/013 governs electronic communications, not personal
   data. The current personal-data act is Law No. 2024/017. See
   `docs/security/compliance-cameroon.md` before making compliance claims.
-* Validation: `npm run typecheck`, `npm test` (239), `npm run test:db` (376),
-  `npm run test:e2e` (25), `npm run lint`, `npm run build`,
+* Validation: `npm run typecheck`, `npm test` (240), `npm run test:db` (379),
+  `npm run test:e2e` (26), `npm run lint`, `npm run build`,
   `npm run verify:production -- --local`.
 * Deployment: `vercel.json` owns Vercel cron; `wrangler.jsonc` + OpenNext own
   Cloudflare; `workers/cron-trigger` calls the same cron routes. The Vercel Hobby

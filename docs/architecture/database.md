@@ -45,6 +45,7 @@ its tests cannot drift apart.
 | `0036_phase12_ussd` | USSD session state, channel-link verification, bounded session RPCs |
 | `0042_phase16_admin_operations` | Platform support access, announcements and operations audit |
 | `0043_phase18_security_hardening` | `security_events`, `security_rate_limits`, `account_deletion_requests`, consent metadata, deletion RPCs, durable rate-limit RPC |
+| `0048_phase24_reading_comfort` | `profiles.easy_mode` reading-comfort preference, limited column update grant |
 
 `supabase/seed.sql` seeds the plan catalogue. It is idempotent.
 
@@ -89,7 +90,8 @@ caller's RLS applies. Writes always go to the canonical table.
 
 A person registers with a first name, last name, email, phone and country.
 `public.profiles` stores those identity fields plus `email_verified_at`,
-`phone_verified_at`, `verification_required` and `onboarding_completed_at`.
+`phone_verified_at`, `verification_required`, `onboarding_completed_at` and the
+`easy_mode` reading-comfort preference.
 `privacy_consents` records the exact policy version, locale, IP, user agent and
 marketing choice at signup.
 

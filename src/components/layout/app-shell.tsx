@@ -32,12 +32,16 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DataSaverToggle } from "@/components/pwa/data-saver-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { EasyBottomNav } from "@/components/easy/easy-bottom-nav";
+import { EasySoundToggle } from "@/components/easy/easy-sound-toggle";
+import { SupportLinks } from "@/components/support/support-links";
 import { PageTransition } from "@/components/motion/page-transition";
 import { Avatar } from "@/components/ui/avatar";
 import { Drawer } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { switchWorkspaceFormAction } from "@/app/[locale]/onboarding/actions";
+import { setEasyModeAction } from "@/app/[locale]/(dashboard)/easy/actions";
 import { interpolate } from "@/lib/i18n/interpolate";
 import type { NotificationRow, WorkspacePlan } from "@/types/database";
 
@@ -226,6 +230,13 @@ export function AppShell({
           <LocaleSwitcher compact />
           <ThemeToggle tone="dark" />
         </div>
+        <SupportLinks
+          variant="dark"
+          className="mt-3"
+          title={dict.common.needHelp}
+          call={dict.common.call}
+          whatsapp={dict.common.whatsapp}
+        />
         <p className="mt-2 px-1 text-[0.65rem] text-jade-200/50">{dict.marketing.footerLocation}</p>
       </div>
     </>
@@ -248,22 +259,28 @@ export function AppShell({
               {dict.easy.badge}
             </span>
             <div className="ml-auto flex items-center gap-1.5">
+              <EasySoundToggle />
               <LocaleSwitcher compact />
               <SignOutButton label={dict.common.signOut} compact />
-              <Link
-                href={`/${locale}/dashboard`}
-                aria-label={dict.easy.backToFull}
-                className="ml-1 inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-panel px-2.5 py-2 text-xs font-bold text-heading hover:bg-accent-soft sm:px-3"
-              >
-                <LayoutGrid className="h-4 w-4" aria-hidden />
-                <span className="hidden lg:inline">{dict.easy.backToFull}</span>
-              </Link>
+              <form action={setEasyModeAction} className="ml-1">
+                <input type="hidden" name="locale" value={locale} />
+                <input type="hidden" name="mode" value="full" />
+                <button
+                  type="submit"
+                  aria-label={dict.easy.backToFull}
+                  className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-line bg-panel px-2.5 py-2 text-xs font-bold text-heading hover:bg-accent-soft sm:px-3"
+                >
+                  <LayoutGrid className="h-4 w-4" aria-hidden />
+                  <span className="hidden lg:inline">{dict.easy.backToFull}</span>
+                </button>
+              </form>
             </div>
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-4xl px-4 py-5 sm:px-6 sm:py-7">
+        <main id="main" className="mx-auto w-full max-w-4xl px-4 py-5 pb-28 sm:px-6 sm:py-7 sm:pb-32">
           <PageTransition>{children}</PageTransition>
         </main>
+        <EasyBottomNav />
       </div>
     );
   }
